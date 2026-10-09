@@ -1,0 +1,38 @@
+plugins { id 'com.android.application' }
+
+def qaBuild = providers.gradleProperty('qaBuild').isPresent()
+def signing = new Properties()
+def signingFile = rootProject.file('signing.properties')
+if (signingFile.exists()) signingFile.withInputStream { signing.load(it) }
+def signingValue = { name, property -> System.getenv(name) ?: signing.getProperty(property) }
+def fixedStore = signingValue('COURSELENS_KEYSTORE_FILE', 'storeFile')
+def fixedPassword = signingValue('COURSELENS_STORE_PASSWORD', 'storePassword')
+def fixedAlias = signingValue('COURSELENS_KEY_ALIAS', 'keyAlias')
+def fixedKeyPassword = signingValue('COURSELENS_KEY_PASSWORD', 'keyPassword')
+if (!qaBuild) {
+ if ([fixedStore, fixedPassword, fixedAlias, fixedKeyPassword].any { !it }) throw new GradleException('Fixed signing is required. Configure signing.properties or COURSELENS signing environment variables; use -PqaBuild only for isolated verification.')
+ def keyFile = rootProject.file(fixedStore)
+ if (!keyFile.isFile()) throw new GradleException('Fixed signing keystore is missing.')
+ def keyStore = java.security.KeyStore.getInstance(keyFile, fixedPassword.toCharArray())
+ def certificate = keyStore.getCertificate(fixedAlias)
+ if (certificate == null) throw new GradleException('Fixed signing alias has no certificate.')
+ def fingerprint = java.security.MessageDigest.getInstance('SHA-256').digest(certificate.encoded).encodeHex().toString()
+ if (fingerprint != rootProject.file('signing-certificate.sha256').text.trim()) throw new GradleException('Signing certificate mismatch. Refusing to build an incompatible update.')
+}
+
+android {
+ namespace 'cn.courselens'
+ compileSdk 34
+ defaultConfig { applicationId 'cn.courselens'; minSdk 26; targetSdk 34; versionCode 6; versionName '2.4'; testInstrumentationRunner 'cn.courselens.NativeChecks' }
+ signingConfigs {
+  fixed {
+   if (!qaBuild) { storeFile rootProject.file(fixedStore); storePassword fixedPassword; keyAlias fixedAlias; keyPassword fixedKeyPassword }
+  }
+ }
+ buildTypes {
+  debug { if (qaBuild) applicationIdSuffix '.qa'; else signingConfig signingConfigs.fixed }
+  release { if (!qaBuild) signingConfig signingConfigs.fixed }
+ }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies { androidTestImplementation 'androidx.collection:collection:1.1.0'; implementation 'org.jsoup:jsoup:1.18.3'; implementation 'androidx.viewpager:viewpager:1.0.0'; implementation 'androidx.customview:customview:1.1.0'; implementation 'androidx.core:core:1.13.0'; implementation 'androidx.annotation:annotation:1.6.0'; implementation 'androidx.profileinstaller:profileinstaller:1.3.1' }

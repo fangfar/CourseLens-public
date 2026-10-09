@@ -1,0 +1,13 @@
+.gradle/
+**/build/
+tests/out/
+local.properties
+signing.properties
+.env
+.env.*
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
