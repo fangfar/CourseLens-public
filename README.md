@@ -44,3 +44,12 @@
 ## 问题反馈
 
 可在 [问题反馈页面](https://github.com/fangfar/CourseLens-public/issues) 描述遇到的问题，注明应用版本、手机型号、Android 版本和操作步骤。请勿上传账号、密码或包含个人信息的完整课表截图。
+## Star History
+
+<a href="https://www.star-history.com/?repos=fangfar%2Fcourselens-public&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=fangfar/courselens-public&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=fangfar/courselens-public&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=fangfar/courselens-public&type=date&legend=top-left" />
+ </picture>
+</a>
