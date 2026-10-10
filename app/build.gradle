@@ -23,7 +23,7 @@ if (!qaBuild) {
 android {
  namespace 'cn.courselens'
  compileSdk 34
- defaultConfig { applicationId 'cn.courselens'; minSdk 26; targetSdk 34; versionCode 6; versionName '2.4'; testInstrumentationRunner 'cn.courselens.NativeChecks' }
+ defaultConfig { applicationId 'cn.courselens'; minSdk 26; targetSdk 34; versionCode 7; versionName '2.5'; testInstrumentationRunner 'cn.courselens.NativeChecks' }
  signingConfigs {
   fixed {
    if (!qaBuild) { storeFile rootProject.file(fixedStore); storePassword fixedPassword; keyAlias fixedAlias; keyPassword fixedKeyPassword }
