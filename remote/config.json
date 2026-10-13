@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "announcements": [],
+  "android": {
+    "versionCode": 7,
+    "versionName": "2.5",
+    "changelog": "课程详情展示任课老师与实验内容。\n重叠课程可选择优先显示的一门。\n支持单次调课与停课，保留原有安排。\n新增 2×2 桌面课表组件。\n优化页面进入、返回和交互动效。",
+    "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.5/CourseLens-2.5-vc7.apk",
+    "diskUrl": "https://pan.baidu.com/s/5Q7q-93RIXFczWfL1i3cvQg"
+  },
+  "repositoryUrl": "https://github.com/fangfar/CourseLens-public"
+}

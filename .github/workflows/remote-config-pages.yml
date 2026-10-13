@@ -1,0 +1,90 @@
+name: Remote configuration
+
+on:
+  push:
+    branches: [main]
+    paths: ['remote/config.json', '.github/workflows/remote-config-pages.yml']
+  pull_request:
+    paths: ['remote/config.json', '.github/workflows/remote-config-pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remote-config-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate configuration
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, datetime, urllib.parse
+          raw = pathlib.Path('remote/config.json').read_bytes()
+          assert len(raw) <= 65536, 'Configuration exceeds 64 KiB'
+          config = json.loads(raw)
+          def text(obj, key, maximum, empty=False):
+              value = obj[key]
+              assert isinstance(value, str) and len(value.strip().encode("utf-16-le")) // 2 <= maximum
+              assert empty or value.strip(), key
+              return value.strip()
+          def link(obj, key):
+              value = text(obj, key, 2048, True)
+              if value:
+                  uri = urllib.parse.urlsplit(value)
+                  assert uri.scheme == 'https' and uri.hostname and not uri.username and not uri.password and uri.port in (None, 443), key
+              return value
+          assert type(config['schemaVersion']) is int and config['schemaVersion'] == 1
+          assert isinstance(config['announcements'], list) and len(config['announcements']) <= 20
+          ids = set()
+          for item in config['announcements']:
+              identifier = text(item, 'id', 120)
+              assert identifier not in ids, 'Duplicate announcement ID'
+              ids.add(identifier)
+              text(item, 'title', 160)
+              text(item, 'body', 8000)
+              published = text(item, 'publishedAt', 40, True)
+              if published:
+                  parsed = datetime.datetime.fromisoformat(published.replace('Z', '+00:00'))
+                  assert parsed.utcoffset() is not None
+              assert type(item['enabled']) is bool
+          android = config['android']
+          assert type(android['versionCode']) is int and 0 < android['versionCode'] <= 9223372036854775807
+          text(android, 'versionName', 80)
+          text(android, 'changelog', 12000, True)
+          link(android, 'apkUrl')
+          link(android, 'diskUrl')
+          assert link(config, 'repositoryUrl') in ('', 'https://github.com/fangfar/CourseLens-public')
+          print('Valid configuration')
+          PY
+      - name: Prepare site
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p site/remote
+          cp remote/config.json site/remote/config.json
+          touch site/.nojekyll
+          printf '%s\n' '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>CourseLens</title><a href="https://github.com/fangfar/CourseLens-public">CourseLens · 课表镜</a></html>' > site/index.html
+      - uses: actions/upload-pages-artifact@v4
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          path: site
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: validate
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
