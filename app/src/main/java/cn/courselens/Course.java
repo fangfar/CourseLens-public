@@ -11,11 +11,24 @@ public final class Course {
  public Course(int d,int s,int e,String n,String r,String w,String t,String extra) { this(d,s,e,n,r,w,t,extra,""); }
  public Course(int d,int s,int e,String n,String r,String w,String t,String extra,String classes) { day=d;start=s;end=e;name=n;room=r;weeks=w;teacher=t;details=optionalText(extra);className=optionalText(classes); }
  public static String optionalText(String value){List<String> parts=new ArrayList<>();if(value!=null)for(String part:value.split("[;；]")){part=part.trim();if(!part.isEmpty()&&!part.equalsIgnoreCase("null"))parts.add(part);}return String.join("；",parts);}
+ public static boolean isTeachingClassName(String courseName,String value){
+  if(value.contains("；")||value.contains(";")||!value.startsWith(courseName+"-"))return false;String[] parts=value.substring(courseName.length()+1).split("-",2);
+  return parts.length==2&&!parts[1].trim().isEmpty()&&(parts[0].trim().equals("本部")||parts[0].trim().endsWith("校区"));
+ }
+ public String displayDetails(){List<String> content=new ArrayList<>();for(String part:details.split("；"))if(!part.isEmpty()&&!isTeachingClassName(name,part))content.add(part);return String.join("；",content);}
  // shortcut: only recognizable class prefixes are split; add a school adapter if its naming format changes.
  public static Course withLessonText(int d,int s,int e,String n,String r,String w,String t,String extra){
-  String value=optionalText(extra),classes="",classToken="(?:\\d{2,4}[\\p{IsHan}A-Za-z]+\\d+(?:班)?|[^\\s;；]+班)";
-  Matcher m=Pattern.compile("^("+classToken+"(?:\\s*[;；]\\s*"+classToken+")*)(?:\\s+|[;；]\\s*|$)(.*)$").matcher(value);
-  if(m.matches()){classes=m.group(1);value=optionalText(m.group(2));}
+  String value=optionalText(extra),classes="";List<String> content=new ArrayList<>();
+  for(String part:value.split("；")){if(isTeachingClassName(n,part))classes=optionalText(classes+"；"+part);else content.add(part);}value=String.join("；",content);
+  String suffix="(?:[（(][^;；()（）]*[）)])?";
+  String strong="(?:\\d{2,4}[\\p{IsHan}A-Za-z]+\\d+(?:班)?"+suffix+"|\\d{2}[A-Z]+[\\p{IsHan}]+"+suffix+"|[^\\s;；]+班)";
+  String unnumbered="\\d{2}(?![^;；\\s]*(?:实验|项目|测量|计划|分析|课程|次))[A-Za-z]*[\\p{IsHan}]+"+suffix;
+  String token="(?:"+strong+"|"+unnumbered+")",tail="(?:\\s+|[;；]\\s*|$)(.*)$";
+  Matcher m=Pattern.compile("^("+token+"(?:\\s*[;；]\\s*"+token+")+)"+tail).matcher(value);
+  boolean list=m.matches();
+  if(list){boolean recognizable=false;for(String part:m.group(1).split("[;；]"))if(part.trim().matches(strong)){recognizable=true;break;}list=recognizable;}
+  if(!list)m=Pattern.compile("^("+strong+"(?:\\s*[;；]\\s*"+strong+")*)"+tail).matcher(value);
+  if(list||m.matches()){classes=optionalText(classes+"；"+m.group(1));value=optionalText(m.group(2));}
   return new Course(d,s,e,n,r,w,t,value,classes);
  }
  public static List<Course> parse(String text) {

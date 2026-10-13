@@ -1,0 +1,4 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
+ <ImageView android:id="@+id/widget_square_bounds" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_centerInParent="true" android:src="@drawable/widget_background" android:adjustViewBounds="true" android:visibility="invisible" android:importantForAccessibility="no" />
+ <include layout="@layout/course_widget" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_alignStart="@id/widget_square_bounds" android:layout_alignEnd="@id/widget_square_bounds" android:layout_alignTop="@id/widget_square_bounds" android:layout_alignBottom="@id/widget_square_bounds" />
+</RelativeLayout>

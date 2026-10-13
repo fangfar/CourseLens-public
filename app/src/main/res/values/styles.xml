@@ -1,5 +1,21 @@
 <resources>
     <style name="SecondaryPicker" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:colorAccent">#355DB0</item>
+        <item name="android:colorAccent">#4266AD</item>
+        <item name="android:datePickerStyle">@style/SoftDatePicker</item>
+    </style>
+    <style name="SoftDatePicker" parent="android:style/Widget.Material.Light.DatePicker">
+        <item name="android:headerBackground">@drawable/date_header</item>
+        <item name="android:headerMonthTextAppearance">@style/DateHeaderText</item>
+        <item name="android:headerDayOfMonthTextAppearance">@style/DateHeaderText</item>
+        <item name="android:headerYearTextAppearance">@style/DateHeaderText</item>
+    </style>
+    <style name="DateHeaderText" parent="android:style/TextAppearance.Material.Body1">
+        <item name="android:textColor">@color/date_header_text</item>
+    </style>
+    <style name="SecondaryDialog" parent="android:style/Theme.Material.Light.Dialog.Alert">
+        <item name="android:colorAccent">#4266AD</item>
+        <item name="android:textColorPrimary">#172132</item>
+        <item name="android:textColorSecondary">#8C97AA</item>
+        <item name="android:windowBackground">@drawable/dialog_surface</item>
     </style>
 </resources>

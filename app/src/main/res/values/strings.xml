@@ -1,6 +1,10 @@
 <resources>
-    <string name="widget_label">课表镜 · 下一节课</string>
-    <string name="widget_description">今日课程数量与下一节安排，点击查看课程详情</string>
-    <string name="widget_empty">添加后显示课程安排</string>
+    <string name="widget_label">今日课表</string>
+    <string name="widget_description">今日剩余课程的时间与教室，分别点击查看课程详情</string>
+    <string name="widget_empty">下一节课程</string>
     <string name="widget_refresh">刷新桌面课表</string>
+    <string name="widget_preview_time">08:00</string>
+    <string name="widget_preview_second">第二节课程</string>
+    <string name="widget_preview_room">教室</string>
+    <string name="widget_next">下一节</string>
 </resources>

@@ -11,31 +11,78 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
-public final class CourseWidget extends AppWidgetProvider {
+public class CourseWidget extends AppWidgetProvider {
+ private static final int[] CONTENT={R.id.widget_content,R.id.widget_content_second,R.id.widget_content_third,R.id.widget_content_fourth},TITLE={R.id.widget_title,R.id.widget_title_second,R.id.widget_title_third,R.id.widget_title_fourth},TIME={R.id.widget_time,R.id.widget_time_second,R.id.widget_time_third,R.id.widget_time_fourth},ROOM={R.id.widget_room,R.id.widget_room_second,R.id.widget_room_third,R.id.widget_room_fourth},STATUS={R.id.widget_status,R.id.widget_status_second,R.id.widget_status_third,R.id.widget_status_fourth};
  public static final String OPEN="cn.courselens.OPEN_WIDGET",REFRESH="cn.courselens.REFRESH_WIDGET";
  @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){for(int id:ids)manager.updateAppWidget(id,views(context,id,LocalDateTime.now(ZoneId.of("Asia/Shanghai"))));}
  @Override public void onAppWidgetOptionsChanged(Context context,AppWidgetManager manager,int id,Bundle options){onUpdate(context,manager,new int[]{id});}
  @Override public void onReceive(Context context,Intent intent){super.onReceive(context,intent);String action=intent.getAction();if(REFRESH.equals(action)||Intent.ACTION_DATE_CHANGED.equals(action)||Intent.ACTION_TIME_CHANGED.equals(action)||Intent.ACTION_TIMEZONE_CHANGED.equals(action))updateAll(context);}
- public static void updateAll(Context context){AppWidgetManager manager=AppWidgetManager.getInstance(context);int[] ids=manager.getAppWidgetIds(new ComponentName(context,CourseWidget.class));if(ids.length>0)new CourseWidget().onUpdate(context,manager,ids);}
+ public static void updateAll(Context context){AppWidgetManager manager=AppWidgetManager.getInstance(context);for(Class<?> provider:new Class<?>[]{CourseWidget.class,CourseWidgetWide.class,CourseWidgetLarge.class}){int[] ids=manager.getAppWidgetIds(new ComponentName(context,provider));if(ids.length>0)new CourseWidget().onUpdate(context,manager,ids);}}
+ static int count(Context context){AppWidgetManager manager=AppWidgetManager.getInstance(context);int count=0;for(Class<?> provider:new Class<?>[]{CourseWidget.class,CourseWidgetWide.class,CourseWidgetLarge.class})count+=manager.getAppWidgetIds(new ComponentName(context,provider)).length;return count;}
  static RemoteViews views(Context context,int id,LocalDateTime now){
   String activity=MainActivity.class.getName(),prefix=context.getPackageName()+".";
   SharedPreferences prefs=context.getSharedPreferences(activity.startsWith(prefix)?activity.substring(prefix.length()):activity,Context.MODE_PRIVATE);
-  RemoteViews views=new RemoteViews(context.getPackageName(),R.layout.course_widget);
-  Intent open=new Intent(context,MainActivity.class).setAction(OPEN).setData(Uri.parse("courselens-widget://open/"+id)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
-  String date=now.format(DateTimeFormatter.ofPattern("M月d日",Locale.CHINA));
+  AppWidgetManager manager=AppWidgetManager.getInstance(context);AppWidgetProviderInfo info=manager.getAppWidgetInfo(id);Bundle options=manager.getAppWidgetOptions(id);android.graphics.Rect padding=AppWidgetHostView.getDefaultPaddingForWidget(context,new ComponentName(context,CourseWidget.class),null);float density=context.getResources().getDisplayMetrics().density;
+  int width=options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,info!=null&&!info.provider.getClassName().equals(CourseWidget.class.getName())?340:164)-Math.round((padding.left+padding.right)/density),height=options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,info!=null&&info.provider.getClassName().equals(CourseWidgetLarge.class.getName())?340:190)-Math.round((padding.top+padding.bottom)/density);if(width<=0)width=148;if(height<=0)height=148;
+  boolean compact=width<240&&height<260,large=height>=260;int limit=large?4:2;
+  RemoteViews views=new RemoteViews(context.getPackageName(),compact&&android.os.Build.VERSION.SDK_INT<31?R.layout.course_widget_square:R.layout.course_widget);
+  views.setViewVisibility(R.id.widget_empty_panel,android.view.View.GONE);views.setViewVisibility(R.id.widget_tomorrow,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_one,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_two,android.view.View.GONE);
+  if(android.os.Build.VERSION.SDK_INT>=31)views.setInt(R.id.widget_date,"setGravity",android.view.Gravity.START);
+  if(android.os.Build.VERSION.SDK_INT>=31){views.setViewLayoutWidth(R.id.widget_surface,compact?Math.min(width,height):width,android.util.TypedValue.COMPLEX_UNIT_DIP);views.setViewLayoutHeight(R.id.widget_surface,compact?Math.min(width,height):height,android.util.TypedValue.COMPLEX_UNIT_DIP);views.setViewLayoutHeight(R.id.widget_heading,compact?32:44,android.util.TypedValue.COMPLEX_UNIT_DIP);}
+  views.setViewVisibility(R.id.widget_date,android.view.View.VISIBLE);views.setTextViewTextSize(R.id.widget_date,android.util.TypedValue.COMPLEX_UNIT_SP,compact?14:18);views.setTextViewText(R.id.widget_date,now.format(DateTimeFormatter.ofPattern(compact?"E · MM.dd":"M月d日 · EEEE",Locale.CHINA)));
+
+  String term=prefs.getString("term","2026-08-31");
   try{
-   String term=prefs.getString("term","2026-08-31");WidgetSchedule schedule=WidgetSchedule.from(prefs.getString("courses",""),term,prefs.getString("courseAdjustments",""),prefs.getStringSet("displayChoices",Collections.emptySet()),now);
-   views.setTextViewText(R.id.widget_header,"今日 "+schedule.todayCount+" 门");
-   if(schedule.next==null){views.setTextViewText(R.id.widget_title,schedule.empty?"还没有课表":"本学期暂无待上课程");views.setTextViewText(R.id.widget_time,schedule.empty?"打开 App 同步或添加课程":"今日安排已计入上方课程数量");views.setTextViewText(R.id.widget_room,"点击打开课表");}
-   else{
-    Course c=schedule.next.courses.get(0);int week=(int)(ChronoUnit.DAYS.between(LocalDate.parse(term),schedule.next.start.toLocalDate())/7)+1;
-    views.setTextViewText(R.id.widget_title,SchoolParser.clean(c.name));views.setTextViewText(R.id.widget_time,schedule.next.start.format(DateTimeFormatter.ofPattern("M月d日 HH:mm",Locale.CHINA))+"\n第 "+c.start+"–"+c.end+" 节");views.setTextViewText(R.id.widget_room,c.room.isEmpty()?"地点未填写":SchoolParser.clean(c.room));
-    open.putExtra("widgetWeek",week).putExtra("widgetCourse",CourseDisplay.key(week,c)).putExtra("widgetTerm",term);
+   WidgetSchedule schedule=WidgetSchedule.from(prefs.getString("courses",""),term,prefs.getString("courseAdjustments",""),prefs.getStringSet("displayChoices",Collections.emptySet()),now);
+   views.setTextViewText(R.id.widget_header,"还剩 "+schedule.remainingCount+" 门");
+   int upcoming=0;while(upcoming<schedule.remaining.size()&&!now.toLocalTime().isBefore(LocalTime.parse(NextClass.START_TIMES[schedule.remaining.get(upcoming).start-1])))upcoming++;
+   for(int slot=0;slot<4;slot++){
+    Course c=slot<limit&&slot<schedule.remaining.size()?schedule.remaining.get(slot):null;
+    views.setViewVisibility(CONTENT[slot],c!=null?android.view.View.VISIBLE:android.view.View.GONE);
+    course(context,views,id,slot,c,term,now,"偷得浮生半日闲",compact,slot==upcoming);
    }
-  }catch(RuntimeException e){views.setTextViewText(R.id.widget_header,date+" · 下一节课");views.setTextViewText(R.id.widget_title,"请检查课表设置");views.setTextViewText(R.id.widget_time,"课表、调整记录或开学日期异常");views.setTextViewText(R.id.widget_room,"点击打开 App");}
-  views.setTextViewText(R.id.widget_updated,"更新 "+now.format(DateTimeFormatter.ofPattern("HH:mm")));
-  views.setOnClickPendingIntent(R.id.widget_content,PendingIntent.getActivity(context,id,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE));
+   int missing=schedule.remainingCount==0?0:limit-Math.min(limit,schedule.remainingCount);views.setViewVisibility(R.id.widget_space_one,(missing&1)!=0?android.view.View.VISIBLE:android.view.View.GONE);views.setViewVisibility(R.id.widget_space_two,(missing&2)!=0?android.view.View.VISIBLE:android.view.View.GONE);
+   if(schedule.remainingCount==0){
+    boolean finished=schedule.todayCount>0;views.setViewVisibility(R.id.widget_empty_panel,android.view.View.VISIBLE);
+    views.setInt(R.id.widget_empty_panel,"setBackgroundResource",compact?0:R.drawable.widget_free_background);
+    views.setTextViewText(R.id.widget_empty_status,finished?"今日课毕":"今日无课");views.setTextViewText(R.id.widget_empty_title,finished?"偷得浮生半日闲":"偷得浮生一日闲");
+    views.setTextViewText(R.id.widget_empty_description,finished?"今天的课程已经全部结束":"今天没有课程安排");views.setTextViewTextSize(R.id.widget_empty_title,android.util.TypedValue.COMPLEX_UNIT_SP,compact?14:large?22:20);views.setTextViewTextSize(R.id.widget_empty_description,android.util.TypedValue.COMPLEX_UNIT_SP,compact?10:large?12:11);
+    if(android.os.Build.VERSION.SDK_INT>=31)views.setInt(R.id.widget_date,"setGravity",compact?android.view.Gravity.CENTER:android.view.Gravity.START);views.setTextViewTextSize(R.id.widget_empty_status,android.util.TypedValue.COMPLEX_UNIT_SP,large?11:9);views.setInt(R.id.widget_empty_description,"setMaxLines",compact?1:2);
+    int inset=Math.round((compact?2:6)*density),badgeInset=Math.round((large?5:2)*density);views.setViewPadding(R.id.widget_empty_panel,inset,inset,inset,inset);views.setViewPadding(R.id.widget_empty_status,badgeInset,badgeInset,badgeInset,badgeInset);
+    if(android.os.Build.VERSION.SDK_INT>=31){views.setInt(R.id.widget_empty_title,"setGravity",compact||large?android.view.Gravity.CENTER:android.view.Gravity.START);views.setInt(R.id.widget_empty_description,"setGravity",compact||large?android.view.Gravity.CENTER:android.view.Gravity.START);views.setInt(R.id.widget_empty_panel,"setGravity",(compact||large?android.view.Gravity.CENTER:android.view.Gravity.START|android.view.Gravity.CENTER_VERTICAL));}
+    views.setOnClickPendingIntent(R.id.widget_empty_panel,open(context,id,4,null,term,now.toLocalDate()));
+    if(schedule.tomorrow!=null){Course tomorrow=schedule.tomorrow;String hint="明天第一节 "+NextClass.START_TIMES[tomorrow.start-1]+" · "+SchoolParser.clean(tomorrow.name)+(large&&!tomorrow.room.isEmpty()?" · "+SchoolParser.clean(tomorrow.room):"");views.setViewVisibility(R.id.widget_tomorrow,android.view.View.VISIBLE);views.setTextViewText(R.id.widget_tomorrow,hint);views.setTextViewTextSize(R.id.widget_tomorrow,android.util.TypedValue.COMPLEX_UNIT_SP,compact?9:12);views.setInt(R.id.widget_tomorrow,"setMaxLines",large?2:1);views.setOnClickPendingIntent(R.id.widget_tomorrow,open(context,id,5,tomorrow,term,now.toLocalDate().plusDays(1)));}
+   }
+  }catch(RuntimeException e){
+   views.setTextViewText(R.id.widget_header,"课表镜");views.setViewVisibility(CONTENT[0],android.view.View.VISIBLE);for(int slot=1;slot<4;slot++)views.setViewVisibility(CONTENT[slot],android.view.View.GONE);
+   course(context,views,id,0,null,term,now,"请检查课表设置",compact,false);
+  }
+
+  views.setContentDescription(R.id.widget_refresh,"刷新课表，上次更新 "+now.format(DateTimeFormatter.ofPattern("HH:mm")));
   Intent refresh=new Intent(context,CourseWidget.class).setAction(REFRESH).setData(Uri.parse("courselens-widget://refresh/"+id));views.setOnClickPendingIntent(R.id.widget_refresh,PendingIntent.getBroadcast(context,id,refresh,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE));
   return views;
  }
+ private static void course(Context context,RemoteViews views,int id,int slot,Course next,String term,LocalDateTime now,String empty,boolean compact,boolean upcoming){
+  int content=CONTENT[slot],title=TITLE[slot],time=TIME[slot],room=ROOM[slot];
+  if(next==null){views.setTextViewText(title,empty);views.setTextViewText(time,"");views.setTextViewText(room,"");views.setContentDescription(content,empty+"，点击打开课表");}
+  else{
+   Course c=next;
+   String when=NextClass.START_TIMES[c.start-1]+(compact?"":"–"+NextClass.END_TIMES[c.end-1]),where=c.room.isEmpty()?"地点未填写":SchoolParser.clean(c.room);
+   String status=now.toLocalTime().isBefore(LocalTime.parse(NextClass.START_TIMES[c.start-1]))?(upcoming?"下一节":"待上课"):"上课中";views.setTextViewText(STATUS[slot],status);
+   boolean active=upcoming||status.equals("上课中");views.setInt(content,"setBackgroundResource",active?R.drawable.widget_next_background:R.drawable.widget_course_background);views.setInt(STATUS[slot],"setBackgroundResource",active?R.drawable.widget_status_background:R.drawable.widget_waiting_background);views.setTextColor(STATUS[slot],active?0xff188466:0xff2375cf);
+   views.setTextViewText(title,SchoolParser.clean(c.name));views.setTextViewText(time,when);views.setTextViewText(room,where);
+   views.setContentDescription(content,status+"，"+SchoolParser.clean(c.name)+"，"+when+"，第"+c.start+"到"+c.end+"节，"+where);
+  }
+  views.setTextViewTextSize(title,android.util.TypedValue.COMPLEX_UNIT_SP,compact?13:18);views.setInt(title,"setMaxLines",compact?2:1);
+  views.setViewVisibility(STATUS[slot],next!=null&&(!compact||upcoming)?android.view.View.VISIBLE:android.view.View.GONE);views.setTextViewTextSize(STATUS[slot],android.util.TypedValue.COMPLEX_UNIT_SP,compact?9:11);
+  views.setViewVisibility(time,next==null?android.view.View.GONE:android.view.View.VISIBLE);
+  views.setViewVisibility(room,next==null?android.view.View.GONE:android.view.View.VISIBLE);
+  views.setOnClickPendingIntent(content,open(context,id,slot,next,term,now.toLocalDate()));
+ }
+ private static PendingIntent open(Context context,int id,int slot,Course course,String term,LocalDate date){
+  Intent intent=new Intent(context,MainActivity.class).setAction(OPEN).setData(Uri.parse("courselens-widget://open/"+id+"/"+slot)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+  if(course!=null){int week=(int)(ChronoUnit.DAYS.between(LocalDate.parse(term),date)/7)+1;intent.putExtra("widgetWeek",week).putExtra("widgetCourse",CourseDisplay.key(week,course)).putExtra("widgetTerm",term);}
+  return PendingIntent.getActivity(context,id,intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+ }
+
 }

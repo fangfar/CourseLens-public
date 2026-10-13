@@ -5,6 +5,7 @@ import java.util.*;
 
 public final class NextClass {
  public static final String[] START_TIMES={"08:00","08:50","09:50","10:40","11:30","14:00","14:50","15:50","16:40","18:40","19:30","20:20"};
+ public static final String[] END_TIMES={"08:40","09:30","10:30","11:20","12:10","14:40","15:30","16:30","17:20","19:20","20:10","21:00"};
  public final LocalDateTime start;
  public final List<Course> courses;
  private NextClass(LocalDateTime start,List<Course> courses){this.start=start;this.courses=Collections.unmodifiableList(courses);}

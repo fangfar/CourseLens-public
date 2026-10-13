@@ -5,5 +5,14 @@
   <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/><action android:name="android.intent.action.DATE_CHANGED"/><action android:name="android.intent.action.TIME_SET"/><action android:name="android.intent.action.TIMEZONE_CHANGED"/></intent-filter>
   <meta-data android:name="android.appwidget.provider" android:resource="@xml/course_widget_info"/>
  </receiver>
+ <receiver android:name=".CourseWidgetWide" android:exported="false" android:label="@string/widget_label">
+  <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/><action android:name="android.intent.action.DATE_CHANGED"/><action android:name="android.intent.action.TIME_SET"/><action android:name="android.intent.action.TIMEZONE_CHANGED"/></intent-filter>
+  <meta-data android:name="android.appwidget.provider" android:resource="@xml/course_widget_wide_info"/>
+ </receiver>
+ <receiver android:name=".CourseWidgetLarge" android:exported="false" android:label="@string/widget_label">
+  <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/><action android:name="android.intent.action.DATE_CHANGED"/><action android:name="android.intent.action.TIME_SET"/><action android:name="android.intent.action.TIMEZONE_CHANGED"/></intent-filter>
+  <meta-data android:name="android.appwidget.provider" android:resource="@xml/course_widget_large_info"/>
+ </receiver>
+ <receiver android:name=".WidgetPinReceiver" android:exported="false"/>
  </application>
 </manifest>
