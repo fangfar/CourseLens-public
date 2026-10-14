@@ -1,0 +1,87 @@
+name: Prepare signed release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'New tag matching app versionName, for example v2.7'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: official-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Validate new release tag
+        run: python3 tests/ReleaseChecks.py "$RELEASE_TAG" --prepare
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - name: Install Android SDK
+        run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+      - name: Regression checks
+        run: |
+          python3 tests/run_checks.py
+          python3 tests/ReleaseChecksTest.py
+      - name: Restore official signing key
+        env:
+          SIGNING_KEY: ${{ secrets.COURSELENS_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$SIGNING_KEY" || { echo 'Release signing secret is missing'; exit 1; }
+          printf '%s' "$SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/courselens.keystore"
+          chmod 600 "$RUNNER_TEMP/courselens.keystore"
+          echo "COURSELENS_KEYSTORE_FILE=$RUNNER_TEMP/courselens.keystore" >> "$GITHUB_ENV"
+      - name: Build and verify official APK
+        env:
+          COURSELENS_STORE_PASSWORD: ${{ secrets.COURSELENS_STORE_PASSWORD }}
+          COURSELENS_KEY_ALIAS: ${{ secrets.COURSELENS_KEY_ALIAS }}
+          COURSELENS_KEY_PASSWORD: ${{ secrets.COURSELENS_KEY_PASSWORD }}
+        run: |
+          python3 tests/SigningChecks.py --signed
+          sh gradlew --no-daemon assembleRelease lintRelease
+          python3 tests/ReleaseChecks.py "$RELEASE_TAG" --apk app/build/outputs/apk/release/app-release.apk
+      - name: Save verified artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: courselens-release-${{ github.sha }}
+          path: app/build/release/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$RELEASE_TAG" app/build/release/* \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --draft --title "CourseLens $RELEASE_TAG" --generate-notes
+      - name: Remove temporary signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/courselens.keystore"
+      - name: Upload release lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: courselens-release-lint-${{ github.sha }}
+          path: app/build/reports/lint-results-release.*
+          if-no-files-found: ignore
+          retention-days: 7

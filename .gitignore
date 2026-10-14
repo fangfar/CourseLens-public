@@ -3,6 +3,7 @@
 tests/out/
 local.properties
 signing.properties
+keystore.properties
 .env
 .env.*
 *.jks
@@ -11,3 +12,6 @@ signing.properties
 *.pfx
 *.pem
 *.key
+__pycache__/
+preview/
+*.apk

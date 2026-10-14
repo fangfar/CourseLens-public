@@ -4,6 +4,11 @@ import os
 import shutil
 import subprocess
 import tempfile
+import argparse
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--signed", action="store_true", help="Also check the configured official key and fingerprint rejection")
+args = parser.parse_args()
 
 root = Path(__file__).resolve().parent.parent
 names = ("COURSELENS_KEYSTORE_FILE", "COURSELENS_STORE_PASSWORD", "COURSELENS_KEY_ALIAS", "COURSELENS_KEY_PASSWORD")
@@ -31,6 +36,10 @@ with tempfile.TemporaryDirectory() as folder:
 
     check("missing key fails instead of generating a signer", [], "Fixed signing is required")
     check("PR verification works without signing secrets", ["-PqaBuild"], None)
+    check("QA cannot build an unsigned official release", ["-PqaBuild", "assembleRelease", "--dry-run"], "not found")
+    if not args.signed:
+        print("SKIP: official key checks (use --signed in the release environment)")
+        raise SystemExit(0)
     props = {}
     if (root / "signing.properties").exists():
         props = dict(line.split("=", 1) for line in (root / "signing.properties").read_text().splitlines() if "=" in line and not line.startswith("#"))

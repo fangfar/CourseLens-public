@@ -1,0 +1,56 @@
+name: Android checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - name: Install Android SDK
+        run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+      - name: Business regression checks
+        run: python3 tests/run_checks.py
+      - name: Release validation tests
+        run: python3 tests/ReleaseChecksTest.py
+      - name: Signing boundaries without official secrets
+        run: python3 tests/SigningChecks.py
+      - name: Build isolated QA APKs and lint
+        run: sh gradlew --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest lintDebug
+      - name: Upload QA APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: courselens-qa-${{ github.sha }}
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload test APK and lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: courselens-checks-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/androidTest/debug/*.apk
+            app/build/reports/lint-results-debug.*
+          if-no-files-found: ignore
+          retention-days: 7
