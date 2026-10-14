@@ -23,14 +23,10 @@
 
 课表不会通过系统备份自动恢复或迁移到新手机。更换手机、卸载或清空应用数据前，请保存重要信息。
 
-## 开发与反馈
-
-源码、开发 PR、自动检查和正式 Releases 统一在本仓库。main 保留稳定代码，独立功能使用短期分支。
-
-需要 JDK 17、Python 3 和 Android SDK；构建、测试、签名及发布步骤见 [开发指南](DEVELOPMENT.md)。普通贡献者使用隔离 QA 构建，无需正式签名密钥。Actions 的 QA APK 不用于更新日常应用。
+## 问题反馈
 
 在 [Issues](https://github.com/fangfar/CourseLens-public/issues) 提供版本、机型、Android 版本及复现步骤；请勿上传账号、密码、私人课表或完整个人截图。
 
 ## 许可证
 
-项目原创代码采用 [MIT License](LICENSE)，保留历史版权署名。第三方依赖遵循各自许可证。
+软件采用 [MIT License](LICENSE)。第三方依赖遵循各自许可证。
