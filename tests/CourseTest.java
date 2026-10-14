@@ -2,9 +2,10 @@ import cn.courselens.Course;
 import java.nio.file.*;
 public class CourseTest {
  public static void main(String[] args)throws Exception {
-  var courses=Course.parse(Files.readString(Path.of("app/src/main/assets/sample.txt")).replace("\uFEFF",""));
+  var courses=Course.parse(Files.readString(Path.of("app/src/androidTest/assets/sample.txt")));
   assert courses.size()==23;
   assert courses.get(0).active(6)&&!courses.get(0).active(7);
+  for(var sample:courses)assert sample.name.startsWith("合成课程")&&sample.room.startsWith("测试教室"):"Fixture must contain synthetic data only";
   var c=Course.parse("7|10|12|课程|地点|1-3,6").get(0);
   assert c.active(2)&&c.active(6)&&!c.active(4);
   var legacy=Course.parse("1|1|2|旧课程|旧地点老师|1-16").get(0);
