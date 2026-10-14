@@ -49,8 +49,14 @@ def main():
         tags = run("git", "tag", "--list", "v*").splitlines()
         if args.tag in tags:
             raise ValueError("Existing release tags must not be replaced")
-        previous = [version(run("git", "show", f"{tag}:app/build.gradle"), tag)[1] for tag in tags
-                    if re.fullmatch(r"v\d+\.\d+(?:\.\d+)?", tag)]
+        previous = []
+        for tag in tags:
+            if not re.fullmatch(r"v\d+\.\d+(?:\.\d+)?", tag):
+                continue
+            build = subprocess.run(["git", "show", f"{tag}:app/build.gradle"], cwd=ROOT, capture_output=True)
+            # The historical public v2.4 tag contains release information only.
+            if build.returncode == 0:
+                previous.append(version(build.stdout.decode("utf-8"), tag)[1])
         check_new_version(code, previous)
     if not args.apk:
         print(f"Validated {args.tag} / versionCode {code}")
