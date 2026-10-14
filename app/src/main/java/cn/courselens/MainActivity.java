@@ -133,6 +133,8 @@ public class MainActivity extends Activity {
    if(animate&&!open)return;open=false;int token=++generation;panel.animate().cancel();shade.animate().cancel();underneath.setImportantForAccessibility(accessibility);if(navigationOverlay==this){navigationOverlay=previous;root=underneath;pageBack=underneathBack;showingDetail=underneathDetail;if(previous!=null)previous.setVisibility(VISIBLE);updateSystemBack();View focus=corner?underneath.findViewWithTag("sheet-action-button"):underneath;if(corner&&focus==null)focus=underneath.findViewWithTag("quick-menu-button");if(focus!=null)focus.requestFocus();}setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);Runnable finish=()->{if(token==generation)stage.removeView(this);};
    if(animate&&isAttachedToWindow()&&android.animation.ValueAnimator.areAnimatorsEnabled()){panel.animate().alpha(corner?0f:1f).scaleX(corner?.86f:1f).scaleY(corner?.86f:1f).translationY(corner?0:dp(48)).setDuration(180).withEndAction(finish).start();shade.animate().alpha(0f).setDuration(180).start();}else finish.run();
   }
+  // Cold attachment replaces the floating observer with the window observer.
+  @Override protected void onAttachedToWindow(){super.onAttachedToWindow();observer=getViewTreeObserver();}
   @Override protected void onDetachedFromWindow(){generation++;if(pending!=null&&observer.isAlive())observer.removeOnPreDrawListener(pending);pending=null;panel.animate().cancel();shade.animate().cancel();super.onDetachedFromWindow();}
  }
  private LinearLayout panel(LinearLayout body){
