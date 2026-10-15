@@ -27,9 +27,6 @@
 
 在 [Issues](https://github.com/fangfar/CourseLens-public/issues) 提供版本、机型、Android 版本及复现步骤；请勿上传账号、密码、私人课表或完整个人截图。
 
-## 许可证
-
-软件采用 [MIT License](LICENSE)。第三方依赖遵循各自许可证。
 
 ## Star History
 
