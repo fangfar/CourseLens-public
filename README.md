@@ -30,3 +30,13 @@
 ## 许可证
 
 软件采用 [MIT License](LICENSE)。第三方依赖遵循各自许可证。
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=fangfar%2Fcourselens-public&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=fangfar/courselens-public&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=fangfar/courselens-public&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=fangfar/courselens-public&type=date&legend=top-left" />
+ </picture>
+</a>
