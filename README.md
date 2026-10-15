@@ -2,11 +2,11 @@
 
 轻量的 Android 课表应用，支持按周查看课程、课程详情、手动编辑、单次调课与停课、冲突课程选择和桌面小组件。已导入的课表可离线查看。
 
-支持 Android 8.0 及以上；学校同步目前适配宿迁学院，其他学校可手动添加。课表镜是独立应用，并非学校官方应用。
+支持 Android 8.0 及以上；学校同步目前适配宿迁学院，其他学校可手动添加。
 
 ## 下载与开始使用
 
-当前正式版本为 **2.6**。在 [GitHub Releases](https://github.com/fangfar/CourseLens-public/releases/latest) 下载正式 APK，版本更新说明和校验文件也在 Releases。已有用户优先覆盖安装；若无法覆盖，先保存重要数据，不要直接卸载旧应用。
+当前正式版本为 **2.6**。在 [GitHub Releases](https://github.com/fangfar/CourseLens-public/releases/latest) 下载正式 APK，版本更新说明和校验文件也在 Releases。
 
 1. 从右上角更多菜单进入“学校登录”导入，或在“课程管理”中手动添加课程。
 2. 在“完整设置”确认开学日期；左右滑动切换教学周，点击课程查看详情。
