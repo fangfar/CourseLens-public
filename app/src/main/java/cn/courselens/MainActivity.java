@@ -200,19 +200,15 @@ public class MainActivity extends Activity {
  private void conflictPicker(CourseDisplay.Group group,int shownWeek,int selected){
   String baseline=data,adjustmentBaseline=adjustments;int[] choice={selected};Course c=group.courses.get(selected);
   detail(c,shownWeek,()->home());NavigationOverlay sheet=navigationOverlay;sheet.panel.setTag("冲突课程");
-  Runnable reopen=()->conflictPicker(group,shownWeek,choice[0]);detailActions(c,shownWeek,reopen);
+  Runnable reopen=()->conflictPicker(group,shownWeek,choice[0]),conflictDetails=()->conflictComparison(group,shownWeek,choice[0]);detailActions(c,shownWeek,reopen,conflictDetails);
   java.util.function.IntConsumer pick=index->{
    if(!data.equals(baseline)||!adjustments.equals(adjustmentBaseline)){toast("课表已更新，请重新选择");home();return;}
    Course next=group.courses.get(index);choice[0]=index;CourseDisplay.prefer(next,displayChoices);getPreferences(0).edit().putStringSet("displayChoices",new HashSet<>(displayChoices)).apply();CourseWidget.updateAll(this);
    if(pager!=null&&pager.isAttachedToWindow())for(int i=0;i<pager.getChildCount();i++)if(pager.getChildAt(i) instanceof WeekGrid){WeekGrid grid=(WeekGrid)pager.getChildAt(i);buildGrid(grid,grid.shownWeek);}
-   sheet.body.removeAllViews();courseInformation(sheet.body,next,shownWeek);detailActions(next,shownWeek,reopen);
+   sheet.body.removeAllViews();courseInformation(sheet.body,next,shownWeek);detailActions(next,shownWeek,reopen,conflictDetails);
   };
-  TextView change=icon("⇄","切换冲突课程；点击循环切换，长按选择课程或查看对比",()->pick.accept((choice[0]+1)%group.courses.size()));change.setTag("conflict-switch");change.setTextSize(24);change.setBackground(bg(0xffeaf0fa,24));
+  TextView change=icon("⇄","切换冲突课程；点击循环切换",()->pick.accept((choice[0]+1)%group.courses.size()));change.setTag("conflict-switch");change.setTextSize(24);change.setBackground(bg(0xffeaf0fa,24));
   LinearLayout bar=(LinearLayout)sheet.panel.findViewWithTag("sheet-action-button").getParent();LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(48),dp(48));lp.rightMargin=dp(8);bar.addView(change,bar.getChildCount()-1,lp);
-  change.setOnLongClickListener(v->{NavigationOverlay menu=new NavigationOverlay(true,"选择冲突课程");
-   for(int i=0;i<group.courses.size();i++){final int index=i;String name=SchoolParser.clean(group.courses.get(i).name);menuItem(menu,name,"conflict-option-"+i,()->pick.accept(index));View item=menu.panel.findViewWithTag("conflict-option-"+i);item.setSelected(i==choice[0]);item.setContentDescription(name+(i==choice[0]?"，当前选择":""));}
-   menuItem(menu,"详情","conflict-course-details",()->conflictComparison(group,shownWeek,choice[0]));return true;
-  });
  }
  private void conflictComparison(CourseDisplay.Group group,int shownWeek,int selected){
   LinearLayout body=bottomSheet("冲突课程对比","",()->conflictPicker(group,shownWeek,selected));
@@ -225,7 +221,7 @@ public class MainActivity extends Activity {
  private void detail(Course c,Runnable back){detail(c,week,back);}
  private void detail(Course c,int shownWeek,Runnable back){
   LinearLayout body=bottomSheet("课程详情","",back);showingDetail=true;
-  courseInformation(body,c,shownWeek);detailActions(c,shownWeek,()->detail(c,shownWeek,back));
+  courseInformation(body,c,shownWeek);detailActions(c,shownWeek,()->detail(c,shownWeek,back),null);
  }
  private void courseInformation(LinearLayout body,Course c,int shownWeek){
   TextView title=root.findViewWithTag("navigation-title");title.setText(SchoolParser.clean(c.name));title.setTextSize(22);title.setTypeface(null,Typeface.BOLD);
@@ -246,9 +242,10 @@ public class MainActivity extends Activity {
   ImageView symbol=new ImageView(this);symbol.setImageResource(drawable);symbol.setImageTintList(android.content.res.ColorStateList.valueOf(PRIMARY));symbol.setBackground(bg(0xffedf2fc,12));symbol.setPadding(dp(9),dp(9),dp(9),dp(9));symbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams iconBounds=new LinearLayout.LayoutParams(dp(22),dp(22));iconBounds.rightMargin=dp(16);row.addView(symbol,iconBounds);
   TextView valueView=text(value,15,INK);valueView.setContentDescription(label+"，"+value);row.addView(valueView,new LinearLayout.LayoutParams(0,-2,1));body.addView(row);
  }
- private void detailActions(Course c,int shownWeek,Runnable reopen){
+ private void detailActions(Course c,int shownWeek,Runnable reopen,Runnable conflictDetails){
   CourseAdjustment moved=movedAdjustment(c,shownWeek);Course source=moved==null?originalCourse(c,shownWeek):moved.original;int sourceWeek=moved==null?shownWeek:moved.week;
   root.findViewWithTag("sheet-action-button").setVisibility(View.VISIBLE);root.findViewWithTag("sheet-action-button").setOnClickListener(v->{NavigationOverlay actions=sheetMenu("课程操作");
+  if(conflictDetails!=null)menuItem(actions,"冲突详情","conflict-course-details",conflictDetails);
   if(source!=null&&source.active(sourceWeek)){menuItem(actions,"本次调课","adjust-course",()->adjustmentForm(source,sourceWeek,false,reopen));menuItem(actions,"本次停课","cancel-course",()->adjustmentForm(source,sourceWeek,true,reopen));}
   menuItem(actions,"校对课程","edit-course",()->{List<Course> courses=Course.parse(data);int index=-1;for(int i=0;i<courses.size();i++)if(source!=null&&courses.get(i).encode().equals(source.encode())){index=i;break;}if(index<0){toast("课程已更新，请重新打开详情");home();return;}courseForm(source,index,reopen);});
   });
