@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "announcements": [],
   "android": {
-    "versionCode": 9,
-    "versionName": "2.6.1",
-    "changelog": "修复冷启动时弹层观察器未及时更新导致的重复重绘。\n精简关于软件页面，检查更新统一使用设置中的入口。\n移除正式安装包中的样例课表资源。",
-    "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.6.1/CourseLens-2.6.1-vc9.apk",
+    "versionCode": 10,
+    "versionName": "2.6.2",
+    "changelog": "冲突课程弹窗的更多菜单新增冲突详情，可直接查看课程对比。\n切换键保留短按循环切换，移除长按菜单；普通课程不显示冲突详情入口。",
+    "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.6.2/CourseLens-2.6.2-vc10.apk",
     "diskUrl": "https://pan.baidu.com/s/5Q7q-93RIXFczWfL1i3cvQg"
   },
   "repositoryUrl": "https://github.com/fangfar/CourseLens-public"
