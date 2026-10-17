@@ -18,7 +18,7 @@ public final class DialogLayoutChecks {
  private static void check(boolean value,String message){if(!value)throw new AssertionError(message);}
  private static void layout(AlertDialog dialog,String label){
   List<Rect> buttons=new ArrayList<>();int top=Integer.MAX_VALUE;
-  for(int which:new int[]{-1,-2,-3}){Button button=dialog.getButton(which);if(button==null||button.getVisibility()!=View.VISIBLE)continue;Rect bounds=new Rect();check(button.getGlobalVisibleRect(bounds),label+": button hidden");check(bounds.height()>=button.getHeight()-1,label+": button clipped");for(Rect other:buttons)check(!Rect.intersects(bounds,other),label+": buttons overlap");buttons.add(bounds);top=Math.min(top,bounds.top);}
+  for(int which:new int[]{-1,-2,-3}){Button button=dialog.getButton(which);if(button==null||button.getVisibility()!=View.VISIBLE)continue;Rect bounds=new Rect();check(button.getGlobalVisibleRect(bounds),label+": button hidden");check(bounds.height()>=button.getHeight()-1,label+": button clipped height="+button.getHeight()+" visible="+bounds+" parentHeight="+((View)button.getParent()).getHeight()+" minimum="+((View)button.getParent()).getMinimumHeight());for(Rect other:buttons)check(!Rect.intersects(bounds,other),label+": buttons overlap");buttons.add(bounds);top=Math.min(top,bounds.top);}
   View body=dialog.findViewById(android.R.id.message);if(body==null||!body.isShown())body=dialog.getWindow().getDecorView().findViewWithTag("remote-message");Rect text=new Rect();check(body!=null&&body.getGlobalVisibleRect(text),label+": message hidden");check(text.bottom<=top-8*body.getResources().getDisplayMetrics().density,label+": text touches button area");
  }
  public static void run(Instrumentation r){
@@ -37,7 +37,7 @@ public final class DialogLayoutChecks {
     }
    }
    main(r,()->check(courses.equals(get(a,"data")),"Dialog layout checks changed courses"));result.putString("result","PASS: six dialog layouts at normal and large font; visible buttons, separated text, no overlapping actions, unchanged courses");code=Activity.RESULT_OK;
-  }catch(Throwable e){result.putString("error",android.util.Log.getStackTraceString(e));}
+  }catch(Throwable e){result.putString("error",android.util.Log.getStackTraceString(e));try{android.graphics.Bitmap frame=r.getUiAutomation().takeScreenshot();try(java.io.FileOutputStream out=r.getTargetContext().openFileOutput("qa-dialog-layout-failure.png",0)){frame.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}frame.recycle();}catch(Exception ignored){}}
   finally{if(activity!=null){MainActivity a=activity;Configuration config=original;main(r,()->{if(config!=null)a.getResources().updateConfiguration(config,a.getResources().getDisplayMetrics());a.finish();});}if(prefs!=null){SharedPreferences.Editor edit=prefs.edit();if(hadGuide)edit.putBoolean("guideSeen",guide);else edit.remove("guideSeen");edit.commit();}r.finish(code,result);}
  }
 }
