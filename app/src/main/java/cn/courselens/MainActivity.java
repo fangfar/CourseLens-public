@@ -424,8 +424,7 @@ public class MainActivity extends Activity {
   Spinner targetWeek=null,day=null,start=null,end=null;EditText room=null;
   if(!cancel){
    String[] weeks=new String[30];for(int i=0;i<30;i++)weeks[i]="第 "+(i+1)+" 周";
-   // The shared animated sheet caches 12 rows; teaching weeks use the platform spinner.
-   TextView label=text("目标教学周",14,0xff56677e);label.setPadding(0,dp(14),0,dp(8));card.addView(label);targetWeek=new Spinner(this);targetWeek.setAdapter(new ArrayAdapter<>(this,R.layout.course_choice,weeks));targetWeek.setSelection(previous!=null&&previous.replacement!=null?Integer.parseInt(initial.weeks)-1:sourceWeek-1);targetWeek.setTag("adjustment-week");targetWeek.setContentDescription("目标教学周");targetWeek.setBackgroundResource(R.drawable.form_field);card.addView(targetWeek,new LinearLayout.LayoutParams(-1,dp(54)));
+   targetWeek=courseChoice(card,"目标教学周",weeks,previous!=null&&previous.replacement!=null?Integer.parseInt(initial.weeks)-1:sourceWeek-1,"adjustment-week");
    if(initial!=null&&initial.teacher.isEmpty()&&!initial.room.isEmpty()){TextView legacy=text("旧课表的老师可能包含在地点信息中，可在此手动分开填写。",12,0xff56677e);legacy.setPadding(0,dp(12),0,0);card.addView(legacy);}
    day=courseChoice(card,"星期",new String[]{"星期一","星期二","星期三","星期四","星期五","星期六","星期日"},initial.day-1,"adjustment-day");String[] units=new String[12];for(int i=0;i<12;i++)units[i]="第 "+(i+1)+" 节";
    start=courseChoice(card,"开始节次",units,initial.start-1,"adjustment-start");end=courseChoice(card,"结束节次",units,initial.end-1,"adjustment-end");room=courseField(card,"上课教室",SchoolParser.clean(initial.room),"教室 / 线上（选填）","adjustment-room");
@@ -484,34 +483,39 @@ public class MainActivity extends Activity {
   choiceSheet.open(choice,label,values);return choiceSheet;
  }
  private class CourseChoiceSheet extends FrameLayout {
-  final View shade;final LinearLayout panel;final TextView title,hint;final ScrollView scroll;final RadioButton[] options=new RadioButton[12];
+  final View shade;final LinearLayout panel;final TextView title,hint;final ScrollView scroll;final LinearLayout rows;final RadioButton[] options=new RadioButton[30];
   Spinner selected;boolean open;int generation;final int formAccessibility=root.getImportantForAccessibility();
   CourseChoiceSheet(){
    super(MainActivity.this);setVisibility(INVISIBLE);setFocusableInTouchMode(true);setClickable(true);
    shade=new View(MainActivity.this);shade.setBackgroundColor(0x66000000);shade.setTag("choice-shade");addView(shade,new FrameLayout.LayoutParams(-1,-1));shade.setOnClickListener(v->close(true));
-   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(20),dp(20),dp(20),dp(16));panel.setBackground(bg(Color.WHITE,28));panel.setClickable(true);FrameLayout.LayoutParams panelBounds=new FrameLayout.LayoutParams(-1,dp(700),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);panelBounds.bottomMargin=dp(16);addView(panel,panelBounds);
-   title=text("",21,INK);title.setTypeface(null,Typeface.BOLD);panel.addView(title);
-   hint=text("",13,0xff56677e);hint.setPadding(0,dp(8),0,dp(16));panel.addView(hint);
-   scroll=new ScrollView(MainActivity.this);panel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout rows=new LinearLayout(MainActivity.this);rows.setOrientation(LinearLayout.VERTICAL);scroll.addView(rows);
+   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(20),dp(12),dp(20),dp(12));panel.setBackground(bg(Color.WHITE,28));panel.setClickable(true);FrameLayout.LayoutParams panelBounds=new FrameLayout.LayoutParams(-1,dp(700),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);panelBounds.bottomMargin=dp(16);addView(panel,panelBounds);
+   View handle=new View(MainActivity.this);handle.setBackground(bg(0xffd4dfe2,2));handle.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams grip=new LinearLayout.LayoutParams(dp(36),dp(4));grip.gravity=Gravity.CENTER_HORIZONTAL;grip.bottomMargin=dp(16);panel.addView(handle,grip);
+   title=text("",21,NAVY);title.setTypeface(null,Typeface.BOLD);panel.addView(title);
+   hint=text("",14,MUTED);hint.setPadding(0,dp(8),0,dp(16));panel.addView(hint);
+   scroll=new ScrollView(MainActivity.this);scroll.setClipToPadding(false);panel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));rows=new LinearLayout(MainActivity.this);rows.setOrientation(LinearLayout.VERTICAL);scroll.addView(rows);
    for(int i=0;i<options.length;i++){
-    final int position=i;RadioButton option=new RadioButton(MainActivity.this);options[i]=option;option.setTextSize(16);option.setButtonTintList(android.content.res.ColorStateList.valueOf(0xff355db0));option.setPadding(dp(12),dp(10),dp(12),dp(10));option.setMinHeight(dp(58));option.setTag("choice-option-"+i);android.graphics.drawable.StateListDrawable background=new android.graphics.drawable.StateListDrawable();background.addState(new int[]{android.R.attr.state_checked},bg(SOFT,14));background.addState(new int[]{},bg(Color.WHITE,8));option.setBackground(background);option.setTextColor(new android.content.res.ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{0xff355db0,INK}));
-    option.setOnClickListener(v->{if(!open)return;selected.setSelection(position);close(true);});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(8);rows.addView(option,lp);
+    final int position=i;RadioButton option=new RadioButton(MainActivity.this);options[i]=option;option.setButtonDrawable(null);option.setGravity(Gravity.CENTER);option.setTextSize(15);option.setPadding(dp(8),dp(10),dp(8),dp(10));option.setTag("choice-option-"+i);option.setTextColor(NAVY);option.setLineSpacing(dp(3),1);option.setOnClickListener(v->{if(!open)return;selected.setSelection(position);close(true);});
    }
-   Button cancel=action(panel,"取消",()->close(true));cancel.setTag("choice-cancel");cancel.setTextColor(0xff355db0);cancel.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
+   Button cancel=action(panel,"取消",()->close(true));cancel.setTag("choice-cancel");cancel.setTextColor(NAVY);cancel.setBackgroundTintList(android.content.res.ColorStateList.valueOf(SURFACE));LinearLayout.LayoutParams footer=(LinearLayout.LayoutParams)cancel.getLayoutParams();footer.topMargin=dp(16);footer.bottomMargin=0;cancel.setStateListAnimator(null);
   }
   @Override protected void onMeasure(int widthSpec,int heightSpec){
-   FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)panel.getLayoutParams();lp.width=Math.max(1,MeasureSpec.getSize(widthSpec)-dp(32));lp.height=Math.max(1,Math.min(MeasureSpec.getSize(heightSpec)*3/4,dp(700)));super.onMeasure(widthSpec,heightSpec);
+   FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)panel.getLayoutParams();lp.width=Math.max(1,MeasureSpec.getSize(widthSpec)-dp(24));rows.measure(MeasureSpec.makeMeasureSpec(Math.max(1,lp.width-dp(40)),MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));int chrome=dp(154)+(int)(title.getTextSize()+hint.getTextSize());lp.height=Math.max(1,Math.min(MeasureSpec.getSize(heightSpec)*4/5,rows.getMeasuredHeight()+chrome));super.onMeasure(widthSpec,heightSpec);
   }
   void open(Spinner choice,String label,String[] values){
-   if(open&&selected==choice)return;int token=++generation;open=true;selected=choice;panel.animate().cancel();shade.animate().cancel();String heading="选择"+label,currentHint="当前："+values[choice.getSelectedItemPosition()]+" · 点击选项确认";if(!TextUtils.equals(title.getText(),heading))title.setText(heading);if(!TextUtils.equals(hint.getText(),currentHint))hint.setText(currentHint);
+   if(open&&selected==choice)return;int token=++generation;open=true;selected=choice;panel.animate().cancel();shade.animate().cancel();title.setText("选择"+label);hint.setText("当前："+values[choice.getSelectedItemPosition()]+" · 点选后返回");
+   boolean units=values.length==12,weeks=values.length==30;int columns=weeks?5:2;
+   for(RadioButton option:options)if(option.getParent()!=null)((ViewGroup)option.getParent()).removeView(option);rows.removeAllViews();
+   LinearLayout row=null;
    for(int i=0;i<options.length;i++){
-    RadioButton option=options[i];option.setVisibility(i<values.length?VISIBLE:GONE);if(i>=values.length)continue;boolean current=i==choice.getSelectedItemPosition();String time=values.length==12?"   "+START_TIMES[i]+"–"+END_TIMES[i]:"";
-    String caption=values[i]+time;if(!TextUtils.equals(option.getText(),caption))option.setText(caption);option.setChecked(current);option.setContentDescription(label+"，"+values[i]+time+(current?"，已选中":""));
+    RadioButton option=options[i];option.setVisibility(i<values.length?VISIBLE:GONE);if(i>=values.length)continue;
+    if(i%columns==0){row=new LinearLayout(MainActivity.this);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);rp.bottomMargin=dp(8);rows.addView(row,rp);}
+    boolean current=i==choice.getSelectedItemPosition();String caption=weeks?""+(i+1):values[i];if(units)caption+="\n"+START_TIMES[i]+"–"+END_TIMES[i];if(current)caption+="  ✓";option.setText(caption);option.setChecked(current);option.setTypeface(null,current?Typeface.BOLD:Typeface.NORMAL);option.setMinHeight(dp(weeks?48:units?72:56));GradientDrawable surface=bg(current?SOFT:SURFACE,16);if(current)surface.setStroke(dp(1.5f),0xff4f8b94);option.setBackground(surface);ripple(option);option.setContentDescription(label+"，"+values[i]+(units?"，"+START_TIMES[i]+"至"+END_TIMES[i]:"")+(current?"，已选中":""));LinearLayout.LayoutParams cell=new LinearLayout.LayoutParams(0,-2,1);if(i%columns>0)cell.leftMargin=dp(8);row.addView(option,cell);
    }
-   root.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);setVisibility(VISIBLE);updateSystemBack();requestFocus();if(android.os.Build.VERSION.SDK_INT>=28)setAccessibilityPaneTitle("选择"+label);
-   panel.setTranslationY(dp(48));shade.setAlpha(0f);
-   getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener(){public boolean onPreDraw(){getViewTreeObserver().removeOnPreDrawListener(this);if(token!=generation||!open||!isAttachedToWindow())return true;scroll.scrollTo(0,Math.max(0,options[choice.getSelectedItemPosition()].getTop()-dp(60)));if(android.animation.ValueAnimator.areAnimatorsEnabled()){panel.animate().translationY(0).setDuration(200).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();shade.animate().alpha(1f).setDuration(200).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();}else{panel.setTranslationY(0);shade.setAlpha(1f);}return true;}});
+   if(values.length%columns!=0)for(int i=values.length%columns;i<columns;i++){Space space=new Space(MainActivity.this);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,1,1);lp.leftMargin=dp(8);row.addView(space,lp);}
+   root.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);setVisibility(VISIBLE);updateSystemBack();requestFocus();if(Build.VERSION.SDK_INT>=28)setAccessibilityPaneTitle("选择"+label);requestLayout();panel.setTranslationY(dp(48));shade.setAlpha(0f);
+   getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener(){public boolean onPreDraw(){getViewTreeObserver().removeOnPreDrawListener(this);if(token!=generation||!open||!isAttachedToWindow())return true;RadioButton option=options[choice.getSelectedItemPosition()];android.graphics.Rect rect=new android.graphics.Rect(0,0,option.getWidth(),option.getHeight());rows.offsetDescendantRectToMyCoords(option,rect);scroll.scrollTo(0,Math.max(0,rect.top-dp(60)));if(android.animation.ValueAnimator.areAnimatorsEnabled()){panel.animate().translationY(0).setDuration(200).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();shade.animate().alpha(1f).setDuration(200).start();}else{panel.setTranslationY(0);shade.setAlpha(1f);}return true;}});
   }
+
   void close(boolean animate){
    scheduleRemoteNotice();
    if(animate&&!open)return;open=false;int token=++generation;panel.animate().cancel();shade.animate().cancel();Runnable finish=()->{if(token!=generation)return;setVisibility(INVISIBLE);updateSystemBack();root.setImportantForAccessibility(formAccessibility);if(selected!=null&&selected.isAttachedToWindow())selected.requestFocus();};
