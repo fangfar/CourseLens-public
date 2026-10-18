@@ -17,10 +17,11 @@ import javax.crypto.spec.*;
 final class ChaoxingClient implements AutoCloseable {
  interface Transport {String request(String url,String form)throws Exception;}
  private static final class ReadFailure extends IOException {ReadFailure(String stage,String reason){super(stage+"："+reason);}}
+ private static final class RequestFailure extends IOException {RequestFailure(String reason){super(reason);}}
  private static final class HttpFailure extends IOException {final int status;HttpFailure(int status){this.status=status;}}
  static String describe(Throwable error){if(error instanceof ReadFailure)return error.getMessage();return "读取过程异常，请重试";}
  private String fetch(String stage,String url)throws Exception {
-  try{return request(url,null);}catch(InterruptedIOException e){if(closed||Thread.currentThread().isInterrupted())throw e;throw new ReadFailure(stage,"网络请求超时");}catch(HttpFailure e){throw new ReadFailure(stage,"平台返回 HTTP "+e.status);}catch(UnknownHostException e){throw new ReadFailure(stage,"网络地址解析失败");}catch(javax.net.ssl.SSLException e){throw new ReadFailure(stage,"安全连接失败");}catch(Exception e){if(closed||Thread.currentThread().isInterrupted())throw new InterruptedIOException("读取已取消");throw new ReadFailure(stage,"平台请求未完成");}
+  try{return request(url,null);}catch(InterruptedIOException e){if(closed||Thread.currentThread().isInterrupted())throw e;throw new ReadFailure(stage,"网络请求超时");}catch(RequestFailure e){throw new ReadFailure(stage,e.getMessage());}catch(HttpFailure e){throw new ReadFailure(stage,"平台返回 HTTP "+e.status);}catch(UnknownHostException e){throw new ReadFailure(stage,"网络地址解析失败");}catch(javax.net.ssl.SSLException e){throw new ReadFailure(stage,"安全连接失败");}catch(Exception e){if(closed||Thread.currentThread().isInterrupted())throw new InterruptedIOException("读取已取消");String kind=e.getClass().getSimpleName();throw new ReadFailure(stage,"连接未完成（"+(kind.matches("[A-Za-z0-9]+")?kind:"NetworkError")+"）");}
  }
  static String institution(String html){
   Matcher match=Pattern.compile("(?:[\"']fid[\"']\\s*:|(?:var|let|const)\\s+fid\\s*=|\\bfid\\s*=)\\s*[\"']?([0-9]+)").matcher(html);if(match.find())return match.group(1);
@@ -127,25 +128,37 @@ final class ChaoxingClient implements AutoCloseable {
   return result;
  }
  static boolean paged(String html){Document page=Jsoup.parse(html);return page.selectFirst("a[rel=next],.pageNext,.nextPage")!=null||Pattern.compile("(?:总共|共)\\s*(?:[2-9]|[1-9][0-9]+)\\s*页").matcher(page.text()).find();}
+ static String redirected(String source,String location)throws IOException {
+  if(location==null)throw new RequestFailure("跳转缺少地址（R01）");
+  try{
+   String target=new URL(new URL(source),location).toString().replace(" ","%20");URI uri=URI.create(target);
+   if("http".equalsIgnoreCase(uri.getScheme())&&uri.getRawUserInfo()==null&&(uri.getPort()==-1||uri.getPort()==80)){
+    String host=uri.getHost();if(host==null)throw new RequestFailure("跳转地址无效（R03）");
+    target="https://"+host+(uri.getRawPath()==null?"":uri.getRawPath())+(uri.getRawQuery()==null?"":"?"+uri.getRawQuery());
+   }
+   if(!ChaoxingHomework.trusted(target))throw new RequestFailure("平台跳转超出学习通 HTTPS 范围（R02）");
+   return target;
+  }catch(IllegalArgumentException|MalformedURLException e){throw new RequestFailure("跳转地址格式无法识别（R03）");}
+ }
  private String http(String initial,String body)throws Exception {
   long wait=300-(System.currentTimeMillis()-lastRequest);if(wait>0)Thread.sleep(wait);lastRequest=System.currentTimeMillis();
   String url=initial;
   for(int redirects=0;redirects<8;redirects++){
    if(closed||Thread.currentThread().isInterrupted())throw new InterruptedIOException("读取已取消");
-   if(!ChaoxingHomework.trusted(url))throw new IOException("不可信的平台跳转。");
+   if(!ChaoxingHomework.trusted(url))throw new RequestFailure("平台跳转超出学习通 HTTPS 范围（R02）");
    HttpURLConnection connection=(HttpURLConnection)URI.create(url).toURL().openConnection();active=connection;
    try{
     connection.setConnectTimeout(15000);connection.setReadTimeout(20000);connection.setInstanceFollowRedirects(false);
     connection.setRequestProperty("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36");connection.setRequestProperty("Referer","https://i.chaoxing.com/");
-    List<String> stored=cookies.get(URI.create(url),Collections.emptyMap()).get("Cookie");String value=stored==null?"":String.join("; ",stored);String external=browserCookies==null?null:browserCookies.apply(url);if(external!=null&&!external.isBlank())value=value.isEmpty()?external:value+"; "+external;if(!value.isEmpty())connection.setRequestProperty("Cookie",value);
+    String value="";for(Map.Entry<String,List<String>> header:cookies.get(URI.create(url),Collections.emptyMap()).entrySet())if("Cookie".equalsIgnoreCase(header.getKey()))value=String.join("; ",header.getValue());String external=browserCookies==null?null:browserCookies.apply(url);if(external!=null&&!external.isBlank())value=value.isEmpty()?external:value+"; "+external;if(!value.isEmpty())connection.setRequestProperty("Cookie",value);
     if(body!=null){connection.setRequestMethod("POST");connection.setDoOutput(true);connection.setRequestProperty("Content-Type","application/x-www-form-urlencoded; charset=UTF-8");try(OutputStream out=connection.getOutputStream()){out.write(body.getBytes(StandardCharsets.UTF_8));}}
     int code=connection.getResponseCode();cookies.put(URI.create(url),connection.getHeaderFields());
-    if(code>=300&&code<400){String location=connection.getHeaderField("Location");if(location==null)throw new IOException("平台跳转信息缺失。");url=URI.create(url).resolve(location).toString();if(body!=null&&(code==307||code==308))throw new IOException("登录地址跳转异常。");body=null;continue;}
+    if(code>=300&&code<400){String location=connection.getHeaderField("Location");url=redirected(url,location);if(body!=null&&(code==307||code==308))throw new RequestFailure("登录请求发生保留表单的跳转，已停止（R04）");body=null;continue;}
     if(code!=200)throw new HttpFailure(code);
-    try(InputStream in=connection.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] buffer=new byte[8192];int count;while((count=in.read(buffer))!=-1){if(closed||Thread.currentThread().isInterrupted())throw new InterruptedIOException("读取已取消");if(out.size()+count>3*1024*1024)throw new IOException("平台响应过大，已停止读取。");out.write(buffer,0,count);}return out.toString(StandardCharsets.UTF_8.name());}
+    try(InputStream in=connection.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] buffer=new byte[8192];int count;while((count=in.read(buffer))!=-1){if(closed||Thread.currentThread().isInterrupted())throw new InterruptedIOException("读取已取消");if(out.size()+count>3*1024*1024)throw new RequestFailure("平台响应过大，已停止读取（R05）");out.write(buffer,0,count);}return out.toString(StandardCharsets.UTF_8.name());}
    }finally{connection.disconnect();active=null;}
   }
-  throw new IOException("平台跳转次数异常。");
+  throw new RequestFailure("平台跳转次数过多，可能登录会话未建立（R06）");
  }
  @Override public void close(){closed=true;HttpURLConnection connection=active;if(connection!=null)connection.disconnect();cookies.getCookieStore().removeAll();}
 }

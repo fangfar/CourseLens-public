@@ -32,6 +32,9 @@ public final class ChaoxingChecks {
   check(ChaoxingClient.institution("<input name='fid' value='101'>").equals("101"),"Institution input ignored");
   String clickCourse="<li><div onclick=\"window.open('/visit/stucoursemiddle?courseid=1&amp;clazzid=2&amp;cpi=3')\"></div><span class='course-name'>合成点击课程</span></li>";
   check(ChaoxingClient.subjects(clickCourse).size()==1,"Click-handler course ignored");
+  check(ChaoxingClient.redirected("https://i.chaoxing.com/base","http://i.chaoxing.com/base?x=1").equals("https://i.chaoxing.com/base?x=1"),"Official redirect not upgraded before request");
+  check(ChaoxingClient.redirected("https://i.chaoxing.com/base","/base?t=1").equals("https://i.chaoxing.com/base?t=1"),"Relative redirect failed");
+  for(String target:new String[]{"http://evil.example/path","http://user@i.chaoxing.com/base","http://i.chaoxing.com:8080/base"}){boolean blocked=false;try{ChaoxingClient.redirected("https://i.chaoxing.com/base",target);}catch(java.io.IOException e){blocked=true;}check(blocked,"Unsafe redirect accepted");}
   List<String> calls=new ArrayList<>();ChaoxingClient client=fake(calls,false);client.login("fixture-user","fixture-password");ChaoxingClient.Result result=client.sync(s->{});
   check(result.total==2&&result.checked==2&&result.warnings.isEmpty(),"Automatic traversal incomplete");check(result.items.size()==1,"Homework aggregation failed");check(result.items.get(0).course.equals("合成课程 A")&&result.items.get(0).title.equals("合成作业 & 报告")&&result.items.get(0).deadline.equals("10-21 23:59"),"Metadata differs");
   check(calls.size()==8,"Wrong login/query sequence");client.close();boolean canceled=false;try{client.sync(s->{});}catch(java.io.InterruptedIOException e){canceled=true;}check(canceled,"Closed session still queries");
