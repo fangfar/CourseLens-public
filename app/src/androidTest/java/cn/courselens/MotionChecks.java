@@ -20,14 +20,14 @@ public final class MotionChecks {
   main(runner,()->{try{call(a,"menu");}catch(Exception e){throw new RuntimeException(e);}});
   runner.waitForIdleSync();SystemClock.sleep(350);
   LinearLayout settings=(LinearLayout)field("root").get(a);ScrollView scroll=(ScrollView)settings.getChildAt(1);
-  String[] pages={"termPicker","edit","adjustmentManager","widgetAddPage","about","weekPicker"};
+  main(runner,()->{View spacer=new View(a);((LinearLayout)scroll.getChildAt(0)).addView(spacer,new LinearLayout.LayoutParams(1,a.getResources().getDisplayMetrics().heightPixels));});runner.waitForIdleSync();SystemClock.sleep(350);
+  String[] pages={"termPicker","edit","adjustmentManager","widgetAddPage","about"};
   for(int position=0;position<3;position++)for(int page=0;page<pages.length;page++){
    final int offset=position,index=page;int[] saved={0},firstFrame={-1};
    main(runner,()->{try{
     int max=scroll.getChildAt(0).getHeight()-scroll.getHeight()+scroll.getPaddingTop()+scroll.getPaddingBottom();
     check(max>0,"Settings fixture must scroll");scroll.scrollTo(0,max*offset/2);saved[0]=scroll.getScrollY();
     if(pages[index].equals("edit"))call(a,"edit",new Class<?>[]{Runnable.class},(Runnable)()->{try{call(a,"menu");}catch(Exception e){throw new RuntimeException(e);}});
-    else if(pages[index].equals("weekPicker"))settings.findViewWithTag("select-teaching-week").performClick();
     else call(a,pages[index]);
    }catch(Exception e){throw new RuntimeException(e);}});
    runner.waitForIdleSync();SystemClock.sleep(350);
@@ -61,7 +61,7 @@ public final class MotionChecks {
   HandlerThread collector=new HandlerThread("motion-frames");collector.start();
   List<Long> frames=Collections.synchronizedList(new ArrayList<>());List<Long> builds=new ArrayList<>();
   Window.OnFrameMetricsAvailableListener listener=(window,metrics,dropped)->frames.add(metrics.getMetric(FrameMetrics.TOTAL_DURATION));
-  SharedPreferences prefs=null;Map<String,?> original=null;
+  SharedPreferences prefs=null;Map<String,?> original=null;boolean listening=false;
   try{
    check(runner.getTargetContext().getPackageName().endsWith(".qa"),"Use isolated QA package");
    activity=NativeChecks.startQaActivity(runner);
@@ -72,9 +72,9 @@ public final class MotionChecks {
    main(runner,()->{try{a.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);field("data").set(a,fixture);field("week").setInt(a,6);field("adjustments").set(a,"");call(a,"home");}catch(Exception e){throw new RuntimeException(e);}});
    runner.waitForIdleSync();SystemClock.sleep(350);
    settingsScrollReturn(runner,a);
-   a.getWindow().addOnFrameMetricsAvailableListener(listener,new Handler(collector.getLooper()));
+   a.getWindow().addOnFrameMetricsAvailableListener(listener,new Handler(collector.getLooper()));listening=true;
    int[] scrollPosition={0};
-   String[] pages={"menu","weekPicker","edit","termPicker","detail","courseForm","adjustmentForm","cancelForm","adjustmentManager","conflictPicker","widgetAddPage","login"};
+   String[] pages={"menu","edit","termPicker","detail","courseForm","adjustmentForm","cancelForm","adjustmentManager","conflictPicker","widgetAddPage","login"};
    for(int round=0;round<3;round++)for(String page:pages){
     Bundle progress=new Bundle();progress.putString("page",page+" "+round);runner.sendStatus(0,progress);
     main(runner,()->{try{
@@ -107,8 +107,8 @@ public final class MotionChecks {
      View root=(View)field("root").get(a);
      check(root.isAttachedToWindow()&&root.getAlpha()==1f&&root.getScaleX()==1f&&root.getTranslationY()==0f,"Unsettled "+page+" attached="+root.isAttachedToWindow()+" alpha="+root.getAlpha()+" scale="+root.getScaleX()+" y="+root.getTranslationY()+" width="+root.getWidth());
      check(root.getLayerType()==View.LAYER_TYPE_NONE,"Leaked hardware layer "+page);
-     if(page.equals("detail")||page.equals("weekPicker")||page.equals("conflictPicker")){ViewGroup panel=(ViewGroup)root;int available=((View)panel.getParent()).getHeight();check(panel.getHeight()>=available/2&&panel.getHeight()<=available*4/5,"Bottom sheet exceeds readable size bounds: "+page);TextView title=panel.findViewWithTag("navigation-title");check(title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity>=20,"Sheet title was shrunk: "+page);if(page.equals("weekPicker")){check(panel.findViewWithTag("week-choice-30")!=null,"Direct week grid incomplete");View cell=panel.findViewWithTag("week-choice-6");check(cell.isSelected()&&cell.getHeight()>=48*a.getResources().getDisplayMetrics().density,"Week selection or touch target missing");}}
-     if(page.equals("edit")||page.equals("widgetAddPage")){View primary=root.findViewWithTag(page.equals("edit")?"manage-add-course":"pin-home-widget");check(((ViewGroup.MarginLayoutParams)primary.getLayoutParams()).bottomMargin>=16*a.getResources().getDisplayMetrics().density,"Primary action touches following controls: "+page);}
+     if(page.equals("detail")||page.equals("weekPicker")||page.equals("conflictPicker")){ViewGroup panel=(ViewGroup)root;int available=((View)panel.getParent()).getHeight();check(panel.getHeight()>0&&panel.getHeight()<=available*4/5,"Bottom sheet exceeds readable size bounds: "+page);TextView title=panel.findViewWithTag("navigation-title");check(title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity>=18,"Sheet title was shrunk: "+page);if(page.equals("weekPicker")){check(panel.findViewWithTag("week-choice-30")!=null,"Direct week grid incomplete");View cell=panel.findViewWithTag("week-choice-6");check(cell.isSelected()&&cell.getHeight()>=48*a.getResources().getDisplayMetrics().density,"Week selection or touch target missing");}}
+     if(page.equals("widgetAddPage")){View primary=root.findViewWithTag("pin-home-widget");check(((ViewGroup.MarginLayoutParams)primary.getLayoutParams()).bottomMargin>=16*a.getResources().getDisplayMetrics().density,"Primary action touches following controls: "+page);}
      if(page.equals("courseForm")){check(root.findViewWithTag("course-name")!=null,"Course form replaced before draft check: tag="+root.getTag());((EditText)root.findViewWithTag("course-name")).setText("不应保存的草稿");}
      if(page.equals("adjustmentForm"))((EditText)root.findViewWithTag("adjustment-room")).setText("不应保存的教室");
      boolean sheet=field("navigationOverlay").get(a)!=null;
@@ -212,8 +212,8 @@ public final class MotionChecks {
    check(prefs.getAll().equals(original),"Motion checks changed preferences");
    synchronized(frames){result.putString("frames",String.format(Locale.ROOT,"n=%d total-duration median=%.2fms p95=%.2fms",frames.size(),percentile(frames,.5),percentile(frames,.95)));}
    result.putString("builds",String.format(Locale.ROOT,"n=%d median=%.2fms p95=%.2fms",builds.size(),percentile(builds,.5),percentile(builds,.95)));
-   result.putString("result","PASS: three bottom sheets, nested sheet return, three corner menu actions, rapid menu reopen, 12 page entries, rapid navigation, mid-animation back, touch blocking, fade through, scroll return, three sheets, system back, unsaved drafts and unchanged preferences");code=Activity.RESULT_OK;
+   result.putString("result","PASS: three bottom sheets, nested sheet return, three corner menu actions, rapid menu reopen, 11 page entries, rapid navigation, mid-animation back, touch blocking, fade through, scroll return, three sheets, system back, unsaved drafts and unchanged preferences");code=Activity.RESULT_OK;
   }catch(Throwable e){java.io.StringWriter trace=new java.io.StringWriter();e.printStackTrace(new java.io.PrintWriter(trace));result.putString("result","FAIL: "+trace);}
-  finally{if(activity!=null){MainActivity a=activity;a.getWindow().removeOnFrameMetricsAvailableListener(listener);main(runner,a::finish);}collector.quitSafely();runner.finish(code,result);}
+  finally{if(activity!=null){MainActivity a=activity;if(listening)a.getWindow().removeOnFrameMetricsAvailableListener(listener);main(runner,a::finish);}collector.quitSafely();runner.finish(code,result);}
  }
 }

@@ -21,7 +21,7 @@ public final class SaveChecks {
  private static void header(MainActivity a,String tag)throws Exception{View button=root(a).findViewWithTag(tag);ViewGroup bar=(ViewGroup)((ViewGroup)root(a)).getChildAt(0);check(button!=null&&button.getParent()==bar&&bar.getChildAt(bar.getChildCount()-1)==button&&button.getContentDescription().toString().equals("保存"),"Save is not in top-right header");}
  private static void dateLayout(MainActivity a)throws Exception{
   DatePicker picker=root(a).findViewWithTag("term-date");ViewGroup card=(ViewGroup)picker.getParent(),body=(ViewGroup)card.getParent();
-  check(card.getWidth()==picker.getWidth()&&picker.getLeft()==0,"Date picker and card edges are not aligned: card="+card.getWidth()+", picker="+picker.getWidth());
+  int left=picker.getLeft()-card.getPaddingLeft(),right=card.getWidth()-card.getPaddingRight()-picker.getRight();check(left>=0&&right>=0&&Math.abs(left-right)<=1,"Date picker is clipped or off-center: "+left+" / "+right);check(!picker.getCalendarViewShown()&&picker.getSpinnersShown(),"Date picker is not in compact year/month/day mode");TextView summary=root(a).findViewWithTag("term-date-summary");check(summary.getText().toString().equals(String.format(Locale.CHINA,"%d年%d月%d日",picker.getYear(),picker.getMonth()+1,picker.getDayOfMonth())),"Selected date summary is stale");
   check(Math.abs((card.getLeft()-body.getPaddingLeft())-(body.getWidth()-body.getPaddingRight()-card.getRight()))<=1,"Date card is not centered");
   check(card.getHeight()-picker.getBottom()>=Math.round(12*a.getResources().getDisplayMetrics().density),"Last calendar row touches the card edge");
  }
@@ -33,8 +33,8 @@ public final class SaveChecks {
   try{
    check(r.getTargetContext().getPackageName().endsWith(".qa"),"QA only");activity=NativeChecks.startQaActivity(r);MainActivity a=activity;prefs=a.getPreferences(0);backup=prefs.getAll();Course course=new Course(1,1,2,"保存测试","A101","1-3","合成教师");String fixture=course.encode();
    main(r,()->{set(a,"data",fixture);set(a,"term","2026-08-31");call(a,"menu");check(root(a).findViewWithTag("settings-term")!=null,"Term setting missing");});r.waitForIdleSync();SystemClock.sleep(350);snapshot(r,a,"qa-settings-design.png");
-   main(r,()->{root(a).findViewWithTag("settings-term").performClick();header(a,"save-term");Button save=root(a).findViewWithTag("save-term");check(save.getBackgroundTintList().getDefaultColor()==0xff9aebf2,"Save does not use the aqua action color");DatePicker picker=root(a).findViewWithTag("term-date");android.util.TypedValue accent=new android.util.TypedValue();check(picker.getContext().getTheme().resolveAttribute(android.R.attr.colorAccent,accent,true)&&accent.data==0xff4266ad,"Calendar accent is not blue");});r.waitForIdleSync();SystemClock.sleep(350);snapshot(r,a,"qa-date-design.png");
-   for(int[] date:new int[][]{{2021,1,28},{2026,5,30},{2026,7,31}}){
+   main(r,()->{root(a).findViewWithTag("settings-term").performClick();header(a,"save-term");Button save=root(a).findViewWithTag("save-term");check(save.getBackgroundTintList().getDefaultColor()==0xff0866d9,"Save does not use the blue action color");DatePicker picker=root(a).findViewWithTag("term-date");android.util.TypedValue accent=new android.util.TypedValue();check(picker.getContext().getTheme().resolveAttribute(android.R.attr.colorAccent,accent,true)&&accent.data==0xff0866d9,"Calendar accent is not blue");});r.waitForIdleSync();SystemClock.sleep(350);snapshot(r,a,"qa-date-design.png");
+   for(int[] date:new int[][]{{2021,1,28},{2024,1,29},{2026,5,30},{2026,7,31}}){
     main(r,()->((DatePicker)root(a).findViewWithTag("term-date")).updateDate(date[0],date[1],date[2]));r.waitForIdleSync();SystemClock.sleep(350);
     snapshot(r,a,"qa-date-layout-"+date[0]+"-"+(date[1]+1)+".png");main(r,()->dateLayout(a));
    }

@@ -3,7 +3,7 @@
 ## 正式与预研隔离
 
 - 任务页及学习通基础作业功能纳入正式开发范围：账号验证、本机加密配置、主动刷新、课程名称与作业展示、按账号离线保存。合并源码不等于发布 APK；正式签名与公开发布仍需单独授权。后续未开放的平台和社交继续隔离开发。
-- 入口：任务 → 账号密码配置。提交后先通过学习通认证，返回登录成功才使用 Android Keystore 的 AES-GCM 密钥加密保存账号及密码；认证失败不替换原配置。配置输入框不回填密码，不参与实例保存 / 自动填充，不写日志或导出文件。
+- 入口：任务 → 右上角账号图标（账号密码配置），旁边为刷新图标（刷新作业）；长按图标可查看名称。提交后先通过学习通认证，返回登录成功才使用 Android Keystore 的 AES-GCM 密钥加密保存账号及密码；认证失败不替换原配置。配置输入框不回填密码，不参与实例保存 / 自动填充，不写日志或导出文件。
 - 账号密码在登录验证成功后加密保存到本机，供后续主动刷新使用。进入任务页和保存配置均不自动读取作业，也不安排后台刷新；只有点击“刷新作业”才使用本机配置登录并获取数据。配置过程仍需联网验证登录是否成功。右上角区分已配置 / 本次已连接 / 待验证，作业读取失败保留本次页面已有结果。
 - 任务页剩余区域直接展示课程、作业标题、提交状态和截止时间，并支持待处理 / 已完成 / 全部筛选。结果按账号保存到 App 私有文件，退出 / 重启后从本机加载，不联网刷新；只保存展示所需课程名、标题、状态和截止时间，不保存签名链接或 Cookie。写入使用 AtomicFile，失败保留原文件。完整刷新替换本机数据；读取失败或部分失败且已有缓存时保留旧数据。未知截止时间与部分失败保留明确说明。无年份日期不猜年份；已提交作业暂不额外请求详情。当前只支持手机号 / 超星账号，验证码或机构认证失败不会保存密码配置。
 - 表单、按钮和弹窗继续复用 `SecondaryUi`、`form_field`、`SecondaryDialog`。设备调试 / 仪器检查按当前用户授权执行；用户手动验收不能代替正式签名、覆盖更新和发布检查。
@@ -46,7 +46,9 @@ adb -s SERIAL install -r app/build/outputs/apk/androidTest/debug/app-debug-andro
 adb -s SERIAL shell am instrument -w -e saveOnly true cn.courselens.qa.test/cn.courselens.NativeChecks
 ```
 
-`SERIAL` 替换为已核验序列号，手机保持解锁和 App 前台。参数可换为 `chaoxingOnly`（学习通只读客户端合成检查）、`navigationOnly`（任务页导航）、`choiceOnly`（课程与调课选择器、取消和草稿保留）、`dialogLayoutOnly`（普通与大字体弹窗正文、按钮分区）、`courseSlotsOnly`、`scrollOnly`、`conflictOnly`、`adjustmentOnly`、`widgetOnly`、`widgetGuideOnly`、`widgetPinOnly`、`motionOnly`、`gestureOnly`、`performanceOnly` 或 `remoteOnly`；不指定专项参数运行全量入口。`nextClassOnly` 是历史名称，首页已无下一节提示。
+`SERIAL` 替换为已核验序列号，手机保持解锁和 App 前台。参数可换为 `chaoxingOnly`（学习通只读客户端合成检查）、`navigationOnly`（任务页导航、紧凑操作及普通 / 大字体布局）、`choiceOnly`（课程与调课选择器、取消和草稿保留）、`dialogLayoutOnly`（普通与大字体弹窗正文、按钮分区）、`courseSlotsOnly`、`scrollOnly`、`conflictOnly`、`adjustmentOnly`、`widgetOnly`、`widgetGuideOnly`、`widgetPinOnly`、`motionOnly`、`gestureOnly`、`performanceOnly` 或 `remoteOnly`；不指定专项参数运行全量入口。`nextClassOnly` 是历史名称，首页已无下一节提示。
+
+`navigationOnly`、`choiceOnly`、`dialogLayoutOnly` 可追加 `-e normalFontOnly true`，只检查设备当前字号，不临时放大字体；未指定时仍覆盖普通与大字体。
 
 测试使用合成数据；正式 Activity 与 QA Activity 的偏好文件名不同，按实际包与文件核实。测试结束或中断后恢复并比较备份，不能仅凭测试的 PASS 推断用户数据未变化。小组件添加、尺寸和点击另在真实启动器验收，测试宿主不能替代它。
 

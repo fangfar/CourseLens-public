@@ -52,7 +52,7 @@ public final class NextClassChecks {
    runner.runOnMainSync(()->{try{
     check(field("week").getInt(a)==currentWeek[0]&&((androidx.viewpager.widget.ViewPager)field("pager").get(a)).getCurrentItem()==currentWeek[0]-1,"Return to current week failed");
     check(field("pageBack").get(a)==null,"Current week did not return home");check(((View)field("root").get(a)).findViewWithTag("return-current-week").getVisibility()==View.GONE,"Return button still visible this week");
-    call(a,"menu");View settings=(View)field("root").get(a);check(settings.findViewWithTag("return-current-week")==null,"Duplicate return entry in settings");settings.findViewWithTag("select-teaching-week").performClick();NativeChecks.openSheetMenu(a);check(((View)field("root").get(a)).findViewWithTag("week-30")!=null,"Settings week selection missing");check(((View)field("root").get(a)).findViewWithTag("return-current-week")==null,"Duplicate return entry in week menu");a.onBackPressed();a.onBackPressed();a.onBackPressed();
+    call(a,"menu");View settings=(View)field("root").get(a);check(settings.findViewWithTag("return-current-week")==null,"Duplicate return entry in settings");check(settings.findViewWithTag("select-teaching-week")==null,"Temporary week-selection entry is still visible");a.onBackPressed();
     check(activityPrefs.getInt("week",-1)==currentWeek[0],"Current week not saved");
    }catch(Throwable e){failure.set(e);}});
    if(failure.get()!=null)throw new RuntimeException(failure.get());
@@ -94,7 +94,7 @@ public final class NextClassChecks {
    runner.waitForIdleSync();android.os.SystemClock.sleep(400);
    runner.runOnMainSync(()->{try{check(((android.widget.ScrollView)field("timetableScroll").get(a)).getScrollY()==scrollY[0],"Settings return reset scroll");check(field("week").getInt(a)==1,"Settings return changed viewed week");}catch(Throwable e){failure.set(e);}});
    if(failure.get()!=null)throw new RuntimeException(failure.get());
-   result.putString("result","PASS: home return icon left of more, both-direction 0/1/2-week visibility boundary, return/hide, settings-only week selection, read-only date, no home next-class hint, preserved saved timetable, secondary navigation, lifecycle, month/date row follows partial horizontal drag, vertically pinned header and scroll return");code=Activity.RESULT_OK;
+   result.putString("result","PASS: home return icon left of more, both-direction 0/1/2-week visibility boundary, return/hide, hidden direct week selection, read-only date, no home next-class hint, preserved saved timetable, secondary navigation, lifecycle, month/date row follows partial horizontal drag, vertically pinned header and scroll return");code=Activity.RESULT_OK;
   }catch(Throwable e){result.putString("result","FAIL: "+e);}
   finally{if(activity!=null){MainActivity a=activity;runner.runOnMainSync(a::finish);}if(prefs!=null){android.content.SharedPreferences.Editor editor=prefs.edit();if(savedPreferences.containsKey("week"))editor.putInt("week",(Integer)savedPreferences.get("week"));else editor.remove("week");for(String key:new String[]{"courses","notes","term"})if(savedPreferences.containsKey(key))editor.putString(key,(String)savedPreferences.get(key));else editor.remove(key);check(editor.commit()&&prefs.getAll().equals(savedPreferences),"Original preferences not restored");}runner.finish(code,result);}
  }
