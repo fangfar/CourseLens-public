@@ -77,7 +77,7 @@ final class TaskPage extends LinearLayout {
   worker.execute(()->{try{ChaoxingAccount.Saved saved=account.load();connection.login(saved.account,saved.password);activity.runOnUiThread(()->{if(current(token))connected(true);});sync(connection,token);}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);connected(false);status.setText("登录未成功，请检查网络或重新配置密码。已有作业保留。");}});}});
  }
  private void sync(ChaoxingClient connection,int token){
-  try{ChaoxingClient.Result result=connection.sync(message->activity.runOnUiThread(()->{if(current(token))status.setText(message);}));activity.runOnUiThread(()->{if(current(token)){snapshot=result;busy(false);status.setText("已读取 "+result.checked+" / "+result.total+" 门课程 · "+result.items.size()+" 份作业"+(result.warnings.isEmpty()?"":" · 部分信息未完成"));render();}});}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("登录成功，但作业读取未完成。密码配置已保留，请稍后刷新。");}});}
+  try{ChaoxingClient.Result result=connection.sync(message->activity.runOnUiThread(()->{if(current(token))status.setText(message);}));activity.runOnUiThread(()->{if(current(token)){snapshot=result;busy(false);status.setText("已读取 "+result.checked+" / "+result.total+" 门课程 · "+result.items.size()+" 份作业"+(result.warnings.isEmpty()?"":" · 部分信息未完成"));render();}});}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("作业读取失败（"+ChaoxingClient.describe(e)+"）。密码配置已保留。");}});}
  }
  void saveState(Bundle state){state.putInt("filter",filter);state.putInt("scrollY",scroll.getScrollY());}
  void close(){closed=true;generation++;if(configuration!=null)configuration.dismiss();if(passwordField!=null)passwordField.setText("");if(client!=null)client.close();worker.shutdownNow();}

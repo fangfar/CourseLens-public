@@ -16,6 +16,17 @@ import javax.crypto.spec.*;
 /** Read-only platform adapter; credentials are used for one login, never persisted. */
 final class ChaoxingClient implements AutoCloseable {
  interface Transport {String request(String url,String form)throws Exception;}
+ private static final class ReadFailure extends IOException {ReadFailure(String stage,String reason){super(stage+"："+reason);}}
+ private static final class HttpFailure extends IOException {final int status;HttpFailure(int status){this.status=status;}}
+ static String describe(Throwable error){if(error instanceof ReadFailure)return error.getMessage();return "读取过程异常，请重试";}
+ private String fetch(String stage,String url)throws Exception {
+  try{return request(url,null);}catch(InterruptedIOException e){if(closed||Thread.currentThread().isInterrupted())throw e;throw new ReadFailure(stage,"网络请求超时");}catch(HttpFailure e){throw new ReadFailure(stage,"平台返回 HTTP "+e.status);}catch(UnknownHostException e){throw new ReadFailure(stage,"网络地址解析失败");}catch(javax.net.ssl.SSLException e){throw new ReadFailure(stage,"安全连接失败");}catch(Exception e){if(closed||Thread.currentThread().isInterrupted())throw new InterruptedIOException("读取已取消");throw new ReadFailure(stage,"平台请求未完成");}
+ }
+ static String institution(String html){
+  Matcher match=Pattern.compile("(?:[\"']fid[\"']\\s*:|(?:var|let|const)\\s+fid\\s*=|\\bfid\\s*=)\\s*[\"']?([0-9]+)").matcher(html);if(match.find())return match.group(1);
+  Document page=Jsoup.parse(html);Element input=page.selectFirst("input#fid,input[name=fid]");return input!=null&&input.val().matches("[0-9]+")?input.val():"";
+ }
+
  static final class Subject {
   final String name,id,clazz,cpi;
   Subject(String name,String id,String clazz,String cpi){this.name=name;this.id=id;this.clazz=clazz;this.cpi=cpi;}
@@ -58,8 +69,9 @@ final class ChaoxingClient implements AutoCloseable {
  }
  static List<Subject> subjects(String html)throws IOException {
   Document page=Jsoup.parse(html);List<Subject> subjects=new ArrayList<>();Set<String> seen=new HashSet<>();
-  for(Element link:page.select("a[href*=stucoursemiddle]")){
-   String href=link.attr("href");Map<String,String> args=query(href);String id=args.getOrDefault("courseid",""),clazz=args.getOrDefault("clazzid",""),cpi=args.getOrDefault("cpi","");
+  for(Element link:page.select("a[href*=stucoursemiddle],[onclick*=stucoursemiddle]")){
+   String source=link.attr("href")+" "+link.attr("onclick");Matcher path=Pattern.compile("stucoursemiddle\\?([^\\s\"'<>]+)").matcher(source);if(!path.find())continue;
+   Map<String,String> args=query("stucoursemiddle?"+path.group(1));String id=args.getOrDefault("courseid",""),clazz=args.getOrDefault("clazzid",""),cpi=args.getOrDefault("cpi","");
    if(!id.matches("[0-9]+")||!clazz.matches("[0-9]+")||!cpi.matches("[0-9]+"))continue;
    if(!seen.add(id+":"+clazz+":"+cpi))continue;
    Element container=link.closest("li");if(container==null)container=link.parent();Element name=container==null?null:container.selectFirst(".course-name");
@@ -91,27 +103,26 @@ final class ChaoxingClient implements AutoCloseable {
   return range.find()?range.group(1):"截止时间未知";
  }
  Result sync(Consumer<String> progress)throws Exception {
-  progress.accept("正在读取课程列表…");String base=request("https://i.chaoxing.com/base",null);
-  Matcher fid=Pattern.compile("(?:[\"']fid[\"']\\s*:|\\bvar\\s+fid\\s*=)\\s*[\"']?([0-9]+)").matcher(base);
-  if(!fid.find())throw new IOException("未读取到账号所属机构，请重新登录或使用官方验证入口。");
-  String courseUrl="https://mooc2-ans.chaoxing.com/mooc2-ans/visit/courselistdata?"+form("courseType","1","courseFid",fid.group(1),"courseTeacherid","0","courseOrderBy","0");
-  String courseHtml=request(courseUrl,null);List<Subject> courses=subjects(courseHtml);Result result=new Result();result.total=courses.size();if(paged(courseHtml))result.warnings.add("课程列表存在分页，尚未读取后续课程。");
+  progress.accept("正在读取账号信息…");String base=fetch("账号信息","https://i.chaoxing.com/base"),fid=institution(base);
+  if(fid.isEmpty())throw new ReadFailure("账号信息","页面未提供机构编号");
+  progress.accept("正在读取课程列表…");String courseUrl="https://mooc2-ans.chaoxing.com/mooc2-ans/visit/courselistdata?"+form("courseType","1","courseFid",fid,"courseTeacherid","0","courseOrderBy","0");
+  String courseHtml=fetch("课程列表",courseUrl);List<Subject> courses;try{courses=subjects(courseHtml);}catch(IOException e){throw new ReadFailure("课程列表","页面结构未识别，可能需要重新登录或适配页面");}Result result=new Result();result.total=courses.size();if(paged(courseHtml))result.warnings.add("课程列表存在分页，尚未读取后续课程。");
   int visited=0;for(Subject course:courses){
    progress.accept("正在识别 "+(++visited)+" / "+result.total+"："+course.name);
    try{
-    Document page=Jsoup.parse(request("https://mooc1.chaoxing.com/visit/stucoursemiddle?"+form("courseid",course.id,"clazzid",course.clazz,"cpi",course.cpi,"ismooc2","1","v","2"),null));
+    Document page=Jsoup.parse(fetch("课程访问参数","https://mooc1.chaoxing.com/visit/stucoursemiddle?"+form("courseid",course.id,"clazzid",course.clazz,"cpi",course.cpi,"ismooc2","1","v","2")));
     String enc=token(page,"workEnc"),stuenc=token(page,"enc"),openc=token(page,"openc");
-    if(enc.isEmpty()||stuenc.isEmpty())throw new IOException("未获得作业访问参数，可能该课程未开放作业或页面变化。");
+    if(enc.isEmpty()||stuenc.isEmpty())throw new ReadFailure("课程访问参数","未找到作业访问参数，课程可能未开放作业");
     String listUrl="https://mooc1.chaoxing.com/mooc2/work/list?"+form("courseId",course.id,"classId",course.clazz,"cpi",course.cpi,"ut","s","openc",openc,"enc",enc,"t",String.valueOf(System.currentTimeMillis()),"stuenc",stuenc,"isdisplaytable","2");
-    String html=request(listUrl,null);List<Work> items=works(html,course.name);
+    String html=fetch("作业列表",listUrl);List<Work> items;try{items=works(html,course.name);}catch(IOException e){throw new ReadFailure("作业列表","页面未识别或无访问权限");}
     // shortcut: unknown pagination is reported as partial; add a verified paging adapter when encountered.
     if(paged(html))result.warnings.add(course.name+"：列表存在分页，当前仅识别首批作业。");
     for(Work work:items){
-     if(!work.completed())try{work.deadline=deadline(request(work.url,null));}catch(InterruptedIOException e){throw e;}catch(Exception e){result.warnings.add(course.name+" · "+work.title+"：截止时间读取失败。");}
+     if(!work.completed())try{work.deadline=deadline(fetch("截止时间",work.url));}catch(InterruptedIOException e){throw e;}catch(Exception e){result.warnings.add(course.name+" · "+work.title+"："+describe(e));}
      result.items.add(work);
     }
     result.checked++;
-   }catch(InterruptedIOException e){throw e;}catch(Exception e){result.warnings.add(course.name+"：读取未完成，请稍后重试。");}
+   }catch(InterruptedIOException e){throw e;}catch(Exception e){result.warnings.add(course.name+"："+describe(e));}
   }
   return result;
  }
@@ -130,7 +141,7 @@ final class ChaoxingClient implements AutoCloseable {
     if(body!=null){connection.setRequestMethod("POST");connection.setDoOutput(true);connection.setRequestProperty("Content-Type","application/x-www-form-urlencoded; charset=UTF-8");try(OutputStream out=connection.getOutputStream()){out.write(body.getBytes(StandardCharsets.UTF_8));}}
     int code=connection.getResponseCode();cookies.put(URI.create(url),connection.getHeaderFields());
     if(code>=300&&code<400){String location=connection.getHeaderField("Location");if(location==null)throw new IOException("平台跳转信息缺失。");url=URI.create(url).resolve(location).toString();if(body!=null&&(code==307||code==308))throw new IOException("登录地址跳转异常。");body=null;continue;}
-    if(code!=200)throw new IOException("平台暂时无法访问（"+code+"），请稍后重试。");
+    if(code!=200)throw new HttpFailure(code);
     try(InputStream in=connection.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] buffer=new byte[8192];int count;while((count=in.read(buffer))!=-1){if(closed||Thread.currentThread().isInterrupted())throw new InterruptedIOException("读取已取消");if(out.size()+count>3*1024*1024)throw new IOException("平台响应过大，已停止读取。");out.write(buffer,0,count);}return out.toString(StandardCharsets.UTF_8.name());}
    }finally{connection.disconnect();active=null;}
   }

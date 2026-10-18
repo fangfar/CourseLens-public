@@ -28,6 +28,10 @@ public final class ChaoxingChecks {
   throw new AssertionError("Unexpected request");
  });}
  private static void clientChecks()throws Exception {
+  check(ChaoxingClient.institution("<script>let fid = '100';</script>").equals("100"),"Modern institution declaration ignored");
+  check(ChaoxingClient.institution("<input name='fid' value='101'>").equals("101"),"Institution input ignored");
+  String clickCourse="<li><div onclick=\"window.open('/visit/stucoursemiddle?courseid=1&amp;clazzid=2&amp;cpi=3')\"></div><span class='course-name'>合成点击课程</span></li>";
+  check(ChaoxingClient.subjects(clickCourse).size()==1,"Click-handler course ignored");
   List<String> calls=new ArrayList<>();ChaoxingClient client=fake(calls,false);client.login("fixture-user","fixture-password");ChaoxingClient.Result result=client.sync(s->{});
   check(result.total==2&&result.checked==2&&result.warnings.isEmpty(),"Automatic traversal incomplete");check(result.items.size()==1,"Homework aggregation failed");check(result.items.get(0).course.equals("合成课程 A")&&result.items.get(0).title.equals("合成作业 & 报告")&&result.items.get(0).deadline.equals("10-21 23:59"),"Metadata differs");
   check(calls.size()==8,"Wrong login/query sequence");client.close();boolean canceled=false;try{client.sync(s->{});}catch(java.io.InterruptedIOException e){canceled=true;}check(canceled,"Closed session still queries");
