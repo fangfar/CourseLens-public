@@ -2,6 +2,11 @@
 
 ## 正式与预研隔离
 
+- 学习通作业读取实验在 `codex/chaoxing-homework` 独立 worktree 开发，起点为任务页预研分支 `f1a576c`；本次按用户要求保持与正式 App 隔离，不推送、不合并、不发布。这里只做 QA 预览，不能作为正式构建来源。
+- 预览入口：任务 → 登录学习通 → 在官方网页完成登录 → 进入某课程作业列表 → 读取当前作业页。App 不收集密码，只通过 WebView 保留本机网页登录状态；“退出登录”清除本预研 App 的 WebView Cookie、网页存储与缓存。网页登录状态不写入日志或导出文件。
+- 当前只从已加载的列表容器、作业链接条目和可访问的同源 iframe 读取候选文字，显示标题、明确标注的截止时间、状态和原文，不遍历课程、不翻页、不读取答案、不提交作业、不持久化或合入任务列表。课程名和相对剩余时间暂不推算。零条或解析失败不能解释为账号没有作业。
+- 当前选择器与登录跳转尚未经真实账号验证；验证码、机构登录、跨域 iframe、移动版列表结构均需在 QA 设备验收。`tests/run_checks.py` 包含合成文本及 URL 信任边界检查，不能代替真实平台测试。
+
 - `C:\codex\CourseLens` 是日常维护目录，以最新 `origin/main` 为正式基线。`codex/development-isolation` 仅保存本隔离约定；后续正式修复从最新正式基线建立独立分支，并保留本节和 `AGENTS.md` 的默认规则。
 - 未开放的任务页、底部导航、新界面与未来社交存放在独立 Git worktree，分支为 `codex/task-page-navigation`。使用 `git worktree list` 查找目录，不复制另一套仓库；只把正式修复同步进预研分支，不把预研分支合入日常分支。
 - 用户未明确指定新功能时，“修复、推送、打包 App”均针对正式开发线；预研分支只在用户明确要求时推送。开放某项功能需单独授权、整理差异、验收并通过 PR 合入，合并及公开发布沿用既有授权边界。
@@ -22,7 +27,7 @@ python tests/SigningChecks.py
 .\gradlew.bat --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest lintDebug
 ```
 
-Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用的五组 Java 业务回归入口；Gradle 单元测试的 `NO-SOURCE` 不代表它们通过。
+Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用的 Java 业务回归入口，另含本实验的学习通解析检查；Gradle 单元测试的 `NO-SOURCE` 不代表它们通过。
 
 普通贡献者使用 `-PqaBuild`：Debug 包名为 `cn.courselens.qa`，使用开发签名；测试数据在测试 APK 中，Release 变体禁用。正式构建保持 `cn.courselens`，必须提供既有签名密钥并通过固定证书检查。
 

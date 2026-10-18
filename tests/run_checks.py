@@ -4,10 +4,11 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parent.parent
-models = ("Course", "CourseDisplay", "NextClass", "CourseAdjustment", "WidgetSchedule")
+models = ("Course", "CourseDisplay", "NextClass", "CourseAdjustment", "WidgetSchedule", "ChaoxingHomework")
 tests = sorted((root / "tests").glob("*Test.java"))
 with tempfile.TemporaryDirectory() as output:
     sources = [root / f"app/src/main/java/cn/courselens/{name}.java" for name in models]
     subprocess.run(["javac", "-encoding", "UTF-8", "-d", output, *map(str, sources + tests)], cwd=root, check=True)
     for test in tests:
-        subprocess.run(["java", "-ea", "-cp", output, test.stem], cwd=root, check=True)
+        name = "cn.courselens." + test.stem if test.stem == "ChaoxingHomeworkTest" else test.stem
+        subprocess.run(["java", "-ea", "-cp", output, name], cwd=root, check=True)

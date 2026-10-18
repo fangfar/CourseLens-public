@@ -30,7 +30,8 @@ final class TaskPage extends LinearLayout {
   TextView platformTitle=text("学习平台",16,INK);platformTitle.setTypeface(null,Typeface.BOLD);status.addView(platformTitle,new LayoutParams(0,-2,1));
   TextView badge=text("暂未连接",12,MUTED);badge.setPadding(dp(10),dp(5),dp(10),dp(5));badge.setBackground(surface(0xffe1e8f5,10));status.addView(badge);
   TextView names=text("学习通  ·  知到  ·  中国大学 MOOC",13,0xff526582);names.setPadding(0,dp(12),0,dp(6));names.setLineSpacing(dp(3),1);platforms.addView(names);
-  platforms.addView(text("平台连接暂未开放",12,MUTED));
+  platforms.addView(text("学习通可尝试读取当前作业页；其他平台暂未开放",12,MUTED));
+  Button connect=new Button(context);connect.setText("登录学习通 · 读取预览");connect.setTag("chaoxing-connect");connect.setOnClickListener(v->context.startActivity(new android.content.Intent(context,ChaoxingActivity.class)));platforms.addView(connect,new LayoutParams(-1,-2));
 
   LinearLayout choices=new LinearLayout(context);choices.setPadding(dp(4),dp(4),dp(4),dp(4));choices.setBackground(surface(0xffedf0f6,14));LayoutParams choiceLayout=new LayoutParams(-1,-2);choiceLayout.topMargin=dp(24);body.addView(choices,choiceLayout);
   String[] labels={"待处理","已完成","全部"};
@@ -48,7 +49,7 @@ final class TaskPage extends LinearLayout {
   filter=value>=0&&value<filters.length?value:0;
   for(int i=0;i<filters.length;i++){boolean selected=i==filter;filters[i].setSelected(selected);filters[i].setTextColor(selected?PRIMARY:MUTED);filters[i].setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);filters[i].setBackground(selected?surface(0xffffffff,10):null);}
   String[] titles={"还没有待处理任务","还没有已完成任务","还没有任务"};emptyTitle.setText(titles[filter]);
-  emptyDescription.setText(filter==1?"完成的课程作业会保留在这里。":"连接学习平台后，\n作业与截止时间会显示在这里。");
+  emptyDescription.setText("学习通读取目前仅提供预览，\n暂不保存到任务列表。");
  }
  void saveState(Bundle state){state.putInt("filter",filter);state.putInt("scrollY",scroll.getScrollY());}
  private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
