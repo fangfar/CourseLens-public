@@ -1,6 +1,6 @@
 <resources>
     <style name="SecondaryPicker" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:colorAccent">#4266AD</item>
+        <item name="android:colorAccent">#0866D9</item>
         <item name="android:datePickerStyle">@style/SoftDatePicker</item>
     </style>
     <style name="SoftDatePicker" parent="android:style/Widget.Material.Light.DatePicker">
@@ -16,9 +16,9 @@
         <item name="android:textColor">@color/date_header_text</item>
     </style>
     <style name="SecondaryDialog" parent="android:style/Theme.Material.Light.Dialog.Alert">
-        <item name="android:colorAccent">#426B75</item>
-        <item name="android:textColorPrimary">#082630</item>
-        <item name="android:textColorSecondary">#687E85</item>
+        <item name="android:colorAccent">#0866D9</item>
+        <item name="android:textColorPrimary">#171717</item>
+        <item name="android:textColorSecondary">#707070</item>
         <item name="android:windowBackground">@drawable/dialog_surface</item>
     </style>
 </resources>

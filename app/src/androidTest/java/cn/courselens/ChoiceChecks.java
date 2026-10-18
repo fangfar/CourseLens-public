@@ -21,7 +21,7 @@ public final class ChoiceChecks {
   Spinner[] field=new Spinner[1];Object[] sheet=new Object[1];int[] initial=new int[1];
   main(r,()->{field[0]=((View)get(a,"root")).findViewWithTag(tag);initial[0]=field[0].getSelectedItemPosition();check(field[0].performClick(),tag+": not clickable");sheet[0]=get(a,"choiceSheet");});settle(r);
   main(r,()->{
-   View panel=(View)get(sheet[0],"panel");View cancel=panel.findViewWithTag("choice-cancel");ScrollView scroll=(ScrollView)get(sheet[0],"scroll");check(cancel.getTop()>=scroll.getBottom()+12*a.getResources().getDisplayMetrics().density,tag+": footer touches options");check(((RadioButton)panel.findViewWithTag("choice-option-"+initial[0])).isChecked(),tag+": current selection missing");
+   View panel=(View)get(sheet[0],"panel");check(panel.getBottom()==((View)panel.getParent()).getHeight(),"Choice sheet leaves an empty band below it");View cancel=panel.findViewWithTag("choice-cancel");ScrollView scroll=(ScrollView)get(sheet[0],"scroll");check(cancel.getTop()>=scroll.getBottom()+12*a.getResources().getDisplayMetrics().density,tag+": footer touches options");check(((RadioButton)panel.findViewWithTag("choice-option-"+initial[0])).isChecked(),tag+": current selection missing");
    List<Rect> cells=new ArrayList<>();for(int i=0;i<field[0].getCount();i++){View option=panel.findViewWithTag("choice-option-"+i);check(option!=null&&option.getHeight()>=48*a.getResources().getDisplayMetrics().density,tag+": missing or small option "+i);Rect bounds=new Rect();if(option.getGlobalVisibleRect(bounds)){for(Rect other:cells)check(!Rect.intersects(bounds,other),tag+": options overlap");cells.add(bounds);}}
    cancel.performClick();check(field[0].getSelectedItemPosition()==initial[0],tag+": cancel changed value");
   });settle(r);
@@ -35,13 +35,13 @@ public final class ChoiceChecks {
   MainActivity activity=null;Configuration original=null;Bundle result=new Bundle();int code=Activity.RESULT_CANCELED;
   try{
    check(r.getTargetContext().getPackageName().endsWith(".qa"),"QA only");activity=NativeChecks.startQaActivity(r);MainActivity a=activity;original=new Configuration(a.getResources().getConfiguration());Map<String,?> stored=new HashMap<>(a.getPreferences(0).getAll());Course fixture=new Course(1,1,2,"选择器测试课程","合成教室","1-30","合成老师");
-   for(float scale:new float[]{original.fontScale,1.4f}){
+   for(float scale:(((NativeChecks)r).normalFontOnly?new float[]{original.fontScale}:new float[]{original.fontScale,1.4f})){
     main(r,()->{Configuration config=new Configuration(a.getResources().getConfiguration());config.fontScale=scale;a.getResources().updateConfiguration(config,a.getResources().getDisplayMetrics());set(a,"data",fixture.encode());set(a,"adjustments","");call(a,"courseForm",new Class<?>[]{Course.class,int.class,Runnable.class},fixture,0,(Runnable)()->{});((EditText)((View)get(a,"root")).findViewWithTag("course-name")).setText("未保存的选择器草稿");});settle(r);
     for(String tag:new String[]{"course-day","course-start","course-end"})picker(r,a,tag);
     main(r,()->{check(((EditText)((View)get(a,"root")).findViewWithTag("course-name")).getText().toString().equals("未保存的选择器草稿"),"Picker discarded draft");call(a,"adjustmentForm",new Class<?>[]{Course.class,int.class,boolean.class,Runnable.class},fixture,7,false,(Runnable)()->{});});settle(r);
     for(String tag:new String[]{"adjustment-week","adjustment-day","adjustment-start","adjustment-end"})picker(r,a,tag);
    }
-   check(a.getPreferences(0).getAll().equals(stored),"Pickers changed stored timetable");result.putString("result","PASS: seven course/adjustment selectors at normal and large font, week 30 and period 12, visible selected values, separated footer, cancel/outside, draft and preference preservation");code=Activity.RESULT_OK;
+   check(a.getPreferences(0).getAll().equals(stored),"Pickers changed stored timetable");result.putString("fontProfile",((NativeChecks)r).normalFontOnly?"current font only":"normal and large fonts");result.putString("result","PASS: seven course/adjustment selectors at the requested font profile, week 30 and period 12, visible selected values, separated footer, cancel/outside, draft and preference preservation");code=Activity.RESULT_OK;
   }catch(Throwable e){result.putString("error",android.util.Log.getStackTraceString(e));}
   finally{if(activity!=null){MainActivity a=activity;Configuration config=original;main(r,()->{if(config!=null)a.getResources().updateConfiguration(config,a.getResources().getDisplayMetrics());a.finish();});}r.finish(code,result);}
  }
