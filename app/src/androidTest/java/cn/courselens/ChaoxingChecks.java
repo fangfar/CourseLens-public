@@ -33,6 +33,7 @@ public final class ChaoxingChecks {
   check(calls.size()==8,"Wrong login/query sequence");client.close();boolean canceled=false;try{client.sync(s->{});}catch(java.io.InterruptedIOException e){canceled=true;}check(canceled,"Closed session still queries");
   result=fake(new ArrayList<>(),true).sync(s->{});check(result.checked==1&&result.warnings.size()==1&&result.items.size()==1,"Partial failures not represented");
   for(String html:new String[]{"<html>登录</html>","<p>没有此页面访问权限</p>"}){boolean rejected=false;try{ChaoxingClient.works(html,"test");}catch(java.io.IOException e){rejected=true;}check(rejected,"Unknown page reported as empty homework");}
+  check(ChaoxingClient.paged("<p>共10页</p>")&&!ChaoxingClient.paged("<p>共1页</p>"),"Pagination completeness check failed");
   check(!ChaoxingClient.safeDetail("https://evil.example/mooc2/work/task"),"Foreign detail endpoint allowed");check(!ChaoxingClient.safeDetail("https://mooc1.chaoxing.com/work/addStudentWorkNew"),"Write endpoint allowed");
   check(ChaoxingClient.deadline("<p>截止时间：2026-10-21 23:59</p>").equals("2026-10-21 23:59"),"Explicit deadline failed");check(ChaoxingClient.deadline("<p>没有日期</p>").equals("截止时间未知"),"Deadline invented");
   check(!new ChaoxingClient.Work("c","w","未完成","u").completed(),"Pending status treated as complete");check(new ChaoxingClient.Work("c","w","待批阅","u").completed(),"Submitted status not complete");

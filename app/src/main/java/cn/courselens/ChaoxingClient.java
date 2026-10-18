@@ -95,7 +95,7 @@ final class ChaoxingClient implements AutoCloseable {
   Matcher fid=Pattern.compile("(?:[\"']fid[\"']\\s*:|\\bvar\\s+fid\\s*=)\\s*[\"']?([0-9]+)").matcher(base);
   if(!fid.find())throw new IOException("未读取到账号所属机构，请重新登录或使用官方验证入口。");
   String courseUrl="https://mooc2-ans.chaoxing.com/mooc2-ans/visit/courselistdata?"+form("courseType","1","courseFid",fid.group(1),"courseTeacherid","0","courseOrderBy","0");
-  List<Subject> courses=subjects(request(courseUrl,null));Result result=new Result();result.total=courses.size();
+  String courseHtml=request(courseUrl,null);List<Subject> courses=subjects(courseHtml);Result result=new Result();result.total=courses.size();if(paged(courseHtml))result.warnings.add("课程列表存在分页，尚未读取后续课程。");
   int visited=0;for(Subject course:courses){
    progress.accept("正在识别 "+(++visited)+" / "+result.total+"："+course.name);
    try{
@@ -104,9 +104,8 @@ final class ChaoxingClient implements AutoCloseable {
     if(enc.isEmpty()||stuenc.isEmpty())throw new IOException("未获得作业访问参数，可能该课程未开放作业或页面变化。");
     String listUrl="https://mooc1.chaoxing.com/mooc2/work/list?"+form("courseId",course.id,"classId",course.clazz,"cpi",course.cpi,"ut","s","openc",openc,"enc",enc,"t",String.valueOf(System.currentTimeMillis()),"stuenc",stuenc,"isdisplaytable","2");
     String html=request(listUrl,null);List<Work> items=works(html,course.name);
-    Document list=Jsoup.parse(html);
     // shortcut: unknown pagination is reported as partial; add a verified paging adapter when encountered.
-    if(list.selectFirst("a[rel=next],.pageNext,.nextPage")!=null||Pattern.compile("(?:总共|共)\\s*[2-9][0-9]*\\s*页").matcher(list.text()).find())result.warnings.add(course.name+"：列表存在分页，当前仅识别首批作业。");
+    if(paged(html))result.warnings.add(course.name+"：列表存在分页，当前仅识别首批作业。");
     for(Work work:items){
      if(!work.completed())try{work.deadline=deadline(request(work.url,null));}catch(InterruptedIOException e){throw e;}catch(Exception e){result.warnings.add(course.name+" · "+work.title+"：截止时间读取失败。");}
      result.items.add(work);
@@ -116,6 +115,7 @@ final class ChaoxingClient implements AutoCloseable {
   }
   return result;
  }
+ static boolean paged(String html){Document page=Jsoup.parse(html);return page.selectFirst("a[rel=next],.pageNext,.nextPage")!=null||Pattern.compile("(?:总共|共)\\s*(?:[2-9]|[1-9][0-9]+)\\s*页").matcher(page.text()).find();}
  private String http(String initial,String body)throws Exception {
   long wait=300-(System.currentTimeMillis()-lastRequest);if(wait>0)Thread.sleep(wait);lastRequest=System.currentTimeMillis();
   String url=initial;
