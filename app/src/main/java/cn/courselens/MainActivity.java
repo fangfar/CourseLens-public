@@ -16,8 +16,10 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
+ private final SecondaryUi secondaryUi=new SecondaryUi(this);
  private static final String[] START_TIMES=NextClass.START_TIMES,END_TIMES=NextClass.END_TIMES;
  private final int INK=0xff172132,MUTED=0xff68788f,BLUE=0xff5c78c6,PRIMARY=0xff4266ad;
+ private final int SURFACE=0xfff1f5f6,AQUA=0xff9aebf2,SOFT=0xffdff8fa,NAVY=0xff082630;
  private AlertDialog widgetDialog,unsavedDialog;
  private AlertDialog remoteDialog;private RemoteConfigClient remote;private TextView remoteStatus;private final Handler remoteHandler=new Handler(Looper.getMainLooper());
  private boolean remoteResumed,touching,manualUpdatePending;private int pagerState,manualCheckScreen=-1;private long interactionAt;private final Runnable remoteNotice=this::showRemoteNotice;private final RemoteConfigClient.Listener remoteListener=this::remoteChanged;
@@ -31,6 +33,7 @@ public class MainActivity extends Activity {
  private HomePage homePage;
  private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible;
  private LinearLayout bottomNavigation;private TextView timetableTab,tasksTab;
+ private LinearLayout settingsPage;private int settingsScrollY;
  private ScrollView timetableScroll;private int timetableScrollY;
  private final PageMotion pageMotion=new PageMotion();private android.window.OnBackInvokedCallback systemBack;private boolean backRegistered;
  private ViewPager pager;private TextView weekLabel,returnWeekButton;private FrameLayout daysBar; private LinearLayout root;private FrameLayout stage;private boolean returningPage;private int week=6;private String data="",notes="",term="2026-08-31";
@@ -56,6 +59,7 @@ public class MainActivity extends Activity {
   pageMotion.cancel();
   if(unsavedDialog!=null){unsavedDialog.dismiss();unsavedDialog=null;}
   while(navigationOverlay!=null)navigationOverlay.close(false);
+  if(root==settingsPage&&settingsPage!=null)settingsScrollY=((ScrollView)settingsPage.getChildAt(1)).getScrollY();
   if(timetableScroll!=null){timetableScrollY=timetableScroll.getScrollY();timetableScroll=null;}
   if(choiceSheet!=null){choiceSheet.close(false);choiceSheet=null;}
   LinearLayout previous=root;boolean backwards=returningPage||!secondary;
@@ -88,8 +92,8 @@ public class MainActivity extends Activity {
  private void ripple(View view){view.setForeground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x225c78c6),null,bg(Color.WHITE,8)));}
 
  private LinearLayout createBottomNavigation(){
-  LinearLayout bar=new LinearLayout(this);bar.setTag("bottom-navigation");bar.setOrientation(LinearLayout.VERTICAL);bar.setBackgroundColor(0xfff8fbff);
-  View divider=new View(this);divider.setBackgroundColor(0xffe1e7f0);bar.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
+  LinearLayout bar=new LinearLayout(this);bar.setTag("bottom-navigation");bar.setOrientation(LinearLayout.VERTICAL);bar.setBackgroundColor(SURFACE);
+  View divider=new View(this);divider.setBackgroundColor(0xffdfe9eb);bar.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
   LinearLayout items=new LinearLayout(this);items.setPadding(dp(20),dp(6),dp(20),dp(6));bar.addView(items,new LinearLayout.LayoutParams(-1,-2));
   timetableTab=navigationTab("课表","nav-timetable",()->{if(tasksVisible)home();});tasksTab=navigationTab("任务","nav-tasks",()->{if(!tasksVisible)tasks();});
   for(TextView tab:new TextView[]{timetableTab,tasksTab}){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(8),0,dp(8),0);items.addView(tab,lp);}return bar;
@@ -97,16 +101,16 @@ public class MainActivity extends Activity {
  private TextView navigationTab(String label,String tag,Runnable action){TextView tab=text(label,12,MUTED);tab.setTag(tag);tab.setContentDescription(label);tab.setGravity(Gravity.CENTER);tab.setMinHeight(dp(56));tab.setPadding(dp(8),dp(6),dp(8),dp(6));tab.setCompoundDrawablePadding(dp(3));tab.setFocusable(true);tab.setOnClickListener(v->action.run());ripple(tab);return tab;}
  private void updateBottomNavigation(){
   if(bottomNavigation==null)return;TextView[] tabs={timetableTab,tasksTab};int[] icons={R.drawable.ic_calendar,R.drawable.ic_tasks};
-  for(int i=0;i<tabs.length;i++){TextView tab=tabs[i];boolean selected=tasksVisible==(i==1);tab.setSelected(selected);tab.setTextColor(selected?PRIMARY:MUTED);tab.setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);tab.setBackground(selected?bg(0xffe6edfa,16):null);android.graphics.drawable.Drawable icon=getDrawable(icons[i]).mutate();icon.setTint(selected?PRIMARY:MUTED);icon.setBounds(0,0,dp(22),dp(22));tab.setCompoundDrawables(null,icon,null,null);}
+  for(int i=0;i<tabs.length;i++){TextView tab=tabs[i];boolean selected=tasksVisible==(i==1);tab.setSelected(selected);tab.setTextColor(selected?NAVY:MUTED);tab.setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);tab.setBackground(selected?bg(SOFT,16):null);android.graphics.drawable.Drawable icon=getDrawable(icons[i]).mutate();icon.setTint(selected?NAVY:MUTED);icon.setBounds(0,0,dp(22),dp(22));tab.setCompoundDrawables(null,icon,null,null);}
  }
- private void tasks(){tasksVisible=true;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,true,taskPage);root.setBackgroundColor(0xfff8fbff);}
+ private void tasks(){tasksVisible=true;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,true,taskPage);root.setBackgroundColor(SURFACE);}
 
  private Calendar date(){Calendar c=Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));c.set(Calendar.HOUR_OF_DAY,12);c.set(Calendar.MINUTE,0);c.set(Calendar.SECOND,0);c.set(Calendar.MILLISECOND,0);return c;}
  private Calendar monday(){Calendar c=date();String[] p=term.split("-");c.set(Integer.parseInt(p[0]),Integer.parseInt(p[1])-1,Integer.parseInt(p[2]));return c;}
  private int currentWeek(){return Math.max(1,Math.min(30,(int)((date().getTimeInMillis()-monday().getTimeInMillis())/86400000L/7)+1));}
  private TextView icon(String symbol,String description,Runnable action){TextView t=text(symbol,27,INK);t.setGravity(Gravity.CENTER);t.setContentDescription(description);t.setOnClickListener(v->action.run());t.setFocusable(true);ripple(t);return t;}
  private void changeWeek(int next){if(next<1||next>30)return;if(navigationOverlay!=null)navigationOverlay.close(true);if(pager!=null&&pager.isAttachedToWindow()){pager.setCurrentItem(next-1,true);}else{week=next;saveWeek();home();}}
- private LinearLayout secondary(String title,String description,Runnable back){base(true,root!=null&&title.equals(root.getTag()));root.setTag(title);pageBack=back;updateSystemBack();root.setBackgroundColor(0xfff8fbff);LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(12),dp(4),dp(16),dp(4));TextView close=icon("‹","返回",()->{if(busy){toast("正在同步，请稍候");return;}backPage();});bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));TextView heading=text(title,22,INK);heading.setTypeface(null,Typeface.BOLD);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));root.addView(bar);View line=new View(this);line.setBackgroundColor(0xffe8ebf0);root.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(20),dp(12),dp(20),dp(28));scroll.addView(body);if(!description.isEmpty()){TextView intro=text(description,14,0xff56677e);intro.setLineSpacing(dp(4),1);intro.setPadding(0,0,0,dp(20));body.addView(intro);}return body;}
+ private LinearLayout secondary(String title,String description,Runnable back){base(true,root!=null&&title.equals(root.getTag()));root.setTag(title);pageBack=back;updateSystemBack();root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(12),dp(8),dp(20),dp(8));TextView close=icon("‹","返回",()->{if(busy){toast("正在同步，请稍候");return;}backPage();});bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));TextView heading=text(title,23,NAVY);heading.setTypeface(null,Typeface.BOLD);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));root.addView(bar);ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(20),dp(12),dp(20),dp(28));scroll.addView(body);if(!description.isEmpty()){TextView intro=text(description,14,MUTED);intro.setLineSpacing(dp(4),1);intro.setPadding(dp(4),0,dp(4),dp(20));body.addView(intro);}return body;}
  private LinearLayout bottomSheet(String title,String description,Runnable back){
   if(returningPage&&navigationOverlay==null)back.run();
   NavigationOverlay overlay=new NavigationOverlay(false,title);LinearLayout body=overlay.body;
@@ -130,7 +134,7 @@ public class MainActivity extends Activity {
    if(previous!=null&&!corner)previous.setVisibility(INVISIBLE);underneath.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
    setFocusableInTouchMode(true);setClickable(true);setTag(corner?"quick-menu":"navigation-sheet");
    shade=new View(MainActivity.this);shade.setBackgroundColor(corner?0x22000000:0x55000000);shade.setTag("navigation-shade");shade.setOnClickListener(v->close(true));addView(shade,new FrameLayout.LayoutParams(-1,-1));
-   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setTag(title);GradientDrawable surface=bg(0xfff8fbff,corner?16:28);if(!corner)surface.setCornerRadii(new float[]{dp(28),dp(28),dp(28),dp(28),0,0,0,0});panel.setBackground(surface);panel.setClickable(true);panel.setElevation(dp(8));
+   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setTag(title);GradientDrawable surface=bg(Color.WHITE,corner?22:28);if(!corner)surface.setCornerRadii(new float[]{dp(28),dp(28),dp(28),dp(28),0,0,0,0});panel.setBackground(surface);panel.setClickable(true);panel.setElevation(dp(8));
    FrameLayout.LayoutParams bounds=new FrameLayout.LayoutParams(-1,-2,corner?Gravity.TOP|Gravity.END:Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);bounds.setMargins(corner?dp(12):0,corner?dp(56):0,corner?dp(12):0,0);if(corner){View trigger=underneath.findViewWithTag("sheet-action-button");if(trigger==null)trigger=underneath.findViewWithTag("quick-menu-button");if(trigger!=null&&trigger.getHeight()>0){int[] at=new int[2],stageAt=new int[2];trigger.getLocationInWindow(at);stage.getLocationInWindow(stageAt);bounds.topMargin=at[1]-stageAt[1]+trigger.getHeight();}}addView(panel,bounds);
    if(!corner){View handle=new View(MainActivity.this);handle.setBackground(bg(0xffcfd9eb,2));handle.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams grip=new LinearLayout.LayoutParams(dp(36),dp(4));grip.gravity=Gravity.CENTER_HORIZONTAL;grip.setMargins(0,dp(10),0,dp(4));panel.addView(handle,grip);}
    if(!corner){LinearLayout bar=new LinearLayout(MainActivity.this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(20),dp(4),dp(16),0);TextView heading=text(title,20,INK);heading.setTag("navigation-title");heading.setTypeface(null,Typeface.BOLD);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));TextView close=icon("⋮",title+"操作",()->{});close.setTag("sheet-action-button");close.setVisibility(View.GONE);close.setTextSize(24);close.setBackground(bg(0xffeaf0fa,24));bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));panel.addView(bar);}
@@ -139,14 +143,15 @@ public class MainActivity extends Activity {
    int token=++generation;shade.setAlpha(0f);panel.setAlpha(corner?0f:1f);panel.setScaleX(corner?.86f:1f);panel.setScaleY(corner?.86f:1f);panel.setTranslationY(corner?0:dp(48));
    observer=getViewTreeObserver();pending=new ViewTreeObserver.OnPreDrawListener(){public boolean onPreDraw(){if(observer.isAlive())observer.removeOnPreDrawListener(this);pending=null;if(token!=generation||!open||!isAttachedToWindow())return true;panel.setPivotX(panel.getWidth());panel.setPivotY(0);if(android.animation.ValueAnimator.areAnimatorsEnabled()){panel.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0).setDuration(200).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();shade.animate().alpha(1f).setDuration(200).start();}else{panel.setAlpha(1f);panel.setScaleX(1f);panel.setScaleY(1f);panel.setTranslationY(0);shade.setAlpha(1f);}return true;}};observer.addOnPreDrawListener(pending);
   }
-  // Keep the sheet at half the available window height; overflow remains scrollable.
-  @Override protected void onMeasure(int widthSpec,int heightSpec){FrameLayout.LayoutParams bounds=(FrameLayout.LayoutParams)panel.getLayoutParams();bounds.width=Math.max(1,MeasureSpec.getSize(widthSpec)-(corner?dp(24):0));if(corner)bounds.width=Math.min(bounds.width,dp(180));bounds.height=-2;if(corner){panel.measure(MeasureSpec.makeMeasureSpec(bounds.width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));bounds.height=Math.min(panel.getMeasuredHeight(),Math.max(1,Math.min(dp(420),MeasureSpec.getSize(heightSpec)-dp(24))));bounds.topMargin=Math.max(dp(12),Math.min(bounds.topMargin,MeasureSpec.getSize(heightSpec)-bounds.height-dp(12)));}else{int width=MeasureSpec.makeMeasureSpec(bounds.width,MeasureSpec.EXACTLY),height=MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED);panel.measure(width,height);int available=Math.max(1,MeasureSpec.getSize(heightSpec)/2);if(panel.getMeasuredHeight()>available){compactSpacing(body);panel.measure(width,height);}bounds.height=available;}super.onMeasure(widthSpec,heightSpec);}
-  private void compactSpacing(View view){
-   if(view instanceof TextView){TextView text=(TextView)view;float size=text.getTextSize()/getResources().getDisplayMetrics().scaledDensity;if(size>13)text.setTextSize(13);}
-   view.setPadding(view.getPaddingLeft(),Math.min(view.getPaddingTop(),dp(4)),view.getPaddingRight(),Math.min(view.getPaddingBottom(),dp(4)));
-   if(view.getLayoutParams() instanceof LinearLayout.LayoutParams){LinearLayout.LayoutParams lp=(LinearLayout.LayoutParams)view.getLayoutParams();lp.topMargin=Math.min(lp.topMargin,dp(4));lp.bottomMargin=Math.min(lp.bottomMargin,dp(4));}
-   if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++)compactSpacing(((ViewGroup)view).getChildAt(i));
+  // Keep readable text; long sheets scroll instead of shrinking their contents.
+  @Override protected void onMeasure(int widthSpec,int heightSpec){
+   FrameLayout.LayoutParams bounds=(FrameLayout.LayoutParams)panel.getLayoutParams();int height=MeasureSpec.getSize(heightSpec);
+   bounds.width=Math.max(1,MeasureSpec.getSize(widthSpec)-(corner?dp(24):0));bounds.height=-2;
+   if(corner){bounds.width=Math.min(bounds.width,dp(200));panel.measure(MeasureSpec.makeMeasureSpec(bounds.width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));bounds.height=Math.min(panel.getMeasuredHeight(),Math.max(1,Math.min(dp(440),height-dp(24))));bounds.topMargin=Math.max(dp(12),Math.min(bounds.topMargin,height-bounds.height-dp(12)));}
+   else{body.measure(MeasureSpec.makeMeasureSpec(Math.max(1,bounds.width),MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));bounds.height=Math.max(1,Math.min(height*4/5,Math.max(height/2,body.getMeasuredHeight()+dp(80))));}
+   super.onMeasure(widthSpec,heightSpec);
   }
+
   void close(boolean animate){
    scheduleRemoteNotice();
    if(animate&&!open)return;open=false;int token=++generation;panel.animate().cancel();shade.animate().cancel();underneath.setImportantForAccessibility(accessibility);if(navigationOverlay==this){navigationOverlay=previous;root=underneath;pageBack=underneathBack;showingDetail=underneathDetail;if(previous!=null)previous.setVisibility(VISIBLE);updateSystemBack();View focus=corner?underneath.findViewWithTag("sheet-action-button"):underneath;if(corner&&focus==null)focus=underneath.findViewWithTag("quick-menu-button");if(focus!=null)focus.requestFocus();}setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);Runnable finish=()->{if(token==generation)stage.removeView(this);};
@@ -157,22 +162,25 @@ public class MainActivity extends Activity {
   @Override protected void onDetachedFromWindow(){generation++;if(pending!=null&&observer.isAlive())observer.removeOnPreDrawListener(pending);pending=null;panel.animate().cancel();shade.animate().cancel();super.onDetachedFromWindow();}
  }
  private LinearLayout panel(LinearLayout body){
-  View divider=new View(this);divider.setBackgroundColor(0xffe8ebf0);body.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
-  LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(0,dp(16),0,dp(16));body.addView(card,new LinearLayout.LayoutParams(-1,-2));return card;
+  LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(16),dp(16),dp(16),dp(16));card.setBackground(bg(Color.WHITE,24));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(16);body.addView(card,lp);return card;
  }
- private Button action(LinearLayout body,String label,Runnable run){Button button=new Button(this);button.setText(label);button.setTextSize(15);button.setAllCaps(false);button.setTextColor(Color.WHITE);button.setTypeface(null,Typeface.BOLD);button.setBackground(bg(PRIMARY,14));button.setElevation(0);button.setBackgroundTintList(new android.content.res.ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{0xffa4acba,PRIMARY}));button.setMinHeight(dp(52));button.setOnClickListener(v->run.run());LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(12);body.addView(button,lp);ripple(button);return button;}
+ private Button action(LinearLayout body,String label,Runnable run){return secondaryUi.action(body,label,run);}
  private LinearLayout option(LinearLayout body,int drawable,String title,String description,Runnable run){
-  LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setMinimumHeight(dp(80));row.setPadding(dp(16),dp(14),dp(16),dp(14));GradientDrawable surface=bg(Color.WHITE,16);surface.setStroke(dp(1),0xffe5ebf5);row.setBackground(surface);LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);rowParams.bottomMargin=dp(8);body.addView(row,rowParams);
-  ImageView symbol=new ImageView(this);symbol.setImageResource(drawable);symbol.setImageTintList(android.content.res.ColorStateList.valueOf(PRIMARY));symbol.setBackground(bg(0xffedf2fc,12));symbol.setPadding(dp(9),dp(9),dp(9),dp(9));symbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams glyph=new LinearLayout.LayoutParams(dp(40),dp(40));glyph.rightMargin=dp(16);row.addView(symbol,glyph);
+  LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setMinimumHeight(dp(72));row.setPadding(dp(16),dp(14),dp(16),dp(14));boolean grouped="settings-group".equals(body.getTag());if(grouped&&body.getChildCount()>0){View line=new View(this);line.setBackgroundColor(0xffedf2f3);LinearLayout.LayoutParams divider=new LinearLayout.LayoutParams(-1,dp(1));divider.leftMargin=dp(72);body.addView(line,divider);}row.setBackground(bg(Color.WHITE,grouped?0:22));LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);rowParams.bottomMargin=grouped?0:dp(10);body.addView(row,rowParams);
+  ImageView symbol=new ImageView(this);symbol.setImageResource(drawable);symbol.setImageTintList(android.content.res.ColorStateList.valueOf(NAVY));symbol.setBackground(bg(SOFT,14));symbol.setPadding(dp(9),dp(9),dp(9),dp(9));symbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams glyph=new LinearLayout.LayoutParams(dp(40),dp(40));glyph.rightMargin=dp(16);row.addView(symbol,glyph);
   LinearLayout copy=new LinearLayout(this);copy.setOrientation(LinearLayout.VERTICAL);TextView heading=text(title,16,INK);heading.setTypeface(null,Typeface.BOLD);copy.addView(heading);if(!description.isEmpty()){TextView note=text(description,13,MUTED);note.setPadding(0,dp(5),0,0);copy.addView(note);}row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));TextView arrow=text("›",24,MUTED);arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);arrow.setPadding(dp(12),0,0,0);row.addView(arrow);
   row.setFocusable(true);row.setContentDescription(description.isEmpty()?title:title+"，"+description);row.setOnClickListener(v->run.run());ripple(row);return row;
  }
  private void weekPicker(){weekPicker(()->home());}
  private void weekPicker(Runnable back){
-  LinearLayout body=bottomSheet("选择教学周","从右上角菜单选择周次，有课周和无课周都可以浏览。",back);LinearLayout card=panel(body);sheetRow(card,"当前查看","第 "+week+" 周");sheetRow(card,"当前教学周","第 "+currentWeek()+" 周");sheetRow(card,"可选范围","第 1–30 周");
+  LinearLayout body=bottomSheet("选择教学周","当前教学周：第 "+currentWeek()+" 周 · 点选即可查看",back);
+  for(int start=1;start<=30;start+=5){LinearLayout row=new LinearLayout(this);LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);rowParams.bottomMargin=dp(8);body.addView(row,rowParams);for(int w=start;w<start+5;w++){final int chosen=w;TextView cell=text(""+w,16,NAVY);cell.setTag("week-choice-"+w);cell.setContentDescription("查看第 "+w+" 周"+(w==currentWeek()?"，当前教学周":""));cell.setGravity(Gravity.CENTER);cell.setMinHeight(dp(48));cell.setSelected(w==week);cell.setTypeface(null,w==week?Typeface.BOLD:Typeface.NORMAL);cell.setBackground(bg(w==week?AQUA:SURFACE,16));cell.setFocusable(true);cell.setOnClickListener(v->changeWeek(chosen));ripple(cell);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(48),1);if(w>start)lp.leftMargin=dp(8);row.addView(cell,lp);}}
+  action(body,"回到本周",()->changeWeek(currentWeek())).setTag("week-current");
   root.findViewWithTag("sheet-action-button").setVisibility(View.VISIBLE);root.findViewWithTag("sheet-action-button").setOnClickListener(v->{NavigationOverlay menu=sheetMenu("教学周操作");for(int w=1;w<=30;w++){final int chosen=w;menuItem(menu,"第 "+w+" 周"+(w==week?" ✓":""),"week-"+w,()->changeWeek(chosen));}});
  }
  private void home(){
+  settingsPage=null;
+  getWindow().setStatusBarColor(0xffe4e8f4);getWindow().setNavigationBarColor(0xffcbd5e6);
   boolean fromTasks=tasksVisible;tasksVisible=false;
   if(homePage!=null&&(pageBack!=null||fromTasks)&&navigationOverlay==null&&homePage.matches()){
    HomePage page=homePage;page.view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,false,page.view);
@@ -232,7 +240,7 @@ public class MainActivity extends Activity {
  }
  private void conflictComparison(CourseDisplay.Group group,int shownWeek,int selected){
   LinearLayout body=bottomSheet("冲突课程对比","",()->conflictPicker(group,shownWeek,selected));
-  for(int i=0;i<group.courses.size();i++){Course c=group.courses.get(i);LinearLayout card=panel(body);card.setTag("conflict-comparison-"+i);TextView name=text(SchoolParser.clean(c.name),16,INK);name.setTypeface(null,Typeface.BOLD);card.addView(name);if(i==selected)card.addView(text("当前显示",12,MUTED));
+  for(int i=0;i<group.courses.size();i++){Course c=group.courses.get(i);LinearLayout card=panel(body);card.setPadding(dp(12),dp(8),dp(12),dp(8));card.setTag("conflict-comparison-"+i);TextView name=text(SchoolParser.clean(c.name),16,INK);name.setTypeface(null,Typeface.BOLD);card.addView(name);if(i==selected)card.addView(text("当前显示",12,MUTED));
    courseInformationRows(card,c,shownWeek);
   }
  }
@@ -257,10 +265,11 @@ public class MainActivity extends Activity {
   if(moved!=null)courseInfoRow(body,R.drawable.ic_calendar,"单次调课",arrangement(moved.original,moved.week)+" → "+arrangement(c,shownWeek));
  }
  private void courseInfoRow(LinearLayout body,int drawable,String label,String value){
+  if(body.getTag()!=null&&body.getTag().toString().startsWith("conflict-comparison-")){sheetRow(body,label,value);return;}
   View divider=new View(this);divider.setBackgroundColor(0xffe8ebf0);body.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
   LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(0,dp(13),0,dp(13));
-  ImageView symbol=new ImageView(this);symbol.setImageResource(drawable);symbol.setImageTintList(android.content.res.ColorStateList.valueOf(PRIMARY));symbol.setBackground(bg(0xffedf2fc,12));symbol.setPadding(dp(9),dp(9),dp(9),dp(9));symbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams iconBounds=new LinearLayout.LayoutParams(dp(22),dp(22));iconBounds.rightMargin=dp(16);row.addView(symbol,iconBounds);
-  TextView valueView=text(value,15,INK);valueView.setContentDescription(label+"，"+value);row.addView(valueView,new LinearLayout.LayoutParams(0,-2,1));body.addView(row);
+  ImageView symbol=new ImageView(this);symbol.setImageResource(drawable);symbol.setImageTintList(android.content.res.ColorStateList.valueOf(NAVY));symbol.setBackground(bg(SOFT,14));symbol.setPadding(dp(9),dp(9),dp(9),dp(9));symbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams iconBounds=new LinearLayout.LayoutParams(dp(40),dp(40));iconBounds.rightMargin=dp(16);row.addView(symbol,iconBounds);
+  LinearLayout copy=new LinearLayout(this);copy.setOrientation(LinearLayout.VERTICAL);copy.addView(text(label,12,MUTED));TextView valueView=text(value,16,INK);valueView.setPadding(0,dp(4),0,0);valueView.setContentDescription(label+"，"+value);copy.addView(valueView);row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));body.addView(row);
  }
  private void detailActions(Course c,int shownWeek,Runnable reopen,Runnable conflictDetails){
   CourseAdjustment moved=movedAdjustment(c,shownWeek);Course source=moved==null?originalCourse(c,shownWeek):moved.original;int sourceWeek=moved==null?shownWeek:moved.week;
@@ -276,25 +285,42 @@ public class MainActivity extends Activity {
  }
  private String prettyWeeks(Course c){StringBuilder out=new StringBuilder();for(int w=1;w<=30;w++){if(!c.active(w))continue;int first=w;while(w<30&&c.active(w+1))w++;if(out.length()>0)out.append("、");out.append(first);if(w>first)out.append("–").append(w);}return "第 "+out+" 周";}
  private void detailRow(LinearLayout card,String label,String value){if(card.getChildCount()>0){View divider=new View(this);divider.setBackgroundColor(0xffedf0f6);card.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));}LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(0,dp(9),0,dp(9));row.addView(text(label,12,0xff56677e));TextView content=text(value.isEmpty()?"学校暂未提供":value,16,INK);content.setTextIsSelectable(true);content.setLineSpacing(dp(2),1);content.setPadding(0,dp(3),0,0);row.addView(content);card.addView(row);}
+ private LinearLayout settingsGroup(LinearLayout body,String title){
+  TextView label=text(title,14,MUTED);label.setTypeface(null,Typeface.BOLD);label.setPadding(dp(4),dp(8),0,dp(10));body.addView(label);
+  LinearLayout group=new LinearLayout(this);group.setOrientation(LinearLayout.VERTICAL);group.setTag("settings-group");group.setBackground(bg(Color.WHITE,24));group.setClipToOutline(true);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(18);body.addView(group,lp);return group;
+ }
  private void menu(){
+  if(returningPage&&settingsPage!=null){
+   settingsPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(true,false,settingsPage);
+   root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);
+   pageBack=()->home();updateSystemBack();remoteStatus=root.findViewWithTag("update-status");refreshRemoteStatus();
+   ((ScrollView)root.getChildAt(1)).scrollTo(0,settingsScrollY);return;
+  }
   LinearLayout body=secondary("课表设置","安排本学期，也整理你的课表。",()->home());
-  TextView semester=text("学期与周次",13,0xff56677e);semester.setPadding(dp(4),0,0,dp(10));body.addView(semester);
-  option(body,R.drawable.ic_calendar,"选择教学周","当前查看第 "+week+" 周",()->weekPicker(()->menu())).setTag("select-teaching-week");
-  option(body,R.drawable.ic_calendar,"开学日期",term+" · 第 1 周开始日期",()->termPicker()).setTag("settings-term");
-  TextView courses=text("课程与桌面",13,0xff56677e);courses.setPadding(dp(4),dp(16),0,dp(10));body.addView(courses);
-  option(body,R.drawable.ic_notes,"课程管理","校对课程与多个上课时段",()->edit(()->menu()));
-  option(body,R.drawable.ic_calendar,"单次调课 / 停课","调整安排，或恢复原课程",()->adjustmentManager()).setTag("adjustment-manager");
-  option(body,R.drawable.ic_grid,"桌面小组件","三种尺寸，随时查看今日课程",()->widgetAddPage()).setTag("add-home-widget");
-  TextView software=text("软件与下载",13,0xff56677e);software.setPadding(dp(4),dp(16),0,dp(10));body.addView(software);
-  LinearLayout update=option(body,R.drawable.ic_sync,"检查更新","当前版本 "+appVersion(),()->checkRemoteUpdates());update.setTag("check-app-update");
+  LinearLayout semester=settingsGroup(body,"学期与周次");
+  option(semester,R.drawable.ic_calendar,"选择教学周","当前查看第 "+week+" 周",()->weekPicker(()->menu())).setTag("select-teaching-week");
+  option(semester,R.drawable.ic_calendar,"开学日期",term+" · 第 1 周开始日期",()->termPicker()).setTag("settings-term");
+  LinearLayout courses=settingsGroup(body,"课程与桌面");
+  option(courses,R.drawable.ic_notes,"课程管理","校对课程与多个上课时段",()->edit(()->menu()));
+  option(courses,R.drawable.ic_calendar,"单次调课 / 停课","调整安排，或恢复原课程",()->adjustmentManager()).setTag("adjustment-manager");
+  option(courses,R.drawable.ic_grid,"桌面小组件","三种尺寸，随时查看今日课程",()->widgetAddPage()).setTag("add-home-widget");
+  LinearLayout software=settingsGroup(body,"软件与下载");
+  LinearLayout update=option(software,R.drawable.ic_sync,"检查更新","当前版本 "+appVersion(),()->checkRemoteUpdates());update.setTag("check-app-update");
   remoteStatus=text("",13,MUTED);remoteStatus.setTag("update-status");remoteStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);remoteStatus.setPadding(dp(4),0,dp(4),dp(8));body.addView(remoteStatus);refreshRemoteStatus();
-  option(body,R.drawable.ic_notes,"关于软件与下载","网盘下载、版本与 GitHub",this::about).setTag("about-app");
+  option(software,R.drawable.ic_notes,"关于软件与下载","网盘下载、版本与 GitHub",this::about).setTag("about-app");
   LinearLayout caution=panel(body);caution.setPadding(dp(16),dp(16),dp(16),dp(16));caution.setBackground(bg(0xfffff1f3,16));caution.addView(text("本地数据",15,0xff9a3849));TextView note=text("清空后需要重新导入，课表、备注和单次调整都会删除。",13,0xff885564);note.setLineSpacing(dp(3),1);note.setPadding(0,dp(8),0,dp(4));caution.addView(note);Button clear=action(caution,"退出并清空课表",()->confirmClear());clear.setTextColor(0xff9a3849);clear.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xfffbe0e5));
+  settingsPage=root;
  }
 
  private String appVersion(){try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}catch(android.content.pm.PackageManager.NameNotFoundException e){throw new IllegalStateException(e);}}
  private long appVersionCode(){try{android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(getPackageName(),0);return Build.VERSION.SDK_INT>=28?info.getLongVersionCode():info.versionCode;}catch(android.content.pm.PackageManager.NameNotFoundException e){throw new IllegalStateException(e);}}
- private void about(){LinearLayout body=secondary("关于软件","课表镜 CourseLens · "+appVersion(),this::menu);remoteStatus=text("",13,MUTED);remoteStatus.setTag("update-status");body.addView(remoteStatus);refreshRemoteStatus();option(body,R.drawable.ic_notes,"网盘下载","通过系统浏览器打开下载页面",()->{String url=remote==null||remote.config==null?"":remote.config.diskUrl;openRemoteLink(url);}).setTag("disk-download");option(body,R.drawable.ic_notes,"GitHub 仓库","公开版本与使用说明",()->openRemoteLink(RemoteConfig.REPOSITORY)).setTag("public-repository");}
+ private void about(){
+  LinearLayout body=secondary("关于软件与下载","",this::menu);
+  LinearLayout brand=new LinearLayout(this);brand.setOrientation(LinearLayout.VERTICAL);brand.setGravity(Gravity.CENTER);brand.setPadding(0,dp(24),0,dp(32));ImageView logo=new ImageView(this);logo.setImageResource(R.mipmap.ic_launcher);logo.setContentDescription("课表镜 App 图标");logo.setTag("about-app-icon");brand.addView(logo,new LinearLayout.LayoutParams(dp(80),dp(80)));TextView name=text("课表镜 CourseLens",23,NAVY);name.setTypeface(null,Typeface.BOLD);name.setPadding(0,dp(20),0,dp(10));brand.addView(name);brand.addView(text("版本 "+appVersion(),14,MUTED));body.addView(brand,new LinearLayout.LayoutParams(-1,-2));
+  LinearLayout links=settingsGroup(body,"下载与项目");option(links,R.drawable.ic_notes,"网盘下载","通过系统浏览器打开下载页面",()->{String url=remote==null||remote.config==null?"":remote.config.diskUrl;openRemoteLink(url);}).setTag("disk-download");option(links,R.drawable.ic_notes,"GitHub 仓库","公开版本与使用说明",()->openRemoteLink(RemoteConfig.REPOSITORY)).setTag("public-repository");
+  remoteStatus=text("",13,MUTED);remoteStatus.setTag("update-status");remoteStatus.setGravity(Gravity.CENTER);body.addView(remoteStatus);refreshRemoteStatus();
+ }
+
  private void openRemoteLink(String url){if(url==null||url.isEmpty()){toast("暂未配置下载地址，请检查更新后重试");return;}if(!RemoteConfig.validLink(url)){toast("下载地址无效，请稍后重试");return;}try{startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse(url)));}catch(ActivityNotFoundException|SecurityException e){toast("没有可打开此链接的浏览器");}}
  private void checkRemoteUpdates(){if(remote==null){remote=RemoteConfigClient.get(this);remote.listen(remoteListener);}manualCheckScreen=screen;remote.check(true);refreshRemoteStatus();}
  private void refreshRemoteStatus(){if(remoteStatus==null||!remoteStatus.isAttachedToWindow())return;String status=remote==null||!remote.loaded?"尚未检查更新":remote.checking?"正在检查更新…":remote.config==null?"暂无可用更新信息":remote.config.newerThan(appVersionCode())?"发现新版本 "+remote.config.versionName:"当前版本 "+appVersion();if(remote!=null&&remote.config!=null){String time=new java.text.SimpleDateFormat("MM-dd HH:mm",Locale.CHINA).format(new Date(remote.validatedAt));status+=" · 缓存于 "+time;if(!remote.fresh(System.currentTimeMillis()))status+="（已过期）";}remoteStatus.setText(status);remoteStatus.setTextColor(remote!=null&&remote.config!=null&&remote.config.newerThan(appVersionCode())?PRIMARY:MUTED);}
@@ -312,12 +338,14 @@ public class MainActivity extends Activity {
   LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(24),dp(20),dp(24),dp(8));LinearLayout heading=new LinearLayout(this);heading.setGravity(Gravity.CENTER_VERTICAL);ImageView image=new ImageView(this);image.setImageResource(icon);image.setColorFilter(PRIMARY);image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);heading.addView(image,new LinearLayout.LayoutParams(dp(24),dp(24)));TextView label=text(title,20,INK);label.setTypeface(null,Typeface.BOLD);label.setMaxLines(3);label.setEllipsize(TextUtils.TruncateAt.END);label.setPadding(dp(12),0,0,0);heading.addView(label,new LinearLayout.LayoutParams(0,-2,1));box.addView(heading);
   if(!date.isEmpty()){TextView time=text(date,12,MUTED);time.setPadding(0,dp(10),0,0);box.addView(time);}ScrollView scroll=new ScrollView(this){@Override protected void onMeasure(int width,int height){int max=Math.max(dp(80),(int)(getResources().getDisplayMetrics().heightPixels*.4));super.onMeasure(width,MeasureSpec.makeMeasureSpec(max,MeasureSpec.AT_MOST));}};TextView message=text(content,15,INK);message.setTextIsSelectable(true);message.setLineSpacing(dp(4),1);message.setPadding(0,dp(16),0,dp(8));message.setTag("remote-message");scroll.addView(message);box.addView(scroll,new LinearLayout.LayoutParams(-1,-2));return new AlertDialog.Builder(this,R.style.SecondaryDialog).setView(box).create();
  }
- private void finishRemoteDialog(AlertDialog dialog){remoteDialog=dialog;dialog.setOnDismissListener(value->{if(remoteDialog==dialog)remoteDialog=null;scheduleRemoteNotice();});dialog.show();dialog.getWindow().setWindowAnimations(android.R.style.Animation_Dialog);dialog.getWindow().setLayout(Math.min(getResources().getDisplayMetrics().widthPixels-dp(32),dp(520)),-2);}
+ private void styleDialog(AlertDialog dialog,boolean destructive){secondaryUi.styleDialog(dialog,destructive);}
+
+ private void finishRemoteDialog(AlertDialog dialog){remoteDialog=dialog;dialog.setOnDismissListener(value->{if(remoteDialog==dialog)remoteDialog=null;scheduleRemoteNotice();});dialog.show();styleDialog(dialog,false);dialog.getWindow().setWindowAnimations(android.R.style.Animation_Dialog);}
  private void showAnnouncement(RemoteConfig.Announcement item){AlertDialog dialog=remoteDialog(item.title,item.body,item.publishedAt.isEmpty()?"":item.publishedAt.replace('T',' ').replace("Z"," UTC"),R.drawable.ic_notes);dialog.setButton(AlertDialog.BUTTON_POSITIVE,"我知道了",(d,w)->remote.read(item.id));finishRemoteDialog(dialog);}
  private void showUpdate(RemoteConfig config){remote.sessionShown.add("update:"+config.versionCode);AlertDialog dialog=remoteDialog("发现新版本 "+config.versionName,config.changelog.isEmpty()?"新版课表镜已发布，可前往下载。":config.changelog,"",R.drawable.ic_sync);dialog.setButton(AlertDialog.BUTTON_NEGATIVE,"稍后更新",(d,w)->remote.snooze(config.versionCode));dialog.setButton(AlertDialog.BUTTON_POSITIVE,"立即更新",(d,w)->{remote.snooze(config.versionCode);openRemoteLink(config.downloadUrl());});finishRemoteDialog(dialog);}
 
- private AlertDialog confirmClear(){if(busy){toast("请等待同步结束");return null;}AlertDialog dialog=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("清空本机课表？").setMessage("课表、备注和单次调整会从这台手机删除。需要再次登录学校才能重新同步。").setNegativeButton("保留课表",null).setPositiveButton("清空",(d,w)->{if(busy){toast("请等待同步结束");return;}school.logout();data="";notes="";adjustments="";getPreferences(0).edit().remove("courseAdjustments").apply();displayChoices.clear();getPreferences(0).edit().remove("displayChoices").apply();save();home();toast("已退出并清空课表。");}).create();dialog.setOnShowListener(v->{dialog.getButton(-1).setTextColor(0xffa53f50);dialog.getButton(-2).setTextColor(0xff355db0);});dialog.show();return dialog;}
- private void termPicker(){LinearLayout body=secondary("开学日期","选择第 1 周的开始日期，用于计算当前周次。",()->menu());LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(bg(Color.WHITE,16));card.setClipToOutline(true);body.addView(card,new LinearLayout.LayoutParams(-1,-2));DatePicker picker=new DatePicker(new android.view.ContextThemeWrapper(this,R.style.SecondaryPicker));Calendar c=monday();picker.init(c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH),null);picker.setTag("term-date");card.addView(picker,new LinearLayout.LayoutParams(-1,-2));Button button=action(body,"保存开学日期",()->{picker.clearFocus();term=String.format(Locale.ROOT,"%04d-%02d-%02d",picker.getYear(),picker.getMonth()+1,picker.getDayOfMonth());save();home();});button.setTag("save-term");saveHeader(body,button);}
+ private AlertDialog confirmClear(){if(busy){toast("请等待同步结束");return null;}AlertDialog dialog=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("清空本机课表？").setMessage("课表、备注和单次调整会从这台手机删除。需要再次登录学校才能重新同步。").setNegativeButton("保留课表",null).setPositiveButton("清空",(d,w)->{if(busy){toast("请等待同步结束");return;}school.logout();data="";notes="";adjustments="";getPreferences(0).edit().remove("courseAdjustments").apply();displayChoices.clear();getPreferences(0).edit().remove("displayChoices").apply();save();home();toast("已退出并清空课表。");}).create();dialog.show();styleDialog(dialog,true);return dialog;}
+ private void termPicker(){LinearLayout body=secondary("开学日期","选择第 1 周的开始日期，用于计算当前周次。",()->menu());LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(bg(Color.WHITE,16));card.setClipToOutline(true);card.setPadding(0,0,0,dp(16));LinearLayout.LayoutParams bounds=new LinearLayout.LayoutParams(-2,-2);bounds.gravity=Gravity.CENTER_HORIZONTAL;body.addView(card,bounds);DatePicker picker=new DatePicker(new android.view.ContextThemeWrapper(this,R.style.SecondaryPicker));Calendar c=monday();picker.init(c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH),null);picker.setTag("term-date");card.addView(picker,new LinearLayout.LayoutParams(-2,-2));Button button=action(body,"保存开学日期",()->{picker.clearFocus();term=String.format(Locale.ROOT,"%04d-%02d-%02d",picker.getYear(),picker.getMonth()+1,picker.getDayOfMonth());save();home();});button.setTag("save-term");saveHeader(body,button);}
  private void edit(){edit(()->home());}
  @Override public void onWindowFocusChanged(boolean focused){super.onWindowFocusChanged(focused);if(focused)scheduleRemoteNotice();if(focused&&ADD_WIDGET.equals(getIntent().getAction())){getIntent().setAction(Intent.ACTION_MAIN);getWindow().getDecorView().post(()->pinWidget());}else if(focused)getWindow().getDecorView().postDelayed(()->checkWidgetPin(),250);}
  private void widgetShortcut(){
@@ -364,11 +392,11 @@ public class MainActivity extends Activity {
  private String widgetManualPath(){return isXiaomi()?"长按桌面空白处 → 小部件 → 全部应用 → 安卓小部件，找到“课表镜”，选择 2×2、4×2 或 4×4。":"长按桌面空白处，打开小组件列表，找到“课表镜”，选择 2×2、4×2 或 4×4。";}
  private void widgetManualGuide(){
   if(widgetDialog!=null)widgetDialog.dismiss();
-  widgetDialog=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("手动添加小组件").setMessage(widgetManualPath()+"\n\n手动添加无需授予创建桌面快捷方式权限。").setPositiveButton("知道了",null).show();
+  widgetDialog=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("手动添加小组件").setMessage(widgetManualPath()+"\n\n手动添加无需授予创建桌面快捷方式权限。").setPositiveButton("知道了",null).show();styleDialog(widgetDialog,false);
  }
  private void widgetPermissionGuide(){
   widgetAddPrefs().edit().putBoolean("guideSeen",true).apply();if(widgetDialog!=null)widgetDialog.dismiss();
-  widgetDialog=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("桌面添加说明").setMessage("部分手机的一键添加可能需要“创建桌面快捷方式”权限。\n\n添加没有反应时，可到应用详情 → 权限管理（或其他权限）开启“创建桌面快捷方式 / 桌面快捷方式”。返回后可再次尝试。\n\n也可不授权，从桌面手动添加。").setPositiveButton("前往设置",(d,w)->widgetPermissionSettings()).setNegativeButton("手动添加",(d,w)->widgetManualGuide()).setNeutralButton("继续添加",(d,w)->pinWidget()).show();
+  widgetDialog=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("桌面添加说明").setMessage("部分手机的一键添加可能需要“创建桌面快捷方式”权限。\n\n添加没有反应时，可到应用详情 → 权限管理（或其他权限）开启“创建桌面快捷方式 / 桌面快捷方式”。返回后可再次尝试。\n\n也可不授权，从桌面手动添加。").setPositiveButton("前往设置",(d,w)->widgetPermissionSettings()).setNegativeButton("手动添加",(d,w)->widgetManualGuide()).setNeutralButton("继续添加",(d,w)->pinWidget()).show();styleDialog(widgetDialog,false);
  }
  private void widgetPermissionSettings(){
   toast("权限管理（或其他权限）→ 创建桌面快捷方式；返回后可再次添加");
@@ -381,7 +409,7 @@ public class MainActivity extends Activity {
   if(isXiaomi()&&!widgetAddPrefs().getBoolean("guideSeen",false)){widgetPermissionGuide();return;}
   AlertDialog.Builder guide=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("还未确认添加到桌面").setMessage("未收到添加确认。可能已取消、桌面空间不足或启动器限制了一键添加。"+(isXiaomi()?"\n可在权限教程中查看“创建桌面快捷方式”设置。":"")).setPositiveButton("重新添加",(d,w)->pinWidget()).setNegativeButton("手动添加",(d,w)->widgetManualGuide());
   if(isXiaomi())guide.setNeutralButton("权限教程",(d,w)->{widgetAddPage();widgetPermissionGuide();});
-  widgetDialog=guide.show();
+  widgetDialog=guide.show();styleDialog(widgetDialog,false);
  }
  private void edit(Runnable back){
   LinearLayout body=secondary("课程管理","按课程归组，每门课程可包含多个上课时段。",back);action(body,"＋ 添加课程",()->courseForm(null,-1,()->edit(back))).setTag("manage-add-course");
@@ -414,8 +442,7 @@ public class MainActivity extends Activity {
   Spinner targetWeek=null,day=null,start=null,end=null;EditText room=null;
   if(!cancel){
    String[] weeks=new String[30];for(int i=0;i<30;i++)weeks[i]="第 "+(i+1)+" 周";
-   // The shared animated sheet caches 12 rows; teaching weeks use the platform spinner.
-   TextView label=text("目标教学周",14,0xff56677e);label.setPadding(0,dp(14),0,dp(8));card.addView(label);targetWeek=new Spinner(this);targetWeek.setAdapter(new ArrayAdapter<>(this,R.layout.course_choice,weeks));targetWeek.setSelection(previous!=null&&previous.replacement!=null?Integer.parseInt(initial.weeks)-1:sourceWeek-1);targetWeek.setTag("adjustment-week");targetWeek.setContentDescription("目标教学周");targetWeek.setBackgroundResource(R.drawable.form_field);card.addView(targetWeek,new LinearLayout.LayoutParams(-1,dp(54)));
+   targetWeek=courseChoice(card,"目标教学周",weeks,previous!=null&&previous.replacement!=null?Integer.parseInt(initial.weeks)-1:sourceWeek-1,"adjustment-week");
    if(initial!=null&&initial.teacher.isEmpty()&&!initial.room.isEmpty()){TextView legacy=text("旧课表的老师可能包含在地点信息中，可在此手动分开填写。",12,0xff56677e);legacy.setPadding(0,dp(12),0,0);card.addView(legacy);}
    day=courseChoice(card,"星期",new String[]{"星期一","星期二","星期三","星期四","星期五","星期六","星期日"},initial.day-1,"adjustment-day");String[] units=new String[12];for(int i=0;i<12;i++)units[i]="第 "+(i+1)+" 节";
    start=courseChoice(card,"开始节次",units,initial.start-1,"adjustment-start");end=courseChoice(card,"结束节次",units,initial.end-1,"adjustment-end");room=courseField(card,"上课教室",SchoolParser.clean(initial.room),"教室 / 线上（选填）","adjustment-room");
@@ -463,7 +490,7 @@ public class MainActivity extends Activity {
    if(current.equals(original)){back.run();return;}
    if(unsavedDialog!=null&&unsavedDialog.isShowing())return;
    AlertDialog prompt=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("修改尚未保存").setMessage("退出前是否保存？").setPositiveButton("保存并退出",null).setNegativeButton("不保存退出",null).create();
-   unsavedDialog=prompt;prompt.setOnDismissListener(dialog->{if(unsavedDialog==prompt)unsavedDialog=null;});prompt.show();
+   unsavedDialog=prompt;prompt.setOnDismissListener(dialog->{if(unsavedDialog==prompt)unsavedDialog=null;});prompt.show();styleDialog(prompt,false);
    prompt.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{prompt.dismiss();button.performClick();});
    prompt.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(v->{prompt.dismiss();discard.run();});
   };
@@ -474,34 +501,39 @@ public class MainActivity extends Activity {
   choiceSheet.open(choice,label,values);return choiceSheet;
  }
  private class CourseChoiceSheet extends FrameLayout {
-  final View shade;final LinearLayout panel;final TextView title,hint;final ScrollView scroll;final RadioButton[] options=new RadioButton[12];
+  final View shade;final LinearLayout panel;final TextView title,hint;final ScrollView scroll;final LinearLayout rows;final RadioButton[] options=new RadioButton[30];
   Spinner selected;boolean open;int generation;final int formAccessibility=root.getImportantForAccessibility();
   CourseChoiceSheet(){
    super(MainActivity.this);setVisibility(INVISIBLE);setFocusableInTouchMode(true);setClickable(true);
    shade=new View(MainActivity.this);shade.setBackgroundColor(0x66000000);shade.setTag("choice-shade");addView(shade,new FrameLayout.LayoutParams(-1,-1));shade.setOnClickListener(v->close(true));
-   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(20),dp(20),dp(20),dp(16));panel.setBackground(bg(0xfff8fbff,22));panel.setClickable(true);FrameLayout.LayoutParams panelBounds=new FrameLayout.LayoutParams(-1,dp(700),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);panelBounds.bottomMargin=dp(16);addView(panel,panelBounds);
-   title=text("",21,INK);title.setTypeface(null,Typeface.BOLD);panel.addView(title);
-   hint=text("",13,0xff56677e);hint.setPadding(0,dp(8),0,dp(16));panel.addView(hint);
-   scroll=new ScrollView(MainActivity.this);panel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout rows=new LinearLayout(MainActivity.this);rows.setOrientation(LinearLayout.VERTICAL);scroll.addView(rows);
+   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(20),dp(12),dp(20),dp(12));panel.setBackground(bg(Color.WHITE,28));panel.setClickable(true);FrameLayout.LayoutParams panelBounds=new FrameLayout.LayoutParams(-1,dp(700),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);panelBounds.bottomMargin=dp(16);addView(panel,panelBounds);
+   View handle=new View(MainActivity.this);handle.setBackground(bg(0xffd4dfe2,2));handle.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams grip=new LinearLayout.LayoutParams(dp(36),dp(4));grip.gravity=Gravity.CENTER_HORIZONTAL;grip.bottomMargin=dp(16);panel.addView(handle,grip);
+   title=text("",21,NAVY);title.setTypeface(null,Typeface.BOLD);panel.addView(title);
+   hint=text("",14,MUTED);hint.setPadding(0,dp(8),0,dp(16));panel.addView(hint);
+   scroll=new ScrollView(MainActivity.this);scroll.setClipToPadding(false);panel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));rows=new LinearLayout(MainActivity.this);rows.setOrientation(LinearLayout.VERTICAL);scroll.addView(rows);
    for(int i=0;i<options.length;i++){
-    final int position=i;RadioButton option=new RadioButton(MainActivity.this);options[i]=option;option.setTextSize(16);option.setButtonTintList(android.content.res.ColorStateList.valueOf(0xff355db0));option.setPadding(dp(12),dp(10),dp(12),dp(10));option.setMinHeight(dp(58));option.setTag("choice-option-"+i);android.graphics.drawable.StateListDrawable background=new android.graphics.drawable.StateListDrawable();background.addState(new int[]{android.R.attr.state_checked},bg(0xffe8edf5,8));background.addState(new int[]{},bg(Color.WHITE,8));option.setBackground(background);option.setTextColor(new android.content.res.ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{0xff355db0,INK}));
-    option.setOnClickListener(v->{if(!open)return;selected.setSelection(position);close(true);});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(8);rows.addView(option,lp);
+    final int position=i;RadioButton option=new RadioButton(MainActivity.this);options[i]=option;option.setButtonDrawable(null);option.setGravity(Gravity.CENTER);option.setTextSize(15);option.setPadding(dp(8),dp(10),dp(8),dp(10));option.setTag("choice-option-"+i);option.setTextColor(NAVY);option.setLineSpacing(dp(3),1);option.setOnClickListener(v->{if(!open)return;selected.setSelection(position);close(true);});
    }
-   Button cancel=action(panel,"取消",()->close(true));cancel.setTag("choice-cancel");cancel.setTextColor(0xff355db0);cancel.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
+   Button cancel=action(panel,"取消",()->close(true));cancel.setTag("choice-cancel");cancel.setTextColor(NAVY);cancel.setBackgroundTintList(android.content.res.ColorStateList.valueOf(SURFACE));LinearLayout.LayoutParams footer=(LinearLayout.LayoutParams)cancel.getLayoutParams();footer.topMargin=dp(16);footer.bottomMargin=0;cancel.setStateListAnimator(null);
   }
   @Override protected void onMeasure(int widthSpec,int heightSpec){
-   FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)panel.getLayoutParams();lp.width=Math.max(1,MeasureSpec.getSize(widthSpec)-dp(32));lp.height=Math.max(1,Math.min(MeasureSpec.getSize(heightSpec)*3/4,dp(700)));super.onMeasure(widthSpec,heightSpec);
+   FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)panel.getLayoutParams();lp.width=Math.max(1,MeasureSpec.getSize(widthSpec)-dp(24));rows.measure(MeasureSpec.makeMeasureSpec(Math.max(1,lp.width-dp(40)),MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));int chrome=dp(154)+(int)(title.getTextSize()+hint.getTextSize());lp.height=Math.max(1,Math.min(MeasureSpec.getSize(heightSpec)*4/5,rows.getMeasuredHeight()+chrome));super.onMeasure(widthSpec,heightSpec);
   }
   void open(Spinner choice,String label,String[] values){
-   if(open&&selected==choice)return;int token=++generation;open=true;selected=choice;panel.animate().cancel();shade.animate().cancel();String heading="选择"+label,currentHint="当前："+values[choice.getSelectedItemPosition()]+" · 点击选项确认";if(!TextUtils.equals(title.getText(),heading))title.setText(heading);if(!TextUtils.equals(hint.getText(),currentHint))hint.setText(currentHint);
+   if(open&&selected==choice)return;int token=++generation;open=true;selected=choice;panel.animate().cancel();shade.animate().cancel();title.setText("选择"+label);hint.setText("当前："+values[choice.getSelectedItemPosition()]+" · 点选后返回");
+   boolean units=values.length==12,weeks=values.length==30;int columns=weeks?5:2;
+   for(RadioButton option:options)if(option.getParent()!=null)((ViewGroup)option.getParent()).removeView(option);rows.removeAllViews();
+   LinearLayout row=null;
    for(int i=0;i<options.length;i++){
-    RadioButton option=options[i];option.setVisibility(i<values.length?VISIBLE:GONE);if(i>=values.length)continue;boolean current=i==choice.getSelectedItemPosition();String time=values.length==12?"   "+START_TIMES[i]+"–"+END_TIMES[i]:"";
-    String caption=values[i]+time;if(!TextUtils.equals(option.getText(),caption))option.setText(caption);option.setChecked(current);option.setContentDescription(label+"，"+values[i]+time+(current?"，已选中":""));
+    RadioButton option=options[i];option.setVisibility(i<values.length?VISIBLE:GONE);if(i>=values.length)continue;
+    if(i%columns==0){row=new LinearLayout(MainActivity.this);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,-2);rp.bottomMargin=dp(8);rows.addView(row,rp);}
+    boolean current=i==choice.getSelectedItemPosition();String caption=weeks?""+(i+1):values[i];if(units)caption+="\n"+START_TIMES[i]+"–"+END_TIMES[i];if(current)caption+="  ✓";option.setText(caption);option.setChecked(current);option.setTypeface(null,current?Typeface.BOLD:Typeface.NORMAL);option.setMinHeight(dp(weeks?48:units?72:56));GradientDrawable surface=bg(current?SOFT:SURFACE,16);if(current)surface.setStroke(dp(1.5f),0xff4f8b94);option.setBackground(surface);ripple(option);option.setContentDescription(label+"，"+values[i]+(units?"，"+START_TIMES[i]+"至"+END_TIMES[i]:"")+(current?"，已选中":""));LinearLayout.LayoutParams cell=new LinearLayout.LayoutParams(0,-2,1);if(i%columns>0)cell.leftMargin=dp(8);row.addView(option,cell);
    }
-   root.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);setVisibility(VISIBLE);updateSystemBack();requestFocus();if(android.os.Build.VERSION.SDK_INT>=28)setAccessibilityPaneTitle("选择"+label);
-   panel.setTranslationY(dp(48));shade.setAlpha(0f);
-   getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener(){public boolean onPreDraw(){getViewTreeObserver().removeOnPreDrawListener(this);if(token!=generation||!open||!isAttachedToWindow())return true;scroll.scrollTo(0,Math.max(0,options[choice.getSelectedItemPosition()].getTop()-dp(60)));if(android.animation.ValueAnimator.areAnimatorsEnabled()){panel.animate().translationY(0).setDuration(200).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();shade.animate().alpha(1f).setDuration(200).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();}else{panel.setTranslationY(0);shade.setAlpha(1f);}return true;}});
+   if(values.length%columns!=0)for(int i=values.length%columns;i<columns;i++){Space space=new Space(MainActivity.this);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,1,1);lp.leftMargin=dp(8);row.addView(space,lp);}
+   root.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);setVisibility(VISIBLE);updateSystemBack();requestFocus();if(Build.VERSION.SDK_INT>=28)setAccessibilityPaneTitle("选择"+label);requestLayout();panel.setTranslationY(dp(48));shade.setAlpha(0f);
+   getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener(){public boolean onPreDraw(){getViewTreeObserver().removeOnPreDrawListener(this);if(token!=generation||!open||!isAttachedToWindow())return true;RadioButton option=options[choice.getSelectedItemPosition()];android.graphics.Rect rect=new android.graphics.Rect(0,0,option.getWidth(),option.getHeight());rows.offsetDescendantRectToMyCoords(option,rect);scroll.scrollTo(0,Math.max(0,rect.top-dp(60)));if(android.animation.ValueAnimator.areAnimatorsEnabled()){panel.animate().translationY(0).setDuration(200).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();shade.animate().alpha(1f).setDuration(200).start();}else{panel.setTranslationY(0);shade.setAlpha(1f);}return true;}});
   }
+
   void close(boolean animate){
    scheduleRemoteNotice();
    if(animate&&!open)return;open=false;int token=++generation;panel.animate().cancel();shade.animate().cancel();Runnable finish=()->{if(token!=generation)return;setVisibility(INVISIBLE);updateSystemBack();root.setImportantForAccessibility(formAccessibility);if(selected!=null&&selected.isAttachedToWindow())selected.requestFocus();};

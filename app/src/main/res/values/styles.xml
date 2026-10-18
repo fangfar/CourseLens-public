@@ -13,9 +13,9 @@
         <item name="android:textColor">@color/date_header_text</item>
     </style>
     <style name="SecondaryDialog" parent="android:style/Theme.Material.Light.Dialog.Alert">
-        <item name="android:colorAccent">#4266AD</item>
-        <item name="android:textColorPrimary">#172132</item>
-        <item name="android:textColorSecondary">#8C97AA</item>
+        <item name="android:colorAccent">#426B75</item>
+        <item name="android:textColorPrimary">#082630</item>
+        <item name="android:textColorSecondary">#687E85</item>
         <item name="android:windowBackground">@drawable/dialog_surface</item>
     </style>
 </resources>
