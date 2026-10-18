@@ -50,6 +50,7 @@ public final class MotionChecks {
   }
   main(runner,()->{try{a.onBackPressed();call(a,"menu");check(field("root").get(a)!=settings,"Fresh settings entry reused old session");}catch(Exception e){throw new RuntimeException(e);}});
   runner.waitForIdleSync();SystemClock.sleep(350);
+  main(runner,a::onBackPressed);runner.waitForIdleSync();SystemClock.sleep(350);
  }
  private static void capture(Instrumentation runner,String name)throws Exception{
   android.graphics.Bitmap bitmap=runner.getUiAutomation().takeScreenshot();check(bitmap!=null,"Screenshot unavailable");
