@@ -30,6 +30,7 @@ public class MainActivity extends Activity {
  private Map<String,CourseAdjustment> cachedMoves=Collections.emptyMap();
  private Map<Course,String> cachedCardText=new HashMap<>();
  private HomePage homePage;
+ private LinearLayout settingsPage;private int settingsScrollY;
  private ScrollView timetableScroll;private int timetableScrollY;
  private final PageMotion pageMotion=new PageMotion();private android.window.OnBackInvokedCallback systemBack;private boolean backRegistered;
  private ViewPager pager;private TextView weekLabel,returnWeekButton;private FrameLayout daysBar; private LinearLayout root;private FrameLayout stage;private boolean returningPage;private int week=6;private String data="",notes="",term="2026-08-31";
@@ -53,6 +54,7 @@ public class MainActivity extends Activity {
   pageMotion.cancel();
   if(unsavedDialog!=null){unsavedDialog.dismiss();unsavedDialog=null;}
   while(navigationOverlay!=null)navigationOverlay.close(false);
+  if(root==settingsPage&&settingsPage!=null)settingsScrollY=((ScrollView)settingsPage.getChildAt(1)).getScrollY();
   if(timetableScroll!=null){timetableScrollY=timetableScroll.getScrollY();timetableScroll=null;}
   if(choiceSheet!=null){choiceSheet.close(false);choiceSheet=null;}
   LinearLayout previous=root;boolean backwards=returningPage||!secondary;
@@ -157,6 +159,7 @@ public class MainActivity extends Activity {
   root.findViewWithTag("sheet-action-button").setVisibility(View.VISIBLE);root.findViewWithTag("sheet-action-button").setOnClickListener(v->{NavigationOverlay menu=sheetMenu("教学周操作");for(int w=1;w<=30;w++){final int chosen=w;menuItem(menu,"第 "+w+" 周"+(w==week?" ✓":""),"week-"+w,()->changeWeek(chosen));}});
  }
  private void home(){
+  settingsPage=null;
   getWindow().setStatusBarColor(0xffe4e8f4);getWindow().setNavigationBarColor(0xffcbd5e6);
   if(homePage!=null&&pageBack!=null&&navigationOverlay==null&&homePage.matches()){
    HomePage page=homePage;page.view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,false,page.view);
@@ -266,6 +269,12 @@ public class MainActivity extends Activity {
   LinearLayout group=new LinearLayout(this);group.setOrientation(LinearLayout.VERTICAL);group.setTag("settings-group");group.setBackground(bg(Color.WHITE,24));group.setClipToOutline(true);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(18);body.addView(group,lp);return group;
  }
  private void menu(){
+  if(returningPage&&settingsPage!=null){
+   settingsPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(true,false,settingsPage);
+   root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);
+   pageBack=()->home();updateSystemBack();remoteStatus=root.findViewWithTag("update-status");refreshRemoteStatus();
+   ((ScrollView)root.getChildAt(1)).scrollTo(0,settingsScrollY);return;
+  }
   LinearLayout body=secondary("课表设置","安排本学期，也整理你的课表。",()->home());
   LinearLayout semester=settingsGroup(body,"学期与周次");
   option(semester,R.drawable.ic_calendar,"选择教学周","当前查看第 "+week+" 周",()->weekPicker(()->menu())).setTag("select-teaching-week");
@@ -279,6 +288,7 @@ public class MainActivity extends Activity {
   remoteStatus=text("",13,MUTED);remoteStatus.setTag("update-status");remoteStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);remoteStatus.setPadding(dp(4),0,dp(4),dp(8));body.addView(remoteStatus);refreshRemoteStatus();
   option(software,R.drawable.ic_notes,"关于软件与下载","网盘下载、版本与 GitHub",this::about).setTag("about-app");
   LinearLayout caution=panel(body);caution.setPadding(dp(16),dp(16),dp(16),dp(16));caution.setBackground(bg(0xfffff1f3,16));caution.addView(text("本地数据",15,0xff9a3849));TextView note=text("清空后需要重新导入，课表、备注和单次调整都会删除。",13,0xff885564);note.setLineSpacing(dp(3),1);note.setPadding(0,dp(8),0,dp(4));caution.addView(note);Button clear=action(caution,"退出并清空课表",()->confirmClear());clear.setTextColor(0xff9a3849);clear.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xfffbe0e5));
+  settingsPage=root;
  }
 
  private String appVersion(){try{return getPackageManager().getPackageInfo(getPackageName(),0).versionName;}catch(android.content.pm.PackageManager.NameNotFoundException e){throw new IllegalStateException(e);}}
@@ -327,7 +337,7 @@ public class MainActivity extends Activity {
  private void showUpdate(RemoteConfig config){remote.sessionShown.add("update:"+config.versionCode);AlertDialog dialog=remoteDialog("发现新版本 "+config.versionName,config.changelog.isEmpty()?"新版课表镜已发布，可前往下载。":config.changelog,"",R.drawable.ic_sync);dialog.setButton(AlertDialog.BUTTON_NEGATIVE,"稍后更新",(d,w)->remote.snooze(config.versionCode));dialog.setButton(AlertDialog.BUTTON_POSITIVE,"立即更新",(d,w)->{remote.snooze(config.versionCode);openRemoteLink(config.downloadUrl());});finishRemoteDialog(dialog);}
 
  private AlertDialog confirmClear(){if(busy){toast("请等待同步结束");return null;}AlertDialog dialog=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("清空本机课表？").setMessage("课表、备注和单次调整会从这台手机删除。需要再次登录学校才能重新同步。").setNegativeButton("保留课表",null).setPositiveButton("清空",(d,w)->{if(busy){toast("请等待同步结束");return;}school.logout();data="";notes="";adjustments="";getPreferences(0).edit().remove("courseAdjustments").apply();displayChoices.clear();getPreferences(0).edit().remove("displayChoices").apply();save();home();toast("已退出并清空课表。");}).create();dialog.show();styleDialog(dialog,true);return dialog;}
- private void termPicker(){LinearLayout body=secondary("开学日期","选择第 1 周的开始日期，用于计算当前周次。",()->menu());LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(bg(Color.WHITE,16));card.setClipToOutline(true);body.addView(card,new LinearLayout.LayoutParams(-1,-2));DatePicker picker=new DatePicker(new android.view.ContextThemeWrapper(this,R.style.SecondaryPicker));Calendar c=monday();picker.init(c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH),null);picker.setTag("term-date");card.addView(picker,new LinearLayout.LayoutParams(-1,-2));Button button=action(body,"保存开学日期",()->{picker.clearFocus();term=String.format(Locale.ROOT,"%04d-%02d-%02d",picker.getYear(),picker.getMonth()+1,picker.getDayOfMonth());save();home();});button.setTag("save-term");saveHeader(body,button);}
+ private void termPicker(){LinearLayout body=secondary("开学日期","选择第 1 周的开始日期，用于计算当前周次。",()->menu());LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setBackground(bg(Color.WHITE,16));card.setClipToOutline(true);card.setPadding(0,0,0,dp(16));LinearLayout.LayoutParams bounds=new LinearLayout.LayoutParams(-2,-2);bounds.gravity=Gravity.CENTER_HORIZONTAL;body.addView(card,bounds);DatePicker picker=new DatePicker(new android.view.ContextThemeWrapper(this,R.style.SecondaryPicker));Calendar c=monday();picker.init(c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH),null);picker.setTag("term-date");card.addView(picker,new LinearLayout.LayoutParams(-2,-2));Button button=action(body,"保存开学日期",()->{picker.clearFocus();term=String.format(Locale.ROOT,"%04d-%02d-%02d",picker.getYear(),picker.getMonth()+1,picker.getDayOfMonth());save();home();});button.setTag("save-term");saveHeader(body,button);}
  private void edit(){edit(()->home());}
  @Override public void onWindowFocusChanged(boolean focused){super.onWindowFocusChanged(focused);if(focused)scheduleRemoteNotice();if(focused&&ADD_WIDGET.equals(getIntent().getAction())){getIntent().setAction(Intent.ACTION_MAIN);getWindow().getDecorView().post(()->pinWidget());}else if(focused)getWindow().getDecorView().postDelayed(()->checkWidgetPin(),250);}
  private void widgetShortcut(){
