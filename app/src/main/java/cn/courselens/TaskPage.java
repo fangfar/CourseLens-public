@@ -1,58 +1,84 @@
 package cn.courselens;
 
-import android.content.Context;
+import android.app.*;
+import android.content.*;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.view.Gravity;
-import android.view.View;
+import android.text.InputType;
+import android.view.*;
 import android.widget.*;
+import java.util.*;
+import java.util.concurrent.*;
 
-@android.annotation.SuppressLint("ViewConstructor") // Created with page state, never inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 final class TaskPage extends LinearLayout {
- private static final int INK=SecondaryUi.INK,MUTED=SecondaryUi.MUTED,PRIMARY=SecondaryUi.NAVY;
+ private final Activity activity;
+ private final SecondaryUi ui;
+ private final ChaoxingAccount account;
+ private final ExecutorService worker=Executors.newSingleThreadExecutor();
  private final TextView[] filters=new TextView[3];
- private final TextView emptyTitle,emptyDescription;
+ private final TextView platform,status,emptyTitle;
+ private final LinearLayout list;
  private final ScrollView scroll;
- private int filter;
+ private final Button refresh,configure;
+ private final ProgressBar progress;
+ private ChaoxingClient client;
+ private ChaoxingClient.Result snapshot;
+ private AlertDialog configuration;
+ private EditText passwordField;
+ private int filter;private volatile int generation;
+ private boolean busy;private volatile boolean closed;
 
  TaskPage(Context context,Bundle state){
-  super(context);setTag("tasks-page");setOrientation(VERTICAL);
-  LinearLayout header=new LinearLayout(context);header.setOrientation(VERTICAL);header.setPadding(dp(20),dp(20),dp(20),dp(20));
-  TextView title=text("任务",28,INK);title.setTypeface(null,Typeface.BOLD);header.addView(title);
-  TextView intro=text("课程作业与截止时间，集中查看",14,MUTED);intro.setPadding(0,dp(6),0,0);header.addView(intro);addView(header,new LayoutParams(-1,-2));
-
-  scroll=new ScrollView(context);scroll.setFillViewport(true);scroll.setClipToPadding(false);addView(scroll,new LayoutParams(-1,0,1));
-  LinearLayout body=new LinearLayout(context);body.setOrientation(VERTICAL);body.setPadding(dp(20),0,dp(20),dp(24));scroll.addView(body,new ScrollView.LayoutParams(-1,-1));
-
-  LinearLayout platforms=new LinearLayout(context);platforms.setOrientation(VERTICAL);platforms.setPadding(dp(18),dp(18),dp(18),dp(18));platforms.setBackground(surface(SecondaryUi.SOFT,18));body.addView(platforms,new LayoutParams(-1,-2));
-  LinearLayout status=new LinearLayout(context);status.setGravity(Gravity.CENTER_VERTICAL);platforms.addView(status,new LayoutParams(-1,-2));
-  TextView platformTitle=text("学习平台",16,INK);platformTitle.setTypeface(null,Typeface.BOLD);status.addView(platformTitle,new LayoutParams(0,-2,1));
-  TextView badge=text("暂未连接",12,MUTED);badge.setPadding(dp(10),dp(5),dp(10),dp(5));badge.setBackground(surface(0xffe5eef0,10));status.addView(badge);
-  TextView names=text("学习通  ·  知到  ·  中国大学 MOOC",13,SecondaryUi.MUTED);names.setPadding(0,dp(12),0,dp(6));names.setLineSpacing(dp(3),1);platforms.addView(names);
-  platforms.addView(text("登录学习通后自动获取课程作业；其他平台暂未开放",12,MUTED));
-  new SecondaryUi((android.app.Activity)context).action(platforms,"连接学习通",()->context.startActivity(new android.content.Intent(context,ChaoxingActivity.class))).setTag("chaoxing-connect");
-
-  LinearLayout choices=new LinearLayout(context);choices.setPadding(dp(4),dp(4),dp(4),dp(4));choices.setBackground(surface(0xffe5eef0,14));LayoutParams choiceLayout=new LayoutParams(-1,-2);choiceLayout.topMargin=dp(24);body.addView(choices,choiceLayout);
-  String[] labels={"待处理","已完成","全部"};
-  for(int i=0;i<labels.length;i++){final int index=i;TextView tab=text(labels[i],14,MUTED);tab.setTag("task-filter-"+i);tab.setGravity(Gravity.CENTER);tab.setMinHeight(dp(48));tab.setPadding(dp(4),dp(10),dp(4),dp(10));tab.setFocusable(true);tab.setContentDescription(labels[i]);tab.setOnClickListener(v->selectFilter(index));filters[i]=tab;choices.addView(tab,new LayoutParams(0,-2,1));}
-
-  LinearLayout empty=new LinearLayout(context);empty.setOrientation(VERTICAL);empty.setGravity(Gravity.CENTER);empty.setPadding(dp(16),dp(44),dp(16),dp(44));empty.setMinimumHeight(dp(280));body.addView(empty,new LayoutParams(-1,0,1));
-  ImageView illustration=new ImageView(context);illustration.setImageResource(R.drawable.ic_tasks);illustration.setImageTintList(android.content.res.ColorStateList.valueOf(SecondaryUi.NAVY));illustration.setPadding(dp(20),dp(20),dp(20),dp(20));illustration.setBackground(surface(SecondaryUi.SOFT,28));illustration.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);empty.addView(illustration,new LayoutParams(dp(80),dp(80)));
-  emptyTitle=text("",18,INK);emptyTitle.setTag("tasks-empty-title");emptyTitle.setTypeface(null,Typeface.BOLD);emptyTitle.setGravity(Gravity.CENTER);emptyTitle.setPadding(0,dp(22),0,dp(8));emptyTitle.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);empty.addView(emptyTitle,new LayoutParams(-1,-2));
-  emptyDescription=text("",14,MUTED);emptyDescription.setGravity(Gravity.CENTER);emptyDescription.setLineSpacing(dp(5),1);empty.addView(emptyDescription,new LayoutParams(-1,-2));
-  selectFilter(state==null?0:state.getInt("filter",0));
-  int restoredY=state==null?0:state.getInt("scrollY",0);scroll.post(()->scroll.scrollTo(0,restoredY));
+  super(context);activity=(Activity)context;ui=new SecondaryUi(activity);account=new ChaoxingAccount(context);setTag("tasks-page");setOrientation(VERTICAL);
+  LinearLayout header=new LinearLayout(context);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(20),ui.dp(20),ui.dp(20),ui.dp(16));addView(header,new LayoutParams(-1,-2));
+  TextView title=ui.text("任务",28,SecondaryUi.INK);title.setTypeface(null,Typeface.BOLD);header.addView(title,new LayoutParams(0,-2,1));
+  platform=ui.text("未连接平台",13,SecondaryUi.MUTED);platform.setTag("task-connected-platforms");platform.setGravity(Gravity.CENTER);platform.setPadding(ui.dp(12),ui.dp(10),ui.dp(12),ui.dp(10));platform.setMinHeight(ui.dp(48));platform.setBackground(ui.bg(SecondaryUi.SOFT,16));platform.setFocusable(true);platform.setOnClickListener(v->configure());ui.ripple(platform);header.addView(platform,new LayoutParams(-2,-2));
+  LinearLayout toolbar=new LinearLayout(context);toolbar.setGravity(Gravity.CENTER_VERTICAL);toolbar.setPadding(ui.dp(20),0,ui.dp(20),0);addView(toolbar,new LayoutParams(-1,-2));
+  configure=ui.action(toolbar,"账号密码配置",this::configure);configure.setTag("chaoxing-connect");LayoutParams configLayout=new LayoutParams(0,-2,1);configLayout.bottomMargin=ui.dp(12);toolbar.updateViewLayout(configure,configLayout);
+  refresh=ui.action(toolbar,"刷新作业",this::refresh);refresh.setTag("chaoxing-refresh");LayoutParams refreshLayout=new LayoutParams(0,-2,1);refreshLayout.leftMargin=ui.dp(10);refreshLayout.bottomMargin=ui.dp(12);toolbar.updateViewLayout(refresh,refreshLayout);refresh.setEnabled(account.configured());
+  status=ui.text("请先配置学习通账号密码，登录验证成功后才会保存。",13,SecondaryUi.MUTED);status.setTag("chaoxing-status");status.setPadding(ui.dp(24),0,ui.dp(24),ui.dp(12));status.setLineSpacing(ui.dp(4),1);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);addView(status,new LayoutParams(-1,-2));
+  progress=new ProgressBar(context,null,android.R.attr.progressBarStyleHorizontal);progress.setIndeterminate(true);progress.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(SecondaryUi.NAVY));progress.setVisibility(GONE);addView(progress,new LayoutParams(-1,ui.dp(3)));
+  LinearLayout choices=new LinearLayout(context);choices.setPadding(ui.dp(4),ui.dp(4),ui.dp(4),ui.dp(4));choices.setBackground(ui.bg(0xffe5eef0,14));LayoutParams choicesLayout=new LayoutParams(-1,-2);choicesLayout.setMargins(ui.dp(20),ui.dp(8),ui.dp(20),ui.dp(12));addView(choices,choicesLayout);
+  String[] labels={"待处理","已完成","全部"};for(int i=0;i<labels.length;i++){final int selected=i;TextView tab=ui.text(labels[i],14,SecondaryUi.MUTED);tab.setTag("task-filter-"+i);tab.setGravity(Gravity.CENTER);tab.setMinHeight(ui.dp(48));tab.setPadding(ui.dp(4),ui.dp(10),ui.dp(4),ui.dp(10));tab.setFocusable(true);tab.setOnClickListener(v->selectFilter(selected));filters[i]=tab;choices.addView(tab,new LayoutParams(0,-2,1));}
+  scroll=new ScrollView(context);scroll.setFillViewport(true);scroll.setClipToPadding(false);addView(scroll,new LayoutParams(-1,0,1));list=new LinearLayout(context);list.setOrientation(VERTICAL);list.setPadding(ui.dp(20),0,ui.dp(20),ui.dp(24));list.setTag("chaoxing-results");scroll.addView(list,new ScrollView.LayoutParams(-1,-2));
+  emptyTitle=ui.text("",18,SecondaryUi.INK);emptyTitle.setTag("tasks-empty-title");emptyTitle.setGravity(Gravity.CENTER);emptyTitle.setTypeface(null,Typeface.BOLD);emptyTitle.setPadding(ui.dp(16),ui.dp(64),ui.dp(16),ui.dp(16));
+  selectFilter(state==null?0:state.getInt("filter",0));int restoredY=state==null?0:state.getInt("scrollY",0);scroll.post(()->scroll.scrollTo(0,restoredY));
+  connected(false);if(account.configured())post(this::refresh);
  }
-
- private void selectFilter(int value){
-  filter=value>=0&&value<filters.length?value:0;
-  for(int i=0;i<filters.length;i++){boolean selected=i==filter;filters[i].setSelected(selected);filters[i].setTextColor(selected?PRIMARY:MUTED);filters[i].setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);filters[i].setBackground(selected?surface(0xffffffff,10):null);}
-  String[] titles={"还没有待处理任务","还没有已完成任务","还没有任务"};emptyTitle.setText(titles[filter]);
-  emptyDescription.setText("连接学习通后自动查看课程作业，\n读取结果在学习通页面中展示。");
+ private void selectFilter(int value){filter=value>=0&&value<filters.length?value:0;for(int i=0;i<filters.length;i++){boolean selected=i==filter;filters[i].setSelected(selected);filters[i].setTextColor(selected?SecondaryUi.NAVY:SecondaryUi.MUTED);filters[i].setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);filters[i].setBackground(selected?ui.bg(android.graphics.Color.WHITE,10):null);}render();}
+ private void render(){
+  list.removeAllViews();int shown=0;
+  if(snapshot!=null)for(ChaoxingClient.Work work:snapshot.items){if(filter==0&&work.completed()||filter==1&&!work.completed())continue;shown++;LinearLayout card=new LinearLayout(getContext());card.setOrientation(VERTICAL);card.setPadding(ui.dp(20),ui.dp(18),ui.dp(20),ui.dp(18));card.setBackground(ui.bg(android.graphics.Color.WHITE,22));LayoutParams lp=new LayoutParams(-1,-2);lp.bottomMargin=ui.dp(12);list.addView(card,lp);
+   TextView course=ui.text("学习通 · "+work.course,13,SecondaryUi.MUTED);card.addView(course);TextView name=ui.text(work.title,18,SecondaryUi.INK);name.setTypeface(null,Typeface.BOLD);name.setTextIsSelectable(true);name.setPadding(0,ui.dp(10),0,ui.dp(12));card.addView(name);TextView detail=ui.text("状态："+(work.status.isEmpty()?"未知":work.status)+"\n截止："+work.deadline,14,SecondaryUi.MUTED);detail.setLineSpacing(ui.dp(5),1);detail.setTextIsSelectable(true);card.addView(detail);
+  }
+  if(shown==0){String[] titles={"还没有待处理任务","还没有已完成任务","还没有任务"};emptyTitle.setText(snapshot!=null&&!snapshot.warnings.isEmpty()?"部分课程尚未读取完成":titles[filter]);list.addView(emptyTitle,new LayoutParams(-1,-2));}
+  if(snapshot!=null)for(String warning:snapshot.warnings){TextView note=ui.text(warning,13,0xff885564);note.setPadding(ui.dp(4),ui.dp(8),ui.dp(4),ui.dp(8));list.addView(note);}
+ }
+ private void connected(boolean value){platform.setText(value?"学习通 · 已连接":account.configured()?"学习通 · 待验证":"未连接平台");platform.setTextColor(value?SecondaryUi.NAVY:SecondaryUi.MUTED);platform.setContentDescription("已连接平台："+(value?"学习通":"无")+"，点击配置账号密码");}
+ private void busy(boolean value){busy=value;configure.setEnabled(!value);platform.setEnabled(!value);refresh.setEnabled(!value&&account.configured());progress.setVisibility(value?VISIBLE:GONE);}
+ private boolean current(int token){return !closed&&token==generation&&!activity.isFinishing()&&!activity.isDestroyed();}
+ private void configure(){
+  if(busy||closed)return;LinearLayout form=new LinearLayout(getContext());form.setOrientation(VERTICAL);form.setPadding(ui.dp(24),ui.dp(8),ui.dp(24),ui.dp(8));
+  TextView intro=ui.text("输入学习通账号密码。验证登录成功后，在本机加密保存；失败时保留原配置。",14,SecondaryUi.MUTED);intro.setLineSpacing(ui.dp(4),1);form.addView(intro);
+  EditText username=field(form,"学习通账号","手机号 / 超星账号",false);EditText password=field(form,"登录密码","请输入密码",true);passwordField=password;
+  TextView feedback=ui.text("",13,SecondaryUi.MUTED);feedback.setPadding(0,ui.dp(12),0,ui.dp(8));feedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);form.addView(feedback);
+  ScrollView scroll=new ScrollView(getContext());scroll.addView(form);
+  AlertDialog dialog=new AlertDialog.Builder(activity,R.style.SecondaryDialog).setTitle("学习通密码配置").setView(scroll).setNegativeButton("取消",null).setPositiveButton("验证并保存",null).create();configuration=dialog;dialog.setOnDismissListener(d->{password.setText("");passwordField=null;configuration=null;});dialog.show();dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);ui.styleDialog(dialog,false);
+  if(account.configured())try{username.setText(account.load().account);}catch(Exception e){feedback.setText("原配置无法解密，请重新输入账号密码。");}
+  dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{String name=username.getText().toString().trim(),secret=password.getText().toString();if(name.isEmpty()||secret.isEmpty()){feedback.setText("请输入账号和密码。");return;}password.setText("");username.setEnabled(false);password.setEnabled(false);dialog.setCancelable(false);dialog.getButton(-1).setEnabled(false);dialog.getButton(-2).setEnabled(false);feedback.setText("正在验证登录，请稍候…");busy(true);int token=++generation;
+   if(client!=null)client.close();client=new ChaoxingClient();ChaoxingClient connection=client;
+   worker.execute(()->{try{connection.login(name,secret);if(!current(token))return;account.save(name,secret);activity.runOnUiThread(()->{if(current(token)){connected(true);dialog.dismiss();status.setText("学习通登录成功，密码配置已加密保存，正在读取作业…");snapshot=null;render();}});sync(connection,token);}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);dialog.setCancelable(true);username.setEnabled(true);password.setEnabled(true);dialog.getButton(-1).setEnabled(true);dialog.getButton(-2).setEnabled(true);feedback.setText("登录验证或保存失败，未更新配置。请核对账号密码和网络；验证码或机构认证需先在学习通完成。");status.setText("配置未更新，原配置及作业保留。");}});}});
+  });
+ }
+ private EditText field(LinearLayout form,String label,String hint,boolean secret){TextView caption=ui.text(label,13,SecondaryUi.MUTED);caption.setPadding(0,ui.dp(16),0,ui.dp(8));form.addView(caption);EditText input=new EditText(getContext());input.setTextSize(15);input.setSingleLine(true);input.setHint(hint);input.setContentDescription(label);input.setTextColor(SecondaryUi.INK);input.setHintTextColor(SecondaryUi.MUTED);input.setPadding(ui.dp(16),0,ui.dp(16),0);input.setBackgroundResource(R.drawable.form_field);input.setInputType(InputType.TYPE_CLASS_TEXT|(secret?InputType.TYPE_TEXT_VARIATION_PASSWORD:InputType.TYPE_TEXT_VARIATION_NORMAL));input.setSaveEnabled(false);input.setImportantForAutofill(IMPORTANT_FOR_AUTOFILL_NO);form.addView(input,new LayoutParams(-1,ui.dp(54)));return input;}
+ private void refresh(){
+  if(busy||closed)return;if(!account.configured()){configure();return;}busy(true);int token=++generation;status.setText("正在使用保存的配置登录学习通…");if(client!=null)client.close();client=new ChaoxingClient();ChaoxingClient connection=client;
+  worker.execute(()->{try{ChaoxingAccount.Saved saved=account.load();connection.login(saved.account,saved.password);activity.runOnUiThread(()->{if(current(token))connected(true);});sync(connection,token);}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);connected(false);status.setText("登录未成功，请检查网络或重新配置密码。已有作业保留。");}});}});
+ }
+ private void sync(ChaoxingClient connection,int token){
+  try{ChaoxingClient.Result result=connection.sync(message->activity.runOnUiThread(()->{if(current(token))status.setText(message);}));activity.runOnUiThread(()->{if(current(token)){snapshot=result;busy(false);status.setText("已读取 "+result.checked+" / "+result.total+" 门课程 · "+result.items.size()+" 份作业"+(result.warnings.isEmpty()?"":" · 部分信息未完成"));render();}});}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("登录成功，但作业读取未完成。密码配置已保留，请稍后刷新。");}});}
  }
  void saveState(Bundle state){state.putInt("filter",filter);state.putInt("scrollY",scroll.getScrollY());}
- private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
- private TextView text(String value,int size,int color){TextView view=new TextView(getContext());view.setText(value);view.setTextSize(size);view.setTextColor(color);view.setIncludeFontPadding(false);return view;}
- private GradientDrawable surface(int color,int radius){GradientDrawable background=new GradientDrawable();background.setColor(color);background.setCornerRadius(dp(radius));return background;}
+ void close(){closed=true;generation++;if(configuration!=null)configuration.dismiss();if(passwordField!=null)passwordField.setText("");if(client!=null)client.close();worker.shutdownNow();}
 }

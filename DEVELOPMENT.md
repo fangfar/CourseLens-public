@@ -3,10 +3,10 @@
 ## 正式与预研隔离
 
 - 学习通作业读取实验在 `codex/chaoxing-homework` 独立 worktree 开发，任务页来自预研分支 `f1a576c`，现已同步最新正式基线 `2063f56`（2.6.3）；本次按用户要求保持与正式 App 隔离，不推送、不合并、不发布。这里只做 QA 预览，不能作为正式构建来源。
-- 入口：任务 → 连接学习通 → 输入手机号 / 超星账号与密码 → 登录并自动识别。客户端按普通网页登录协议认证，再查询课程列表、每门课的作业列表以及待交作业详情。只读，不提交作业、不读取或生成答案。验证码 / 机构登录使用官方验证入口，验证完成后自动继续读取。
-- 密码只在一次登录请求期间驻留内存，输入框立即清空，不保存进偏好、实例状态、日志或文件。原生登录 Cookie 只在内存中保留到页面关闭；官方验证入口采用 App 私有 WebView 会话，凭据不导出、不入 Git。
-- 作业结果在本页按课程卡片展示并可手动刷新，暂不持久化到任务数据库。失败课程、未知截止时间、检测到分页均明确标记，不能把未知页面当成无作业。无年份截止时间保持平台原文，不猜年份；已提交作业暂不额外请求详情。
-- 登录表单、按钮及验证弹窗复用设置页的 `SecondaryUi` 与 `form_field` / `SecondaryDialog` 资源。`chaoxingOnly` 仪器检查用合成网络响应验证自动登录读取、部分失败、只读边界与 UI；真实账号仍需用户亲自登录验收。
+- 入口：任务 → 账号密码配置。提交后先通过学习通认证，返回登录成功才使用 Android Keystore 的 AES-GCM 密钥加密保存账号及密码；认证失败不替换原配置。配置输入框不回填密码，不参与实例保存 / 自动填充，不写日志或导出文件。
+- 任务页右上角显示已验证连接的平台；保存配置后自动读取，首次进入任务页或点击刷新时使用已保存的配置登录。登录失效显示待验证，作业读取失败保留已有结果。密码配置弹窗单独提供，不占用作业详情区。
+- 任务页剩余区域直接展示课程、作业标题、提交状态和截止时间，并支持待处理 / 已完成 / 全部筛选。结果暂不持久化；未知截止时间与部分失败保留明确说明。无年份日期不猜年份；已提交作业暂不额外请求详情。当前只支持手机号 / 超星账号，验证码或机构认证失败不会保存密码配置。
+- 表单、按钮和弹窗继续复用 `SecondaryUi`、`form_field`、`SecondaryDialog`。按用户要求本轮不运行设备调试 / 仪器测试，只构建并安装 QA 包；新密码保存和任务布局由用户检查。
 - 协议调研参考：[只读客户端实现](https://github.com/DanMo661/Xuexitong-mcp/blob/main/xuexitong_mcp/client.py)，并核查了[官方登录入口](https://passport2.chaoxing.com/login?newversion=true)。这些网页接口没有稳定性保证；官方脚本地址本次返回不可访问页，未声称已完成真实账号协议验收。
 
 - `C:\codex\CourseLens` 是日常维护目录，以最新 `origin/main` 为正式基线。`codex/development-isolation` 仅保存本隔离约定；后续正式修复从最新正式基线建立独立分支，并保留本节和 `AGENTS.md` 的默认规则。
@@ -43,7 +43,7 @@ adb -s SERIAL install -r app/build/outputs/apk/androidTest/debug/app-debug-andro
 adb -s SERIAL shell am instrument -w -e saveOnly true cn.courselens.qa.test/cn.courselens.NativeChecks
 ```
 
-`SERIAL` 替换为已核验序列号，手机保持解锁和 App 前台。参数可换为 `chaoxingOnly`（学习通自动读取与界面）、`navigationOnly`（任务页导航）、`choiceOnly`（课程与调课选择器、取消和草稿保留）、`dialogLayoutOnly`（普通与大字体弹窗正文、按钮分区）、`courseSlotsOnly`、`scrollOnly`、`conflictOnly`、`adjustmentOnly`、`widgetOnly`、`widgetGuideOnly`、`widgetPinOnly`、`motionOnly`、`gestureOnly`、`performanceOnly` 或 `remoteOnly`；不指定专项参数运行全量入口。`nextClassOnly` 是历史名称，首页已无下一节提示。
+`SERIAL` 替换为已核验序列号，手机保持解锁和 App 前台。参数可换为 `chaoxingOnly`（学习通只读客户端合成检查）、`navigationOnly`（任务页导航）、`choiceOnly`（课程与调课选择器、取消和草稿保留）、`dialogLayoutOnly`（普通与大字体弹窗正文、按钮分区）、`courseSlotsOnly`、`scrollOnly`、`conflictOnly`、`adjustmentOnly`、`widgetOnly`、`widgetGuideOnly`、`widgetPinOnly`、`motionOnly`、`gestureOnly`、`performanceOnly` 或 `remoteOnly`；不指定专项参数运行全量入口。`nextClassOnly` 是历史名称，首页已无下一节提示。
 
 测试使用合成数据；正式 Activity 与 QA Activity 的偏好文件名不同，按实际包与文件核实。测试结束或中断后恢复并比较备份，不能仅凭测试的 PASS 推断用户数据未变化。小组件添加、尺寸和点击另在真实启动器验收，测试宿主不能替代它。
 
