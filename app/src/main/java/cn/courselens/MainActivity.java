@@ -19,7 +19,7 @@ public class MainActivity extends Activity {
  private final SecondaryUi secondaryUi=new SecondaryUi(this);
  private static final String[] START_TIMES=NextClass.START_TIMES,END_TIMES=NextClass.END_TIMES;
  private final int INK=0xff172132,MUTED=0xff68788f,BLUE=0xff5c78c6,PRIMARY=0xff4266ad;
- private final int SURFACE=0xfff1f5f6,AQUA=0xff9aebf2,SOFT=0xffdff8fa,NAVY=0xff082630;
+ private final int SURFACE=0xfff3f4f5,AQUA=0xff9aebf2,SOFT=0xffdff8fa,NAVY=0xff082630;
  private AlertDialog widgetDialog,unsavedDialog;
  private AlertDialog remoteDialog;private RemoteConfigClient remote;private TextView remoteStatus;private final Handler remoteHandler=new Handler(Looper.getMainLooper());
  private boolean remoteResumed,touching,manualUpdatePending;private int pagerState,manualCheckScreen=-1;private long interactionAt;private final Runnable remoteNotice=this::showRemoteNotice;private final RemoteConfigClient.Listener remoteListener=this::remoteChanged;
@@ -32,7 +32,7 @@ public class MainActivity extends Activity {
  private Map<Course,String> cachedCardText=new HashMap<>();
  private HomePage homePage;
  private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible;
- private LinearLayout bottomNavigation;private TextView timetableTab,tasksTab;
+ private LinearLayout bottomNavigation;private ImageButton timetableTab,tasksTab;
  private LinearLayout settingsPage;private int settingsScrollY;
  private ScrollView timetableScroll;private int timetableScrollY;
  private final PageMotion pageMotion=new PageMotion();private android.window.OnBackInvokedCallback systemBack;private boolean backRegistered;
@@ -41,7 +41,7 @@ public class MainActivity extends Activity {
  private EditText account,password,captcha;private TextView loginStatus;private ProgressBar loginProgress;private Button loginButton;private LinearLayout captchaBox;private ImageView captchaImage;
  private int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
 
- @Override public void onCreate(Bundle state){super.onCreate(state);getWindow().setStatusBarColor(0xffe4e8f4);getWindow().setNavigationBarColor(0xffcbd5e6);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);data=getPreferences(0).getString("courses","");notes=getPreferences(0).getString("notes","");if((getApplicationInfo().flags&android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0)school.onDiagnostic=summary->{try(java.io.FileOutputStream out=openFileOutput("sync-diagnostic.txt",0)){out.write(summary.getBytes(java.nio.charset.StandardCharsets.UTF_8));}catch(Exception ignored){}};else deleteFile("sync-diagnostic.txt");week=getPreferences(0).getInt("week",6);term=getPreferences(0).getString("term",term);displayChoices=new HashSet<>(getPreferences(0).getStringSet("displayChoices",Collections.emptySet()));adjustments=getPreferences(0).getString("courseAdjustments","");home();openWidget(getIntent());widgetShortcut();
+ @Override public void onCreate(Bundle state){super.onCreate(state);getWindow().setStatusBarColor(0xffe4e8f4);getWindow().setNavigationBarColor(Color.WHITE);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);data=getPreferences(0).getString("courses","");notes=getPreferences(0).getString("notes","");if((getApplicationInfo().flags&android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0)school.onDiagnostic=summary->{try(java.io.FileOutputStream out=openFileOutput("sync-diagnostic.txt",0)){out.write(summary.getBytes(java.nio.charset.StandardCharsets.UTF_8));}catch(Exception ignored){}};else deleteFile("sync-diagnostic.txt");week=getPreferences(0).getInt("week",6);term=getPreferences(0).getString("term",term);displayChoices=new HashSet<>(getPreferences(0).getStringSet("displayChoices",Collections.emptySet()));adjustments=getPreferences(0).getString("courseAdjustments","");home();openWidget(getIntent());widgetShortcut();
   if(state!=null){taskState=state.getBundle("taskPage");if(state.getBoolean("tasksVisible")&&!CourseWidget.OPEN.equals(getIntent().getAction())&&!ADD_WIDGET.equals(getIntent().getAction()))tasks();}
   View decor=getWindow().getDecorView();decor.getViewTreeObserver().addOnScrollChangedListener(remoteScroll);
   decor.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener(){boolean drawn;public void onDraw(){if(drawn)return;drawn=true;decor.post(()->{if(decor.getViewTreeObserver().isAlive())decor.getViewTreeObserver().removeOnDrawListener(this);remoteHandler.postDelayed(()->{if(!isDestroyed()&&!isFinishing()){remote=RemoteConfigClient.get(MainActivity.this);remote.listen(remoteListener);remote.check(false);refreshRemoteStatus();}},1500);});}});
@@ -92,25 +92,24 @@ public class MainActivity extends Activity {
  private void ripple(View view){view.setForeground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x225c78c6),null,bg(Color.WHITE,8)));}
 
  private LinearLayout createBottomNavigation(){
-  LinearLayout bar=new LinearLayout(this);bar.setTag("bottom-navigation");bar.setOrientation(LinearLayout.VERTICAL);bar.setBackgroundColor(SURFACE);
-  View divider=new View(this);divider.setBackgroundColor(0xffdfe9eb);bar.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
-  LinearLayout items=new LinearLayout(this);items.setPadding(dp(20),dp(6),dp(20),dp(6));bar.addView(items,new LinearLayout.LayoutParams(-1,-2));
+  LinearLayout bar=new LinearLayout(this);bar.setTag("bottom-navigation");bar.setOrientation(LinearLayout.VERTICAL);bar.setBackgroundColor(Color.WHITE);
+  LinearLayout items=new LinearLayout(this);items.setPadding(dp(36),dp(4),dp(36),dp(4));bar.addView(items,new LinearLayout.LayoutParams(-1,-2));
   timetableTab=navigationTab("课表","nav-timetable",()->{if(tasksVisible)home();});tasksTab=navigationTab("任务","nav-tasks",()->{if(!tasksVisible)tasks();});
-  for(TextView tab:new TextView[]{timetableTab,tasksTab}){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(8),0,dp(8),0);items.addView(tab,lp);}return bar;
+  for(ImageButton tab:new ImageButton[]{timetableTab,tasksTab}){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(8),0,dp(8),0);items.addView(tab,lp);}return bar;
  }
- private TextView navigationTab(String label,String tag,Runnable action){TextView tab=text(label,12,MUTED);tab.setTag(tag);tab.setContentDescription(label);tab.setGravity(Gravity.CENTER);tab.setMinHeight(dp(56));tab.setPadding(dp(8),dp(6),dp(8),dp(6));tab.setCompoundDrawablePadding(dp(3));tab.setFocusable(true);tab.setOnClickListener(v->action.run());ripple(tab);return tab;}
+ private ImageButton navigationTab(String label,String tag,Runnable action){ImageButton tab=new ImageButton(this);tab.setTag(tag);tab.setContentDescription(label);tab.setTooltipText(label);tab.setMinimumHeight(dp(56));tab.setPadding(dp(8),dp(12),dp(8),dp(12));tab.setScaleType(ImageView.ScaleType.CENTER);tab.setBackground(null);tab.setOnClickListener(v->action.run());ripple(tab);return tab;}
  private void updateBottomNavigation(){
-  if(bottomNavigation==null)return;TextView[] tabs={timetableTab,tasksTab};int[] icons={R.drawable.ic_calendar,R.drawable.ic_tasks};
-  for(int i=0;i<tabs.length;i++){TextView tab=tabs[i];boolean selected=tasksVisible==(i==1);tab.setSelected(selected);tab.setTextColor(selected?NAVY:MUTED);tab.setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);tab.setBackground(selected?bg(SOFT,16):null);android.graphics.drawable.Drawable icon=getDrawable(icons[i]).mutate();icon.setTint(selected?NAVY:MUTED);icon.setBounds(0,0,dp(22),dp(22));tab.setCompoundDrawables(null,icon,null,null);}
+  if(bottomNavigation==null)return;ImageButton[] tabs={timetableTab,tasksTab};int[] icons={R.drawable.ic_calendar,R.drawable.ic_tasks};
+  for(int i=0;i<tabs.length;i++){ImageButton tab=tabs[i];boolean selected=tasksVisible==(i==1);tab.setSelected(selected);tab.setImageResource(icons[i]);tab.setImageTintList(android.content.res.ColorStateList.valueOf(selected?0xff171717:0xff999999));}
  }
- private void tasks(){tasksVisible=true;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,true,taskPage);root.setBackgroundColor(SURFACE);}
+ private void tasks(){getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(Color.WHITE);tasksVisible=true;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,true,taskPage);root.setBackgroundColor(SURFACE);}
 
  private Calendar date(){Calendar c=Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));c.set(Calendar.HOUR_OF_DAY,12);c.set(Calendar.MINUTE,0);c.set(Calendar.SECOND,0);c.set(Calendar.MILLISECOND,0);return c;}
  private Calendar monday(){Calendar c=date();String[] p=term.split("-");c.set(Integer.parseInt(p[0]),Integer.parseInt(p[1])-1,Integer.parseInt(p[2]));return c;}
  private int currentWeek(){return Math.max(1,Math.min(30,(int)((date().getTimeInMillis()-monday().getTimeInMillis())/86400000L/7)+1));}
  private TextView icon(String symbol,String description,Runnable action){TextView t=text(symbol,27,INK);t.setGravity(Gravity.CENTER);t.setContentDescription(description);t.setOnClickListener(v->action.run());t.setFocusable(true);ripple(t);return t;}
  private void changeWeek(int next){if(next<1||next>30)return;if(navigationOverlay!=null)navigationOverlay.close(true);if(pager!=null&&pager.isAttachedToWindow()){pager.setCurrentItem(next-1,true);}else{week=next;saveWeek();home();}}
- private LinearLayout secondary(String title,String description,Runnable back){base(true,root!=null&&title.equals(root.getTag()));root.setTag(title);pageBack=back;updateSystemBack();root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(12),dp(8),dp(20),dp(8));TextView close=icon("‹","返回",()->{if(busy){toast("正在同步，请稍候");return;}backPage();});bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));TextView heading=text(title,23,NAVY);heading.setTypeface(null,Typeface.BOLD);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));root.addView(bar);ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(20),dp(12),dp(20),dp(28));scroll.addView(body);if(!description.isEmpty()){TextView intro=text(description,14,MUTED);intro.setLineSpacing(dp(4),1);intro.setPadding(dp(4),0,dp(4),dp(20));body.addView(intro);}return body;}
+ private LinearLayout secondary(String title,String description,Runnable back){base(true,root!=null&&title.equals(root.getTag()));root.setTag(title);pageBack=back;updateSystemBack();root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(16),dp(8),dp(16),dp(8));TextView close=icon("‹","返回",()->{if(busy){toast("正在同步，请稍候");return;}backPage();});close.setText("");android.graphics.drawable.Drawable backIcon=getDrawable(R.drawable.ic_back).mutate();backIcon.setTint(0xff171717);backIcon.setBounds(0,0,dp(24),dp(24));close.setCompoundDrawables(backIcon,null,null,null);close.setPadding(dp(12),0,dp(12),0);GradientDrawable circle=bg(Color.WHITE,24);circle.setStroke(dp(1),0xffe7e7e7);close.setBackground(circle);close.setClipToOutline(true);bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));TextView heading=text(title,18,0xff171717);heading.setGravity(Gravity.CENTER);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));View spacer=new View(this);spacer.setTag("header-spacer");spacer.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);bar.addView(spacer,new LinearLayout.LayoutParams(dp(48),dp(48)));root.addView(bar);ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(20),dp(12),dp(20),dp(28));scroll.addView(body);if(!description.isEmpty()){TextView intro=text(description,14,MUTED);intro.setLineSpacing(dp(4),1);intro.setPadding(dp(4),0,dp(4),dp(20));body.addView(intro);}return body;}
  private LinearLayout bottomSheet(String title,String description,Runnable back){
   if(returningPage&&navigationOverlay==null)back.run();
   NavigationOverlay overlay=new NavigationOverlay(false,title);LinearLayout body=overlay.body;
@@ -166,9 +165,9 @@ public class MainActivity extends Activity {
  }
  private Button action(LinearLayout body,String label,Runnable run){return secondaryUi.action(body,label,run);}
  private LinearLayout option(LinearLayout body,int drawable,String title,String description,Runnable run){
-  LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setMinimumHeight(dp(72));row.setPadding(dp(16),dp(14),dp(16),dp(14));boolean grouped="settings-group".equals(body.getTag());if(grouped&&body.getChildCount()>0){View line=new View(this);line.setBackgroundColor(0xffedf2f3);LinearLayout.LayoutParams divider=new LinearLayout.LayoutParams(-1,dp(1));divider.leftMargin=dp(72);body.addView(line,divider);}row.setBackground(bg(Color.WHITE,grouped?0:22));LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);rowParams.bottomMargin=grouped?0:dp(10);body.addView(row,rowParams);
-  ImageView symbol=new ImageView(this);symbol.setImageResource(drawable);symbol.setImageTintList(android.content.res.ColorStateList.valueOf(NAVY));symbol.setBackground(bg(SOFT,14));symbol.setPadding(dp(9),dp(9),dp(9),dp(9));symbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams glyph=new LinearLayout.LayoutParams(dp(40),dp(40));glyph.rightMargin=dp(16);row.addView(symbol,glyph);
-  LinearLayout copy=new LinearLayout(this);copy.setOrientation(LinearLayout.VERTICAL);TextView heading=text(title,16,INK);heading.setTypeface(null,Typeface.BOLD);copy.addView(heading);if(!description.isEmpty()){TextView note=text(description,13,MUTED);note.setPadding(0,dp(5),0,0);copy.addView(note);}row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));TextView arrow=text("›",24,MUTED);arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);arrow.setPadding(dp(12),0,0,0);row.addView(arrow);
+  LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setMinimumHeight(dp(64));row.setPadding(dp(20),dp(16),dp(20),dp(16));boolean grouped="settings-group".equals(body.getTag());if(grouped&&body.getChildCount()>0){View line=new View(this);line.setBackgroundColor(0xffe7e7e7);LinearLayout.LayoutParams divider=new LinearLayout.LayoutParams(-1,dp(1));divider.leftMargin=dp(20);divider.rightMargin=dp(20);body.addView(line,divider);}row.setBackground(bg(Color.WHITE,grouped?0:22));LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);rowParams.bottomMargin=grouped?0:dp(10);body.addView(row,rowParams);
+  ImageView symbol=new ImageView(this);symbol.setImageResource(drawable);symbol.setImageTintList(android.content.res.ColorStateList.valueOf(0xff171717));symbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams glyph=new LinearLayout.LayoutParams(dp(24),dp(24));glyph.rightMargin=dp(18);row.addView(symbol,glyph);
+  LinearLayout copy=new LinearLayout(this);copy.setOrientation(LinearLayout.VERTICAL);TextView heading=text(title,17,0xff171717);copy.addView(heading);if(!description.isEmpty()){TextView note=text(description,13,0xff707070);note.setPadding(0,dp(5),0,0);copy.addView(note);}row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));TextView arrow=text("›",22,0xffaaaaaa);arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);arrow.setPadding(dp(12),0,0,0);row.addView(arrow);
   row.setFocusable(true);row.setContentDescription(description.isEmpty()?title:title+"，"+description);row.setOnClickListener(v->run.run());ripple(row);return row;
  }
  private void weekPicker(){weekPicker(()->home());}
@@ -180,7 +179,7 @@ public class MainActivity extends Activity {
  }
  private void home(){
   settingsPage=null;
-  getWindow().setStatusBarColor(0xffe4e8f4);getWindow().setNavigationBarColor(0xffcbd5e6);
+  getWindow().setStatusBarColor(0xffe4e8f4);getWindow().setNavigationBarColor(Color.WHITE);
   boolean fromTasks=tasksVisible;tasksVisible=false;
   if(homePage!=null&&(pageBack!=null||fromTasks)&&navigationOverlay==null&&homePage.matches()){
    HomePage page=homePage;page.view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,false,page.view);
@@ -268,7 +267,7 @@ public class MainActivity extends Activity {
   if(body.getTag()!=null&&body.getTag().toString().startsWith("conflict-comparison-")){sheetRow(body,label,value);return;}
   View divider=new View(this);divider.setBackgroundColor(0xffe8ebf0);body.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));
   LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(0,dp(13),0,dp(13));
-  ImageView symbol=new ImageView(this);symbol.setImageResource(drawable);symbol.setImageTintList(android.content.res.ColorStateList.valueOf(NAVY));symbol.setBackground(bg(SOFT,14));symbol.setPadding(dp(9),dp(9),dp(9),dp(9));symbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams iconBounds=new LinearLayout.LayoutParams(dp(40),dp(40));iconBounds.rightMargin=dp(16);row.addView(symbol,iconBounds);
+  ImageView symbol=new ImageView(this);symbol.setImageResource(drawable);symbol.setImageTintList(android.content.res.ColorStateList.valueOf(0xff171717));symbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams iconBounds=new LinearLayout.LayoutParams(dp(40),dp(40));iconBounds.rightMargin=dp(16);row.addView(symbol,iconBounds);
   LinearLayout copy=new LinearLayout(this);copy.setOrientation(LinearLayout.VERTICAL);copy.addView(text(label,12,MUTED));TextView valueView=text(value,16,INK);valueView.setPadding(0,dp(4),0,0);valueView.setContentDescription(label+"，"+value);copy.addView(valueView);row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));body.addView(row);
  }
  private void detailActions(Course c,int shownWeek,Runnable reopen,Runnable conflictDetails){
@@ -286,7 +285,7 @@ public class MainActivity extends Activity {
  private String prettyWeeks(Course c){StringBuilder out=new StringBuilder();for(int w=1;w<=30;w++){if(!c.active(w))continue;int first=w;while(w<30&&c.active(w+1))w++;if(out.length()>0)out.append("、");out.append(first);if(w>first)out.append("–").append(w);}return "第 "+out+" 周";}
  private void detailRow(LinearLayout card,String label,String value){if(card.getChildCount()>0){View divider=new View(this);divider.setBackgroundColor(0xffedf0f6);card.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));}LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(0,dp(9),0,dp(9));row.addView(text(label,12,0xff56677e));TextView content=text(value.isEmpty()?"学校暂未提供":value,16,INK);content.setTextIsSelectable(true);content.setLineSpacing(dp(2),1);content.setPadding(0,dp(3),0,0);row.addView(content);card.addView(row);}
  private LinearLayout settingsGroup(LinearLayout body,String title){
-  TextView label=text(title,14,MUTED);label.setTypeface(null,Typeface.BOLD);label.setPadding(dp(4),dp(8),0,dp(10));body.addView(label);
+  TextView label=text(title,13,0xff707070);label.setPadding(dp(4),dp(8),0,dp(10));body.addView(label);
   LinearLayout group=new LinearLayout(this);group.setOrientation(LinearLayout.VERTICAL);group.setTag("settings-group");group.setBackground(bg(Color.WHITE,24));group.setClipToOutline(true);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(18);body.addView(group,lp);return group;
  }
  private void menu(){
@@ -296,19 +295,19 @@ public class MainActivity extends Activity {
    pageBack=()->home();updateSystemBack();remoteStatus=root.findViewWithTag("update-status");refreshRemoteStatus();
    ((ScrollView)root.getChildAt(1)).scrollTo(0,settingsScrollY);return;
   }
-  LinearLayout body=secondary("课表设置","安排本学期，也整理你的课表。",()->home());
+  LinearLayout body=secondary("课表设置","",()->home());
   LinearLayout semester=settingsGroup(body,"学期与周次");
   option(semester,R.drawable.ic_calendar,"选择教学周","当前查看第 "+week+" 周",()->weekPicker(()->menu())).setTag("select-teaching-week");
-  option(semester,R.drawable.ic_calendar,"开学日期",term+" · 第 1 周开始日期",()->termPicker()).setTag("settings-term");
+  option(semester,R.drawable.ic_calendar,"开学日期",term,()->termPicker()).setTag("settings-term");
   LinearLayout courses=settingsGroup(body,"课程与桌面");
-  option(courses,R.drawable.ic_notes,"课程管理","校对课程与多个上课时段",()->edit(()->menu()));
-  option(courses,R.drawable.ic_calendar,"单次调课 / 停课","调整安排，或恢复原课程",()->adjustmentManager()).setTag("adjustment-manager");
-  option(courses,R.drawable.ic_grid,"桌面小组件","三种尺寸，随时查看今日课程",()->widgetAddPage()).setTag("add-home-widget");
+  option(courses,R.drawable.ic_notes,"课程管理","",()->edit(()->menu()));
+  option(courses,R.drawable.ic_calendar,"单次调课 / 停课","",()->adjustmentManager()).setTag("adjustment-manager");
+  option(courses,R.drawable.ic_grid,"桌面小组件","",()->widgetAddPage()).setTag("add-home-widget");
   LinearLayout software=settingsGroup(body,"软件与下载");
   LinearLayout update=option(software,R.drawable.ic_sync,"检查更新","当前版本 "+appVersion(),()->checkRemoteUpdates());update.setTag("check-app-update");
   remoteStatus=text("",13,MUTED);remoteStatus.setTag("update-status");remoteStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);remoteStatus.setPadding(dp(4),0,dp(4),dp(8));body.addView(remoteStatus);refreshRemoteStatus();
-  option(software,R.drawable.ic_notes,"关于软件与下载","网盘下载、版本与 GitHub",this::about).setTag("about-app");
-  LinearLayout caution=panel(body);caution.setPadding(dp(16),dp(16),dp(16),dp(16));caution.setBackground(bg(0xfffff1f3,16));caution.addView(text("本地数据",15,0xff9a3849));TextView note=text("清空后需要重新导入，课表、备注和单次调整都会删除。",13,0xff885564);note.setLineSpacing(dp(3),1);note.setPadding(0,dp(8),0,dp(4));caution.addView(note);Button clear=action(caution,"退出并清空课表",()->confirmClear());clear.setTextColor(0xff9a3849);clear.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xfffbe0e5));
+  option(software,R.drawable.ic_notes,"关于软件与下载","",this::about).setTag("about-app");
+  LinearLayout caution=settingsGroup(body,"本地数据");TextView clear=text("退出并清空课表",17,0xffc52c47);clear.setTag("clear-timetable");clear.setGravity(Gravity.CENTER_VERTICAL);clear.setMinHeight(dp(60));clear.setPadding(dp(20),dp(16),dp(20),dp(16));clear.setFocusable(true);clear.setOnClickListener(v->confirmClear());ripple(clear);caution.addView(clear,new LinearLayout.LayoutParams(-1,-2));
   settingsPage=root;
  }
 
@@ -456,7 +455,7 @@ public class MainActivity extends Activity {
     CourseAdjustment next=new CourseAdjustment(term,sourceWeek,original,replacement);if(!next.applies(Course.parse(data),term))throw new IllegalArgumentException("原课程已更新，请重新打开");storeAdjustment(next);
     ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(root.getWindowToken(),0);home();toast(cancel?"本次课程已停课":"本次课程已调课");
    }catch(Exception e){error.setText("未保存："+e.getMessage());}
-  });submit.setTag("save-adjustment");if(cancel){body.removeView(submit);LinearLayout.LayoutParams footer=new LinearLayout.LayoutParams(-1,dp(52));footer.setMargins(dp(20),dp(8),dp(20),dp(16));root.addView(submit,footer);}else saveHeader(body,submit);
+  });submit.setTag("save-adjustment");if(cancel){body.removeView(submit);LinearLayout.LayoutParams footer=new LinearLayout.LayoutParams(-2,-2);footer.gravity=Gravity.CENTER_HORIZONTAL;footer.setMargins(dp(20),dp(8),dp(20),dp(16));root.addView(submit,footer);}else saveHeader(body,submit);
   if(!cancel){choiceSheet=new CourseChoiceSheet();((FrameLayout)root.getParent()).addView(choiceSheet,new FrameLayout.LayoutParams(-1,-1));}
  }
  private void adjustmentManager(){
@@ -482,7 +481,7 @@ public class MainActivity extends Activity {
  }
  private void saveHeader(LinearLayout body,Button button){
   body.removeView(button);button.setText("保存");button.setContentDescription("保存");button.setMinWidth(0);button.setMinimumWidth(0);button.setMinHeight(dp(48));button.setMinimumHeight(dp(48));button.setPadding(dp(12),0,dp(12),0);
-  ((LinearLayout)root.getChildAt(0)).addView(button,new LinearLayout.LayoutParams(dp(72),dp(48)));
+  LinearLayout bar=(LinearLayout)root.getChildAt(0);bar.removeView(bar.findViewWithTag("header-spacer"));bar.addView(button,new LinearLayout.LayoutParams(dp(64),-2));
   List<Object> original=new ArrayList<>();formValues(body,original);Runnable back=pageBack;
   Runnable discard=()->{returningPage=true;try{back.run();}finally{returningPage=false;}};
   pageBack=()->{

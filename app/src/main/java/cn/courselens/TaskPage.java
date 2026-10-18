@@ -31,12 +31,11 @@ final class TaskPage extends LinearLayout {
 
  TaskPage(Context context,Bundle state){
   super(context);activity=(Activity)context;ui=new SecondaryUi(activity);account=new ChaoxingAccount(context);setTag("tasks-page");setOrientation(VERTICAL);
-  LinearLayout header=new LinearLayout(context);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(20),ui.dp(20),ui.dp(20),ui.dp(16));addView(header,new LayoutParams(-1,-2));
-  TextView title=ui.text("任务",28,SecondaryUi.INK);title.setTypeface(null,Typeface.BOLD);header.addView(title,new LayoutParams(0,-2,1));
-  platform=ui.text("未连接平台",13,SecondaryUi.MUTED);platform.setTag("task-connected-platforms");platform.setGravity(Gravity.CENTER);platform.setPadding(ui.dp(12),ui.dp(10),ui.dp(12),ui.dp(10));platform.setMinHeight(ui.dp(48));platform.setBackground(ui.bg(SecondaryUi.SOFT,16));platform.setFocusable(true);platform.setOnClickListener(v->configure());ui.ripple(platform);header.addView(platform,new LayoutParams(-2,-2));
-  LinearLayout toolbar=new LinearLayout(context);toolbar.setGravity(Gravity.CENTER_VERTICAL);toolbar.setPadding(ui.dp(20),0,ui.dp(20),0);addView(toolbar,new LayoutParams(-1,-2));
-  configure=ui.action(toolbar,"账号密码配置",this::configure);configure.setTag("chaoxing-connect");LayoutParams configLayout=new LayoutParams(0,-2,1);configLayout.bottomMargin=ui.dp(12);toolbar.updateViewLayout(configure,configLayout);
-  refresh=ui.action(toolbar,"刷新作业",this::refresh);refresh.setTag("chaoxing-refresh");LayoutParams refreshLayout=new LayoutParams(0,-2,1);refreshLayout.leftMargin=ui.dp(10);refreshLayout.bottomMargin=ui.dp(12);toolbar.updateViewLayout(refresh,refreshLayout);refresh.setEnabled(account.configured());
+  LinearLayout header=new LinearLayout(context);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(20),ui.dp(12),ui.dp(20),ui.dp(12));addView(header,new LayoutParams(-1,-2));
+  LinearLayout heading=new LinearLayout(context);heading.setOrientation(VERTICAL);header.addView(heading,new LayoutParams(0,-2,1));TextView title=ui.text("任务",24,SecondaryUi.INK);title.setTypeface(null,Typeface.BOLD);heading.addView(title);
+  platform=ui.text("未连接平台",12,SecondaryUi.MUTED);platform.setTag("task-connected-platforms");platform.setPadding(0,ui.dp(4),0,0);heading.addView(platform,new LayoutParams(-1,-2));
+  configure=ui.iconAction(header,R.drawable.ic_person,"账号密码配置",this::configure);configure.setTag("chaoxing-connect");
+  refresh=ui.iconAction(header,R.drawable.ic_sync,"刷新作业",this::refresh);refresh.setTag("chaoxing-refresh");refresh.setEnabled(account.configured());
   status=ui.text("请先配置学习通账号密码，登录验证成功后才会保存。",13,SecondaryUi.MUTED);status.setTag("chaoxing-status");status.setPadding(ui.dp(24),0,ui.dp(24),ui.dp(12));status.setLineSpacing(ui.dp(4),1);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);addView(status,new LayoutParams(-1,-2));
   progress=new ProgressBar(context,null,android.R.attr.progressBarStyleHorizontal);progress.setIndeterminate(true);progress.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(SecondaryUi.NAVY));progress.setVisibility(GONE);addView(progress,new LayoutParams(-1,ui.dp(3)));
   LinearLayout choices=new LinearLayout(context);choices.setPadding(ui.dp(4),ui.dp(4),ui.dp(4),ui.dp(4));choices.setBackground(ui.bg(0xffe5eef0,14));LayoutParams choicesLayout=new LayoutParams(-1,-2);choicesLayout.setMargins(ui.dp(20),ui.dp(8),ui.dp(20),ui.dp(12));addView(choices,choicesLayout);
@@ -44,7 +43,7 @@ final class TaskPage extends LinearLayout {
   scroll=new ScrollView(context);scroll.setFillViewport(true);scroll.setClipToPadding(false);addView(scroll,new LayoutParams(-1,0,1));list=new LinearLayout(context);list.setOrientation(VERTICAL);list.setPadding(ui.dp(20),0,ui.dp(20),ui.dp(24));list.setTag("chaoxing-results");scroll.addView(list,new ScrollView.LayoutParams(-1,-2));
   emptyTitle=ui.text("",18,SecondaryUi.INK);emptyTitle.setTag("tasks-empty-title");emptyTitle.setGravity(Gravity.CENTER);emptyTitle.setTypeface(null,Typeface.BOLD);emptyTitle.setPadding(ui.dp(16),ui.dp(64),ui.dp(16),ui.dp(16));
   selectFilter(state==null?0:state.getInt("filter",0));int restoredY=state==null?0:state.getInt("scrollY",0);scroll.post(()->scroll.scrollTo(0,restoredY));
-  connected(false);if(account.configured()){platform.setText("学习通 · 已配置");platform.setContentDescription("已配置平台：学习通，点击配置账号密码");status.setText("正在加载本机保存的作业…");loadLocal();}
+  connected(false);if(account.configured()){platform.setText("学习通 · 已配置");platform.setContentDescription("已配置平台：学习通");status.setText("正在加载本机保存的作业…");loadLocal();}
  }
  private void selectFilter(int value){filter=value>=0&&value<filters.length?value:0;for(int i=0;i<filters.length;i++){boolean selected=i==filter;filters[i].setSelected(selected);filters[i].setTextColor(selected?SecondaryUi.NAVY:SecondaryUi.MUTED);filters[i].setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);filters[i].setBackground(selected?ui.bg(android.graphics.Color.WHITE,10):null);}render();}
  private void render(){
@@ -55,7 +54,7 @@ final class TaskPage extends LinearLayout {
   if(shown==0){String[] titles={"还没有待处理任务","还没有已完成任务","还没有任务"};emptyTitle.setText(snapshot==null?"尚未读取作业":!snapshot.warnings.isEmpty()?"部分课程尚未读取完成":titles[filter]);list.addView(emptyTitle,new LayoutParams(-1,-2));}
   if(snapshot!=null)for(String warning:snapshot.warnings){TextView note=ui.text(warning,13,0xff885564);note.setPadding(ui.dp(4),ui.dp(8),ui.dp(4),ui.dp(8));list.addView(note);}
  }
- private void connected(boolean value){platform.setText(value?"学习通 · 已连接":account.configured()?"学习通 · 待验证":"未连接平台");platform.setTextColor(value?SecondaryUi.NAVY:SecondaryUi.MUTED);platform.setContentDescription("已连接平台："+(value?"学习通":"无")+"，点击配置账号密码");}
+ private void connected(boolean value){platform.setText(value?"学习通 · 已连接":account.configured()?"学习通 · 待验证":"未连接平台");platform.setTextColor(value?SecondaryUi.NAVY:SecondaryUi.MUTED);platform.setContentDescription(platform.getText());}
  private void busy(boolean value){busy=value;configure.setEnabled(!value);platform.setEnabled(!value);refresh.setEnabled(!value&&account.configured());progress.setVisibility(value?VISIBLE:GONE);}
  private boolean current(int token){return !closed&&token==generation&&!activity.isFinishing()&&!activity.isDestroyed();}
  private void configure(){
