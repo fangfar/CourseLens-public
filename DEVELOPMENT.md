@@ -2,8 +2,18 @@
 
 ## 正式与预研隔离
 
+- 任务页及学习通基础作业功能纳入正式开发范围：账号验证、本机加密配置、主动刷新、课程名称与作业展示、按账号离线保存。合并源码不等于发布 APK；正式签名与公开发布仍需单独授权。后续未开放的平台和社交继续隔离开发。
+- 入口：任务 → 账号密码配置。提交后先通过学习通认证，返回登录成功才使用 Android Keystore 的 AES-GCM 密钥加密保存账号及密码；认证失败不替换原配置。配置输入框不回填密码，不参与实例保存 / 自动填充，不写日志或导出文件。
+- 账号密码在登录验证成功后加密保存到本机，供后续主动刷新使用。进入任务页和保存配置均不自动读取作业，也不安排后台刷新；只有点击“刷新作业”才使用本机配置登录并获取数据。配置过程仍需联网验证登录是否成功。右上角区分已配置 / 本次已连接 / 待验证，作业读取失败保留本次页面已有结果。
+- 任务页剩余区域直接展示课程、作业标题、提交状态和截止时间，并支持待处理 / 已完成 / 全部筛选。结果按账号保存到 App 私有文件，退出 / 重启后从本机加载，不联网刷新；只保存展示所需课程名、标题、状态和截止时间，不保存签名链接或 Cookie。写入使用 AtomicFile，失败保留原文件。完整刷新替换本机数据；读取失败或部分失败且已有缓存时保留旧数据。未知截止时间与部分失败保留明确说明。无年份日期不猜年份；已提交作业暂不额外请求详情。当前只支持手机号 / 超星账号，验证码或机构认证失败不会保存密码配置。
+- 表单、按钮和弹窗继续复用 `SecondaryUi`、`form_field`、`SecondaryDialog`。设备调试 / 仪器检查按当前用户授权执行；用户手动验收不能代替正式签名、覆盖更新和发布检查。
+- 读取失败在界面显示安全的阶段原因（账号信息 / 课程列表 / 课程访问参数 / 作业列表 / 截止时间），不显示响应正文、Cookie、请求地址或访问签名。课程列表兼容 href 与 onclick 中的课程链接，机构编号兼容脚本声明及隐藏输入；网络超时按请求阶段报告。第三方接口适配需以用户实际刷新结果确认，构建通过不代表平台端到端验收。
+- 官方 HTTP 重定向只在目标仍属于受信学习通域、无用户信息且使用标准端口时转换为 HTTPS 后请求；不启用明文流量，不跨域转发登录表单。连接错误显示安全异常类型及 R01–R06 跳转代码，不暴露地址、查询参数或凭据。
+- 课程名称在与课程链接对应的独立卡片内读取，支持嵌套容器和空 title 时的正文回退；跨多个课程的父容器不借用相邻课程名称。未解析到名称时明确显示“课程名称未识别”，不再用课程编号充当名称。
+- 协议调研参考：[只读客户端实现](https://github.com/DanMo661/Xuexitong-mcp/blob/main/xuexitong_mcp/client.py)，并核查了[官方登录入口](https://passport2.chaoxing.com/login?newversion=true)。这些网页接口没有稳定性保证；官方脚本地址本次返回不可访问页，未声称已完成真实账号协议验收。
+
 - `C:\codex\CourseLens` 是日常维护目录，以最新 `origin/main` 为正式基线。`codex/development-isolation` 仅保存本隔离约定；后续正式修复从最新正式基线建立独立分支，并保留本节和 `AGENTS.md` 的默认规则。
-- 未开放的任务页、底部导航、新界面与未来社交存放在独立 Git worktree，分支为 `codex/task-page-navigation`。使用 `git worktree list` 查找目录，不复制另一套仓库；只把正式修复同步进预研分支，不把预研分支合入日常分支。
+- 已开放的任务页、底部导航和学习通基础功能在正式线维护；未开放的平台、新界面与未来社交存放在独立 Git worktree，分支为 `codex/task-page-navigation`。使用 `git worktree list` 查找目录，不复制另一套仓库；只把正式修复同步进预研分支，不把预研分支合入日常分支。
 - 用户未明确指定新功能时，“修复、推送、打包 App”均针对正式开发线；预研分支只在用户明确要求时推送。开放某项功能需单独授权、整理差异、验收并通过 PR 合入，合并及公开发布沿用既有授权边界。
 - 预研界面以已选第三张浅色设计为目标；社交仅预留入口，平台接口暂不接入。设计图、手机截图和设备备份留在仓库外。
 - 预览复用 `-PqaBuild` 与 `cn.courselens.qa`，不覆盖正式包；不同分支的 QA 包会相互覆盖，安装前仍按设备验证章节备份。第三张设计尚未实现时，不把现有原型称为最终界面。
@@ -22,7 +32,7 @@ python tests/SigningChecks.py
 .\gradlew.bat --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest lintDebug
 ```
 
-Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用的五组 Java 业务回归入口；Gradle 单元测试的 `NO-SOURCE` 不代表它们通过。
+Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用的 Java 业务回归入口，另含本实验的学习通解析检查；Gradle 单元测试的 `NO-SOURCE` 不代表它们通过。
 
 普通贡献者使用 `-PqaBuild`：Debug 包名为 `cn.courselens.qa`，使用开发签名；测试数据在测试 APK 中，Release 变体禁用。正式构建保持 `cn.courselens`，必须提供既有签名密钥并通过固定证书检查。
 
@@ -36,7 +46,7 @@ adb -s SERIAL install -r app/build/outputs/apk/androidTest/debug/app-debug-andro
 adb -s SERIAL shell am instrument -w -e saveOnly true cn.courselens.qa.test/cn.courselens.NativeChecks
 ```
 
-`SERIAL` 替换为已核验序列号，手机保持解锁和 App 前台。参数可换为 `choiceOnly`（课程与调课选择器、取消和草稿保留）、`dialogLayoutOnly`（普通与大字体弹窗正文、按钮分区）、`courseSlotsOnly`、`scrollOnly`、`conflictOnly`、`adjustmentOnly`、`widgetOnly`、`widgetGuideOnly`、`widgetPinOnly`、`motionOnly`、`gestureOnly`、`performanceOnly` 或 `remoteOnly`；不指定专项参数运行全量入口。`nextClassOnly` 是历史名称，首页已无下一节提示。
+`SERIAL` 替换为已核验序列号，手机保持解锁和 App 前台。参数可换为 `chaoxingOnly`（学习通只读客户端合成检查）、`navigationOnly`（任务页导航）、`choiceOnly`（课程与调课选择器、取消和草稿保留）、`dialogLayoutOnly`（普通与大字体弹窗正文、按钮分区）、`courseSlotsOnly`、`scrollOnly`、`conflictOnly`、`adjustmentOnly`、`widgetOnly`、`widgetGuideOnly`、`widgetPinOnly`、`motionOnly`、`gestureOnly`、`performanceOnly` 或 `remoteOnly`；不指定专项参数运行全量入口。`nextClassOnly` 是历史名称，首页已无下一节提示。
 
 测试使用合成数据；正式 Activity 与 QA Activity 的偏好文件名不同，按实际包与文件核实。测试结束或中断后恢复并比较备份，不能仅凭测试的 PASS 推断用户数据未变化。小组件添加、尺寸和点击另在真实启动器验收，测试宿主不能替代它。
 
