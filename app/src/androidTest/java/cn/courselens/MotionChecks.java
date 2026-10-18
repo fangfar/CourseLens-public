@@ -16,6 +16,41 @@ public final class MotionChecks {
  private static void check(boolean ok,String message){if(!ok)throw new AssertionError(message);}
  private static void main(Instrumentation runner,Runnable work){java.util.concurrent.atomic.AtomicReference<Throwable> error=new java.util.concurrent.atomic.AtomicReference<>();runner.runOnMainSync(()->{try{work.run();}catch(Throwable e){error.set(e);}});if(error.get()!=null)throw new RuntimeException(error.get());}
  private static double percentile(List<Long> values,double percentile){List<Long> sorted=new ArrayList<>(values);Collections.sort(sorted);return sorted.isEmpty()?0:sorted.get((int)Math.ceil(percentile*sorted.size())-1)/1000000d;}
+ private static void settingsScrollReturn(Instrumentation runner,MainActivity a)throws Exception{
+  main(runner,()->{try{call(a,"menu");}catch(Exception e){throw new RuntimeException(e);}});
+  runner.waitForIdleSync();SystemClock.sleep(350);
+  LinearLayout settings=(LinearLayout)field("root").get(a);ScrollView scroll=(ScrollView)settings.getChildAt(1);
+  String[] pages={"termPicker","edit","adjustmentManager","widgetAddPage","about","weekPicker"};
+  for(int position=0;position<3;position++)for(int page=0;page<pages.length;page++){
+   final int offset=position,index=page;int[] saved={0},firstFrame={-1};
+   main(runner,()->{try{
+    int max=scroll.getChildAt(0).getHeight()-scroll.getHeight()+scroll.getPaddingTop()+scroll.getPaddingBottom();
+    check(max>0,"Settings fixture must scroll");scroll.scrollTo(0,max*offset/2);saved[0]=scroll.getScrollY();
+    if(pages[index].equals("edit"))call(a,"edit",new Class<?>[]{Runnable.class},(Runnable)()->{try{call(a,"menu");}catch(Exception e){throw new RuntimeException(e);}});
+    else if(pages[index].equals("weekPicker"))settings.findViewWithTag("select-teaching-week").performClick();
+    else call(a,pages[index]);
+   }catch(Exception e){throw new RuntimeException(e);}});
+   runner.waitForIdleSync();SystemClock.sleep(350);
+   main(runner,()->{try{
+    if(index%2==0){LinearLayout child=(LinearLayout)field("root").get(a);((ViewGroup)child.getChildAt(0)).getChildAt(0).performClick();}
+    else a.onBackPressed();
+    check(field("root").get(a)==settings,"Settings rebuilt after "+pages[index]);
+    check(settings.getChildAt(1)==scroll&&scroll.getScrollY()==saved[0],"Immediate settings scroll lost: "+pages[index]);
+    settings.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener(){public boolean onPreDraw(){settings.getViewTreeObserver().removeOnPreDrawListener(this);firstFrame[0]=scroll.getScrollY();return true;}});
+   }catch(Exception e){throw new RuntimeException(e);}});
+   runner.waitForIdleSync();SystemClock.sleep(350);
+   main(runner,()->{try{
+    check(firstFrame[0]==saved[0],"First frame jumped or was not drawn: "+pages[index]);
+    check(scroll.getScrollY()==saved[0],"Settled settings scroll lost: "+pages[index]);
+    check(settings.getAlpha()==1f&&settings.getTranslationX()==0f,"Settings transition did not settle");
+    check(settings.getImportantForAccessibility()!=View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS,"Settings accessibility not restored");
+    check(((ViewGroup)field("stage").get(a)).getChildCount()==1,"Settings return retained outgoing page");
+    check(field("remoteStatus").get(a)==settings.findViewWithTag("update-status"),"Settings update status still points to child");
+   }catch(Exception e){throw new RuntimeException(e);}});
+  }
+  main(runner,()->{try{a.onBackPressed();call(a,"menu");check(field("root").get(a)!=settings,"Fresh settings entry reused old session");}catch(Exception e){throw new RuntimeException(e);}});
+  runner.waitForIdleSync();SystemClock.sleep(350);
+ }
  private static void capture(Instrumentation runner,String name)throws Exception{
   android.graphics.Bitmap bitmap=runner.getUiAutomation().takeScreenshot();check(bitmap!=null,"Screenshot unavailable");
   try(java.io.FileOutputStream out=runner.getTargetContext().openFileOutput("qa-navigation-"+name+".png",0)){bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}finally{bitmap.recycle();}
@@ -35,6 +70,7 @@ public final class MotionChecks {
    CourseDisplay.Group group=CourseDisplay.groups(Course.parse(fixture),6,Collections.emptySet()).get(0);
    main(runner,()->{try{a.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);field("data").set(a,fixture);field("week").setInt(a,6);field("adjustments").set(a,"");call(a,"home");}catch(Exception e){throw new RuntimeException(e);}});
    runner.waitForIdleSync();SystemClock.sleep(350);
+   settingsScrollReturn(runner,a);
    a.getWindow().addOnFrameMetricsAvailableListener(listener,new Handler(collector.getLooper()));
    int[] scrollPosition={0};
    String[] pages={"menu","weekPicker","edit","termPicker","detail","courseForm","adjustmentForm","cancelForm","adjustmentManager","conflictPicker","widgetAddPage","login"};
