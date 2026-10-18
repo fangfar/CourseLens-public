@@ -68,16 +68,25 @@ final class ChaoxingClient implements AutoCloseable {
   if(!ChaoxingHomework.trusted(url))throw new IOException("平台返回了不可信链接，已停止读取。");
   return transport.request(url,body);
  }
+ private static final String COURSE_LINKS="a[href*=stucoursemiddle],[onclick*=stucoursemiddle]";
+ private static final String UNKNOWN_COURSE="课程名称未识别";
+ private static Map<String,String> courseArgs(Element link){
+  Matcher path=Pattern.compile("stucoursemiddle\\?([^\\s\"'<>]+)").matcher(link.attr("href")+" "+link.attr("onclick"));if(!path.find())return Collections.emptyMap();Map<String,String> args=query("stucoursemiddle?"+path.group(1));for(String key:new String[]{"courseid","clazzid","cpi"})if(!args.getOrDefault(key,"").matches("[0-9]+"))return Collections.emptyMap();return args;
+ }
+ private static String courseLabel(Element name){String label=name.attr("title").trim();if(label.isEmpty())label=name.text().trim();return label.matches("[0-9]+")||label.equals("课程")||label.equals("进入课程")?"":label;}
+ private static String courseName(Element link){
+  for(Element card=link;card!=null&&!card.normalName().equals("body")&&!card.normalName().equals("html");card=card.parent()){
+   Set<String> names=new LinkedHashSet<>();for(Element label:card.select(".course-name,.courseName")){String name=courseLabel(label);if(!name.isEmpty())names.add(name);}if(names.isEmpty())continue;
+   Set<String> identities=new HashSet<>();for(Element candidate:card.select(COURSE_LINKS)){Map<String,String> args=courseArgs(candidate);if(!args.isEmpty())identities.add(args.get("courseid")+":"+args.get("clazzid")+":"+args.get("cpi"));}
+   if(identities.size()==1&&names.size()==1)return names.iterator().next();break;
+  }
+  String title=link.attr("title").trim();return title.isEmpty()||title.matches("[0-9]+")||title.equals("课程")||title.equals("进入课程")?UNKNOWN_COURSE:title;
+ }
  static List<Subject> subjects(String html)throws IOException {
   Document page=Jsoup.parse(html);List<Subject> subjects=new ArrayList<>();Set<String> seen=new HashSet<>();
-  for(Element link:page.select("a[href*=stucoursemiddle],[onclick*=stucoursemiddle]")){
-   String source=link.attr("href")+" "+link.attr("onclick");Matcher path=Pattern.compile("stucoursemiddle\\?([^\\s\"'<>]+)").matcher(source);if(!path.find())continue;
-   Map<String,String> args=query("stucoursemiddle?"+path.group(1));String id=args.getOrDefault("courseid",""),clazz=args.getOrDefault("clazzid",""),cpi=args.getOrDefault("cpi","");
-   if(!id.matches("[0-9]+")||!clazz.matches("[0-9]+")||!cpi.matches("[0-9]+"))continue;
-   if(!seen.add(id+":"+clazz+":"+cpi))continue;
-   Element container=link.closest("li");if(container==null)container=link.parent();Element name=container==null?null:container.selectFirst(".course-name");
-   String title=name==null?link.attr("title"):name.hasAttr("title")?name.attr("title"):name.text();
-   subjects.add(new Subject(title.isBlank()?"课程 "+id:title,id,clazz,cpi));
+  for(Element link:page.select(COURSE_LINKS)){
+   Map<String,String> args=courseArgs(link);if(args.isEmpty())continue;String id=args.get("courseid"),clazz=args.get("clazzid"),cpi=args.get("cpi");String identity=id+":"+clazz+":"+cpi;
+   if(seen.add(identity))subjects.add(new Subject(courseName(link),id,clazz,cpi));
   }
   if(subjects.isEmpty()&&!page.text().matches(".*(暂无课程|还没有课程|没有相关课程|暂无相关课程).*"))throw new IOException("课程列表未识别，可能登录已失效或平台页面变化。");
   return subjects;
