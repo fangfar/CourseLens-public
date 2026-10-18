@@ -4,6 +4,9 @@
         <item name="android:datePickerStyle">@style/SoftDatePicker</item>
     </style>
     <style name="SoftDatePicker" parent="android:style/Widget.Material.Light.DatePicker">
+        <item name="android:datePickerMode">spinner</item>
+        <item name="android:calendarViewShown">false</item>
+        <item name="android:spinnersShown">true</item>
         <item name="android:headerBackground">@drawable/date_header</item>
         <item name="android:headerMonthTextAppearance">@style/DateHeaderText</item>
         <item name="android:headerDayOfMonthTextAppearance">@style/DateHeaderText</item>
