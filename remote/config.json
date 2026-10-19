@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "announcements": [],
   "android": {
-    "versionCode": 11,
-    "versionName": "2.6.3",
-    "changelog": "优化设置与关于页面的分组、圆角样式和按钮留白。\n优化课程与调课选择器，节次附时间，目标周使用网格选择。\n改善说明弹窗正文与按钮分区、大字体及多按钮显示。\n返回设置时保留滚动位置，优化开学日期卡片居中与末行留白。",
-    "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.6.3/CourseLens-2.6.3-vc11.apk",
+    "versionCode": 12,
+    "versionName": "2.7.0",
+    "changelog": "新增任务页，支持学习通账号配置、主动刷新作业和离线查看。\n作业按课程分组，展示提交状态与截止时间，支持待处理、已完成和全部筛选。\n支持左右滑动切换筛选，保留各分类的滚动位置，改善首次进入任务页的流畅度。\n部分课程读取失败时保留已有作业，并显示读取情况。\n优化底部导航、设置、课程详情及弹窗的布局与交互。",
+    "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.7.0/CourseLens-2.7.0-vc12.apk",
     "diskUrl": "https://pan.baidu.com/s/5Q7q-93RIXFczWfL1i3cvQg"
   },
   "repositoryUrl": "https://github.com/fangfar/CourseLens-public"
