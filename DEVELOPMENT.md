@@ -21,7 +21,7 @@
 
 ## 开发与构建
 
-使用本公开仓库的 `main` 和短期功能分支；重要修改经 PR 和检查后合入。协作权限见 [AGENTS.md](AGENTS.md)。工程沿用单模块 Java / 原生 View 架构，版本和依赖以 `app/build.gradle` 为准。
+使用本公开仓库的 `main` 和短期功能分支；重要修改经 PR 和检查后合入。协作权限见 [AGENTS.md](AGENTS.md)。工程沿用单模块 Java / 原生 View 架构，版本和依赖以 `app/build.gradle` 为准。底部内容弹层与表单选择器统一占可用高度的一半，长内容在弹层内滚动。
 
 安装 JDK 17、Python 3、Android SDK 34 与 build-tools 34.0.0。配置 `ANDROID_HOME`，或在被忽略的 `local.properties` 指定 `sdk.dir`。
 

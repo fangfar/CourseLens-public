@@ -163,7 +163,7 @@ public class MainActivity extends Activity {
    FrameLayout.LayoutParams bounds=(FrameLayout.LayoutParams)panel.getLayoutParams();int height=MeasureSpec.getSize(heightSpec);bounds.bottomMargin=0;
    bounds.width=Math.max(1,MeasureSpec.getSize(widthSpec)-(corner?dp(24):0));bounds.height=-2;
    if(corner){bounds.width=Math.min(bounds.width,dp(200));panel.measure(MeasureSpec.makeMeasureSpec(bounds.width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));bounds.height=Math.min(panel.getMeasuredHeight(),Math.max(1,Math.min(dp(440),height-dp(24))));bounds.topMargin=Math.max(dp(12),Math.min(bounds.topMargin,height-bounds.height-dp(12)));}
-   else{panel.measure(MeasureSpec.makeMeasureSpec(bounds.width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));bounds.height=Math.max(1,Math.min(height*4/5,panel.getMeasuredHeight()));}
+   else bounds.height=Math.max(1,height/2);
    super.onMeasure(widthSpec,heightSpec);
   }
 
@@ -528,7 +528,7 @@ public class MainActivity extends Activity {
   CourseChoiceSheet(){
    super(MainActivity.this);setVisibility(INVISIBLE);setFocusableInTouchMode(true);setClickable(true);
    shade=new View(MainActivity.this);shade.setBackgroundColor(0x55000000);shade.setTag("choice-shade");addView(shade,new FrameLayout.LayoutParams(-1,-1));shade.setOnClickListener(v->close(true));
-   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(16),dp(12),dp(16),dp(12));GradientDrawable choiceSurface=bg(Color.WHITE,20);choiceSurface.setCornerRadii(new float[]{dp(20),dp(20),dp(20),dp(20),0,0,0,0});panel.setBackground(choiceSurface);panel.setClickable(true);FrameLayout.LayoutParams panelBounds=new FrameLayout.LayoutParams(-1,dp(700),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);addView(panel,panelBounds);
+   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(16),dp(12),dp(16),dp(12));GradientDrawable choiceSurface=bg(Color.WHITE,20);choiceSurface.setCornerRadii(new float[]{dp(20),dp(20),dp(20),dp(20),0,0,0,0});panel.setBackground(choiceSurface);panel.setClickable(true);FrameLayout.LayoutParams panelBounds=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);addView(panel,panelBounds);
    View handle=new View(MainActivity.this);handle.setBackground(bg(0xffd4dfe2,2));handle.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams grip=new LinearLayout.LayoutParams(dp(36),dp(4));grip.gravity=Gravity.CENTER_HORIZONTAL;grip.bottomMargin=dp(16);panel.addView(handle,grip);
    title=text("",18,NAVY);title.setTypeface(null,Typeface.BOLD);panel.addView(title);
    hint=text("",14,MUTED);hint.setPadding(0,dp(8),0,dp(16));panel.addView(hint);
@@ -539,7 +539,7 @@ public class MainActivity extends Activity {
    Button cancel=action(panel,"取消",()->close(true));cancel.setTag("choice-cancel");cancel.setTextColor(NAVY);cancel.setBackgroundTintList(android.content.res.ColorStateList.valueOf(SURFACE));LinearLayout.LayoutParams footer=(LinearLayout.LayoutParams)cancel.getLayoutParams();footer.topMargin=dp(16);footer.bottomMargin=0;cancel.setStateListAnimator(null);
   }
   @Override protected void onMeasure(int widthSpec,int heightSpec){
-   FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)panel.getLayoutParams();lp.width=Math.max(1,MeasureSpec.getSize(widthSpec));rows.measure(MeasureSpec.makeMeasureSpec(Math.max(1,lp.width-dp(32)),MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));int chrome=dp(154)+(int)(title.getTextSize()+hint.getTextSize());lp.height=Math.max(1,Math.min(MeasureSpec.getSize(heightSpec)*4/5,rows.getMeasuredHeight()+chrome));super.onMeasure(widthSpec,heightSpec);
+   FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)panel.getLayoutParams();lp.width=Math.max(1,MeasureSpec.getSize(widthSpec));lp.height=Math.max(1,MeasureSpec.getSize(heightSpec)/2);super.onMeasure(widthSpec,heightSpec);
   }
   void open(Spinner choice,String label,String[] values){
    if(open&&selected==choice)return;int token=++generation;open=true;selected=choice;panel.animate().cancel();shade.animate().cancel();title.setText("选择"+label);hint.setText("当前："+values[choice.getSelectedItemPosition()]+" · 点选后返回");
