@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.text.InputType;
 import android.view.*;
 import android.widget.*;
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -17,9 +19,13 @@ final class TaskPage extends LinearLayout {
  private final ChaoxingAccount account;
  private final ExecutorService worker=Executors.newSingleThreadExecutor();
  private final TextView[] filters=new TextView[3];
- private final TextView platform,status,emptyTitle;
- private final LinearLayout list;
- private final ScrollView scroll;
+ private final TextView platform,status;
+ private final ScrollView[] scrolls=new ScrollView[3];
+ private final LinearLayout[] lists=new LinearLayout[3];
+ private final ViewPager pager;
+ private final View capsule;
+ private final LinearLayout choices;
+ private int[] restoredScrollY;
  private final Button refresh,configure;
  private final ProgressBar progress;
  private ChaoxingClient client;
@@ -39,15 +45,31 @@ final class TaskPage extends LinearLayout {
   LinearLayout summary=new LinearLayout(context);summary.setPadding(ui.dp(20),ui.dp(4),ui.dp(20),ui.dp(8));addView(summary,new LayoutParams(-1,-2));summary.addView(platform,new LayoutParams(-2,-2));TextView separator=ui.text("|",12,SecondaryUi.MUTED);separator.setPadding(ui.dp(8),0,ui.dp(8),0);separator.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);summary.addView(separator);
   status=ui.text("请先配置学习通账号密码，登录验证成功后才会保存。",12,SecondaryUi.MUTED);status.setTag("chaoxing-status");status.setLineSpacing(ui.dp(3),1);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);summary.addView(status,new LayoutParams(0,-2,1));
   progress=new ProgressBar(context,null,android.R.attr.progressBarStyleHorizontal);progress.setIndeterminate(true);progress.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(SecondaryUi.NAVY));progress.setVisibility(GONE);addView(progress,new LayoutParams(-1,ui.dp(3)));
-  LinearLayout choices=new LinearLayout(context);choices.setPadding(ui.dp(4),ui.dp(4),ui.dp(4),ui.dp(4));choices.setBackground(ui.bg(SecondaryUi.SOFT,14));LayoutParams choicesLayout=new LayoutParams(-1,-2);choicesLayout.setMargins(ui.dp(16),ui.dp(8),ui.dp(16),ui.dp(4));addView(choices,choicesLayout);
+  FrameLayout selector=new FrameLayout(context);selector.setPadding(ui.dp(4),ui.dp(4),ui.dp(4),ui.dp(4));selector.setBackground(ui.bg(SecondaryUi.SOFT,999));LayoutParams choicesLayout=new LayoutParams(-1,-2);choicesLayout.setMargins(ui.dp(16),ui.dp(8),ui.dp(16),ui.dp(4));addView(selector,choicesLayout);
+  capsule=new View(context);capsule.setTag("task-filter-capsule");capsule.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);capsule.setBackground(ui.bg(android.graphics.Color.WHITE,999));selector.addView(capsule,new FrameLayout.LayoutParams(0,0));
+  choices=new LinearLayout(context);selector.addView(choices,new FrameLayout.LayoutParams(-1,-2));
   String[] labels={"待处理","已完成","全部"};for(int i=0;i<labels.length;i++){final int selected=i;TextView tab=ui.text(labels[i],14,SecondaryUi.MUTED);tab.setTag("task-filter-"+i);tab.setGravity(Gravity.CENTER);tab.setMinHeight(ui.dp(48));tab.setPadding(ui.dp(4),ui.dp(10),ui.dp(4),ui.dp(10));tab.setFocusable(true);tab.setOnClickListener(v->selectFilter(selected));filters[i]=tab;choices.addView(tab,new LayoutParams(0,-2,1));}
-  scroll=new ScrollView(context);scroll.setFillViewport(true);scroll.setClipToPadding(false);addView(scroll,new LayoutParams(-1,0,1));list=new LinearLayout(context);list.setOrientation(VERTICAL);list.setPadding(ui.dp(16),0,ui.dp(16),ui.dp(16));list.setTag("chaoxing-results");scroll.addView(list,new ScrollView.LayoutParams(-1,-2));
-  emptyTitle=ui.text("",18,SecondaryUi.INK);emptyTitle.setTag("tasks-empty-title");emptyTitle.setGravity(Gravity.CENTER);emptyTitle.setTypeface(null,Typeface.BOLD);emptyTitle.setPadding(ui.dp(16),ui.dp(64),ui.dp(16),ui.dp(16));
-  selectFilter(state==null?0:state.getInt("filter",0));int restoredY=state==null?0:state.getInt("scrollY",0);scroll.post(()->scroll.scrollTo(0,restoredY));
+  for(int i=0;i<scrolls.length;i++){ScrollView scroll=new ScrollView(context);scroll.setTag("task-filter-page-"+i);scroll.setFillViewport(true);scroll.setClipToPadding(false);scrolls[i]=scroll;LinearLayout list=new LinearLayout(context);list.setOrientation(VERTICAL);list.setPadding(ui.dp(16),0,ui.dp(16),ui.dp(16));list.setTag("chaoxing-results");lists[i]=list;scroll.addView(list,new ScrollView.LayoutParams(-1,-2));}
+  pager=new ViewPager(context);pager.setTag("task-filter-pager");pager.setOffscreenPageLimit(2);addView(pager,new LayoutParams(-1,0,1));pager.setAdapter(new PagerAdapter(){
+   @Override public int getCount(){return scrolls.length;}
+   @Override public boolean isViewFromObject(View view,Object page){return view==page;}
+   @Override public Object instantiateItem(ViewGroup parent,int position){parent.addView(scrolls[position]);return scrolls[position];}
+   @Override public void destroyItem(ViewGroup parent,int position,Object page){parent.removeView((View)page);}
+  });
+  pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener(){
+   @Override public void onPageScrolled(int position,float offset,int pixels){moveCapsule(position+offset);}
+   @Override public void onPageSelected(int position){markFilter(position);}
+  });
+  choices.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->moveCapsule(pager.getWidth()==0?filter:(float)pager.getScrollX()/pager.getWidth()));
+  int initial=state==null?0:state.getInt("filter",0);pager.setCurrentItem(Math.max(0,Math.min(2,initial)),false);markFilter(pager.getCurrentItem());
+  if(state!=null){restoredScrollY=state.getIntArray("filterScrollY");if(restoredScrollY==null||restoredScrollY.length!=3){restoredScrollY=new int[3];restoredScrollY[filter]=state.getInt("scrollY",0);}}render();
   connected(false);if(account.configured()){platform.setText("学习通 · 已配置");platform.setContentDescription("已配置平台：学习通");status.setText("正在加载本机保存的作业…");loadLocal();}
  }
- private void selectFilter(int value){filter=value>=0&&value<filters.length?value:0;for(int i=0;i<filters.length;i++){boolean selected=i==filter;filters[i].setSelected(selected);filters[i].setTextColor(selected?SecondaryUi.NAVY:SecondaryUi.MUTED);filters[i].setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);filters[i].setBackground(selected?ui.bg(android.graphics.Color.WHITE,10):null);}render();}
- private void render(){
+ private void selectFilter(int value){pager.setCurrentItem(value>=0&&value<filters.length?value:0,android.animation.ValueAnimator.areAnimatorsEnabled());}
+ private void markFilter(int value){filter=value;for(int i=0;i<filters.length;i++){boolean selected=i==filter;filters[i].setSelected(selected);filters[i].setTextColor(selected?SecondaryUi.INK:SecondaryUi.MUTED);filters[i].setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);scrolls[i].setImportantForAccessibility(selected?IMPORTANT_FOR_ACCESSIBILITY_AUTO:IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);}}
+ private void moveCapsule(float position){if(choices.getWidth()==0)return;int width=choices.getWidth()/filters.length;ViewGroup.LayoutParams size=capsule.getLayoutParams();if(size.width!=width||size.height!=choices.getHeight()){size.width=width;size.height=choices.getHeight();capsule.setLayoutParams(size);}capsule.setTranslationX(position*choices.getWidth()/filters.length);}
+ private void render(){for(int i=0;i<lists.length;i++){final int page=i,y=restoredScrollY==null?scrolls[i].getScrollY():restoredScrollY[i];render(lists[i],i);scrolls[i].post(()->{if(!closed)scrolls[page].scrollTo(0,y);});}if(snapshot!=null)restoredScrollY=null;}
+ private void render(LinearLayout list,int filter){
   list.removeAllViews();Map<String,List<ChaoxingClient.Work>> groups=new LinkedHashMap<>();
   if(snapshot!=null)for(ChaoxingClient.Work work:snapshot.items){if(filter==0&&work.completed()||filter==1&&!work.completed())continue;groups.computeIfAbsent(work.course,key->new ArrayList<>()).add(work);}
   for(Map.Entry<String,List<ChaoxingClient.Work>> group:groups.entrySet()){
@@ -62,7 +84,7 @@ final class TaskPage extends LinearLayout {
     TextView deadline=ui.text(work.deadline,13,SecondaryUi.MUTED);deadline.setTag("task-work-deadline");deadline.setTextIsSelectable(true);deadline.setLineSpacing(ui.dp(2),1);deadline.setContentDescription("截止："+work.deadline);android.graphics.drawable.Drawable clock=activity.getDrawable(R.drawable.ic_clock).mutate();clock.setTint(SecondaryUi.MUTED);clock.setBounds(0,0,ui.dp(16),ui.dp(16));deadline.setCompoundDrawables(clock,null,null,null);deadline.setCompoundDrawablePadding(ui.dp(6));LayoutParams time=new LayoutParams(-1,-2);time.topMargin=ui.dp(8);row.addView(deadline,time);
    }
   }
-  if(groups.isEmpty()){String[] titles={"还没有待处理任务","还没有已完成任务","还没有任务"};emptyTitle.setText(snapshot==null?"尚未读取作业":snapshot.items.isEmpty()&&!snapshot.warnings.isEmpty()?"部分课程尚未读取完成":titles[filter]);list.addView(emptyTitle,new LayoutParams(-1,-2));}
+  if(groups.isEmpty()){String[] titles={"还没有待处理任务","还没有已完成任务","还没有任务"};TextView emptyTitle=ui.text(snapshot==null?"尚未读取作业":snapshot.items.isEmpty()&&!snapshot.warnings.isEmpty()?"部分课程尚未读取完成":titles[filter],18,SecondaryUi.INK);emptyTitle.setTag("tasks-empty-title");emptyTitle.setGravity(Gravity.CENTER);emptyTitle.setTypeface(null,Typeface.BOLD);emptyTitle.setPadding(ui.dp(16),ui.dp(64),ui.dp(16),ui.dp(16));list.addView(emptyTitle,new LayoutParams(-1,-2));}
   if(snapshot!=null&&!snapshot.warnings.isEmpty()){TextView heading=ui.text("本次读取说明",13,SecondaryUi.MUTED);heading.setTag("task-read-notes");heading.setPadding(ui.dp(4),ui.dp(20),ui.dp(4),ui.dp(4));list.addView(heading);for(String warning:snapshot.warnings){TextView note=ui.text(warning,13,0xff885564);note.setPadding(ui.dp(4),ui.dp(8),ui.dp(4),ui.dp(8));list.addView(note);}}
  }
  private void connected(boolean value){platform.setText(value?"学习通 · 已连接":account.configured()?"学习通 · 待验证":"未连接平台");platform.setTextColor(value?SecondaryUi.NAVY:SecondaryUi.MUTED);platform.setContentDescription(platform.getText());}
@@ -96,6 +118,6 @@ final class TaskPage extends LinearLayout {
    activity.runOnUiThread(()->{if(current(token)){snapshot=result;busy(false);status.setText("已更新 "+result.checked+" / "+result.total+" 门课程"+(saved?"":" · 本机保存失败，退出后可能无法保留"));render();}});
   }catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("作业读取失败（"+ChaoxingClient.describe(e)+"）。原有作业和密码配置已保留。");}});}finally{connection.close();}
  }
- void saveState(Bundle state){state.putInt("filter",filter);state.putInt("scrollY",scroll.getScrollY());}
+ void saveState(Bundle state){state.putInt("filter",filter);int[] positions=new int[scrolls.length];for(int i=0;i<positions.length;i++)positions[i]=scrolls[i].getScrollY();state.putIntArray("filterScrollY",restoredScrollY==null?positions:restoredScrollY);}
  void close(){closed=true;generation++;if(configuration!=null)configuration.dismiss();if(passwordField!=null)passwordField.setText("");if(client!=null)client.close();worker.shutdownNow();}
 }
