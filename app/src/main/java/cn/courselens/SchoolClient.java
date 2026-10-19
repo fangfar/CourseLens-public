@@ -12,7 +12,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
 import org.json.*;
 
-public final class SchoolClient {
+public class SchoolClient {
+ public ClassTimes classTimes=ClassTimes.DEFAULT;
  public static final String HOST="https://vpn.squ.edu.cn",BASE=HOST+"/https/webvpne219e91d3788da04dcec4cdddadd1b9e/student",TABLE=BASE+"/for-std/course-table";
  private final CookieManager cookies=new CookieManager(null,CookiePolicy.ACCEPT_ORIGINAL_SERVER);
  static boolean passwordRejected(String message){return message!=null&&!message.contains("验证码")&&message.matches("(?is).*(?:密码错误|密码不正确|密码有误|用户名或密码错误|invalid password|incorrect password).*");}

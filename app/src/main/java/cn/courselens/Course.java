@@ -38,7 +38,7 @@ public final class Course {
    try {
     if(p.length<6||p.length>9)throw new IllegalArgumentException();
     int d=Integer.parseInt(p[0].trim()),s=Integer.parseInt(p[1].trim()),e=Integer.parseInt(p[2].trim());
-    if(d<1||d>7||s<1||e<s||e>12||p[3].trim().isEmpty())throw new IllegalArgumentException();
+    if(d<1||d>7||s<1||e<s||e>ClassTimes.MAX_PERIODS||p[3].trim().isEmpty())throw new IllegalArgumentException();
     String w=p[5].trim(); if(w.isEmpty())throw new IllegalArgumentException();
     for(String part:w.split(",",-1)) {
      String[] range=part.split("-",-1); if(range.length>2)throw new IllegalArgumentException();
@@ -47,7 +47,7 @@ public final class Course {
     }
     String teacher=p.length>=7?p[6].trim():"",extra=p.length>=8?optionalText(p[7]):"";
     out.add(p.length==8?withLessonText(d,s,e,p[3].trim(),p[4].trim(),w,teacher,extra):new Course(d,s,e,p[3].trim(),p[4].trim(),w,teacher,extra,p.length==9?optionalText(p[8]):""));
-   } catch(Exception ex) { throw new IllegalArgumentException("第 "+line+" 行格式不正确：星期1–7、节次1–12、周次1–30。",ex); }
+   } catch(Exception ex) { throw new IllegalArgumentException("第 "+line+" 行格式不正确：星期1–7、节次1–30、周次1–30。",ex); }
   }
   return out;
  }

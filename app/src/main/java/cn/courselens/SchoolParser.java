@@ -8,6 +8,29 @@ import java.util.*;
 import java.util.regex.*;
 
 public final class SchoolParser {
+ public static String xzitCourses(String json)throws Exception {
+  JSONObject root=new JSONObject(json);JSONArray courses=root.getJSONArray("kbList");Set<String> rows=new LinkedHashSet<>();
+  for(int i=0;i<courses.length();i++){
+   JSONObject item=courses.getJSONObject(i);if(item.optString("sxbj").equals("0"))continue;
+   String[] units=item.getString("jcs").split("-",-1);if(units.length<1||units.length>2)throw new IllegalArgumentException("学校课程节次未识别。");
+   StringBuilder weeks=new StringBuilder();for(String part:item.getString("zcd").split("[,，、]")){
+    String value=part.replace("第","").replace("周","").replace("(","").replace(")","").replace("（","").replace("）","");String parsed=weeks(value);if(weeks.length()>0)weeks.append(',');weeks.append(parsed);
+   }
+   String name=clean(item.getString("kcmc")),room=clean(item.optString("xqmc","")+" "+item.optString("cdmc",""));
+   Course course=new Course(item.getInt("xqj"),Integer.parseInt(units[0]),Integer.parseInt(units[units.length-1]),name,room,weeks.toString(),clean(item.optString("xm","")),item.optString("jxbsftkbj").equals("1")?"学校调课":"",clean(item.optString("jxbzc","")));
+   Course.parse(course.encode());rows.add(course.encode());
+  }
+  return String.join("\n",rows);
+ }
+ public static ClassTimes xzitTimes(String json)throws Exception {
+  JSONArray array=new JSONArray(json);Map<Integer,String[]> times=new TreeMap<>();
+  for(int i=0;i<array.length();i++){JSONObject item=array.getJSONObject(i);int number=item.getInt("jcmc");if(number<1||number>ClassTimes.MAX_PERIODS||times.put(number,new String[]{item.getString("qssj"),item.getString("jssj")})!=null)throw new IllegalArgumentException("学校作息节次异常。");}
+  if(times.isEmpty())throw new IllegalArgumentException("学校未返回作息时间，已保留原课表。");
+  String[] starts=new String[times.size()],ends=new String[times.size()];for(int i=0;i<starts.length;i++){String[] pair=times.get(i+1);if(pair==null)throw new IllegalArgumentException("学校作息节次不完整。");starts[i]=pair[0];ends[i]=pair[1];}return new ClassTimes(starts,ends);
+ }
+ public static String xzitNotes(String json)throws Exception {
+  JSONObject root=new JSONObject(json);Set<String> notes=new LinkedHashSet<>();for(String list:new String[]{"sjkList","jxhjkcList"}){JSONArray items=root.optJSONArray(list);if(items==null)continue;for(int i=0;i<items.length();i++){JSONObject item=items.getJSONObject(i);for(String field:new String[]{"sjkcgs","qtkcgs","jxhjkcgs"}){String text=clean(item.optString(field,""));if(!text.isEmpty())notes.add(text);}}}return String.join("\n",notes);
+ }
  public static String scriptJson(String html,String variable)throws Exception {
   Matcher m=Pattern.compile("(?:var|let|const)\\s+"+Pattern.quote(variable)+"\\s*=\\s*(\\{[^\\n]+?\\})\\s*;").matcher(html);
   if(!m.find())throw new IllegalArgumentException("学校登录接口已变化，未找到认证配置。");return m.group(1);
