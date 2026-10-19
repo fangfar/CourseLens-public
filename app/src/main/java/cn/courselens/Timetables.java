@@ -19,8 +19,13 @@ final class Timetables {
   if(!names(context).containsKey(id))throw new IllegalArgumentException("课表不存在。");SharedPreferences prefs=preferences(context,id);ClassTimes times=ClassTimes.parse(prefs.getString("classTimes",""));times.validate(Course.parse(prefs.getString("courses","")));
   if(!registry(context).edit().putString("active",id).commit())throw new IllegalStateException("课表切换未保存，请重试。");
  }
+ private static String checkedName(String name){name=name.trim();if(name.isEmpty()||name.length()>40)throw new IllegalArgumentException("课表名称请填写 1–40 个字。");return name;}
+ static void rename(Context context,String id,String name){
+  if(!names(context).containsKey(id))throw new IllegalArgumentException("课表不存在。");
+  if(!registry(context).edit().putString("name."+id,checkedName(name)).commit())throw new IllegalStateException("课表名称未保存，请重试。");
+ }
  static void add(Context context,String name,String school,ClassTimes times,String term){
-  name=name.trim();if(name.isEmpty()||name.length()>40)throw new IllegalArgumentException("课表名称请填写 1–40 个字。");
+  name=checkedName(name);
   String id=UUID.randomUUID().toString();
   if(!preferences(context,id).edit().putString("school",school).putString("classTimes",times.encode()).putString("term",term).putInt("week",1).commit())throw new IllegalStateException("新增课表未保存，请重试。");
   SharedPreferences registry=registry(context);String ids=registry.getString("ids","");
