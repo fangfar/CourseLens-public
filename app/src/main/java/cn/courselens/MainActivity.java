@@ -231,12 +231,12 @@ public class MainActivity extends Activity {
   for(int i=0;i<START_TIMES.length;i++){LinearLayout label=new LinearLayout(this);label.setOrientation(LinearLayout.VERTICAL);label.setGravity(Gravity.CENTER_HORIZONTAL);TextView n=text(""+(i+1),14,INK);label.addView(n);TextView time=text(begin[i]+"\n"+end[i],10,INK);time.setGravity(Gravity.CENTER);LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,-2);tp.topMargin=dp(4);label.addView(time,tp);FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(axis,row);lp.topMargin=i*row+dp(8);grid.addView(label,lp);}
   List<CourseDisplay.Group> groups=CourseDisplay.groups(courses,week,displayChoices);
   if(groups.isEmpty()){LinearLayout empty=new LinearLayout(this);empty.setOrientation(LinearLayout.VERTICAL);empty.setGravity(Gravity.CENTER);empty.setPadding(dp(16),0,dp(16),0);TextView msg=text(data.trim().isEmpty()?"还没有导入课表":"行到水穷处，坐看云起时",data.trim().isEmpty()?17:21,0xff435776);msg.setTag("timetable-empty-message");msg.setGravity(Gravity.CENTER);msg.setMinHeight(row);if(!data.trim().isEmpty()){msg.setTypeface(Typeface.create("serif",Typeface.NORMAL));msg.setLetterSpacing(.04f);msg.setLineSpacing(dp(4),1);}empty.addView(msg);if(data.trim().isEmpty()){TextView link=text("点击右上角菜单中的学校登录，登录学校账号后导入课表",14,0xff526d9c);link.setTag("timetable-import");link.setGravity(Gravity.CENTER);link.setLineSpacing(dp(4),1);link.setPadding(0,dp(12),0,0);link.setMinHeight(dp(48));link.setFocusable(true);link.setOnClickListener(v->quickMenu());empty.addView(link);}FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(width-axis,-2);lp.leftMargin=axis;lp.topMargin=3*row;grid.addView(empty,lp);return;}
-  for(CourseDisplay.Group group:groups){Course c=group.selected;String content=c.displayDetails();boolean conflict=group.courses.size()>1,adjusted=movedAdjustment(c,week)!=null;
+  for(CourseDisplay.Group group:groups){Course c=group.selected;String content=c.displayDetails();boolean conflict=group.courses.size()>1,adjusted=c.schoolAdjusted()||movedAdjustment(c,week)!=null;
    String cardText=cachedCardText.computeIfAbsent(c,key->SchoolParser.clean(c.name)+"\n@"+SchoolParser.clean(c.room)+(c.teacher.isEmpty()?"":"\n"+SchoolParser.clean(c.teacher))+(content.isEmpty()?"":"\n"+SchoolParser.clean(content)));
    TextView card=text(cardText,12,Color.WHITE);card.setTypeface(null,Typeface.BOLD);card.setLineSpacing(dp(1),1);card.setPadding(dp(3),dp(4),dp(2),dp(3));card.setEllipsize(TextUtils.TruncateAt.END);card.setMaxLines(Math.max(2,(c.end-c.start+1)*4-(conflict||adjusted?1:0)));
    View tile=card;
-   if(conflict||adjusted){LinearLayout stack=new LinearLayout(this);stack.setOrientation(LinearLayout.VERTICAL);TextView badge=text(conflict?(adjusted?"冲突 · 调课":"冲突"):"调课",10,courseColor(c.name));badge.setTag(conflict?"conflict-badge":"adjustment-badge");badge.setTypeface(null,Typeface.BOLD);badge.setPadding(dp(3),dp(1),dp(3),dp(1));badge.setBackground(bg(Color.WHITE,3));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-2,-2);bp.setMargins(dp(3),dp(4),dp(3),0);stack.addView(badge,bp);stack.addView(card,new LinearLayout.LayoutParams(-1,0,1));tile=stack;}
-   GradientDrawable background=bg(courseColor(c.name),5);background.setStroke(dp(1.2f),0xfff0edf7);tile.setBackground(background);ripple(tile);tile.setContentDescription(c.name+"，星期"+c.day+"，第"+c.start+"到"+c.end+"节，"+c.room+"，"+c.teacher+(content.isEmpty()?"":"，"+content)+(adjusted?"，单次调课":"")+(conflict?"，有冲突，共 "+group.courses.size()+" 门，点击更换显示课程":""));tile.setFocusable(true);tile.setTag("course-card");tile.setOnClickListener(v->{if(conflict)conflictPicker(group,week);else detail(c,week,()->home());});
+   if(conflict||adjusted){LinearLayout stack=new LinearLayout(this);stack.setOrientation(LinearLayout.VERTICAL);TextView badge=text(conflict?(adjusted?"冲突 · 调":"冲突"):"调",10,courseColor(c.name));badge.setTag(conflict?"conflict-badge":"adjustment-badge");badge.setTypeface(null,Typeface.BOLD);badge.setPadding(dp(3),dp(1),dp(3),dp(1));badge.setBackground(bg(Color.WHITE,3));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-2,-2);bp.setMargins(dp(3),dp(4),dp(3),0);stack.addView(badge,bp);stack.addView(card,new LinearLayout.LayoutParams(-1,0,1));tile=stack;}
+   GradientDrawable background=bg(courseColor(c.name),5);background.setStroke(dp(1.2f),0xfff0edf7);tile.setBackground(background);ripple(tile);tile.setContentDescription(c.name+"，星期"+c.day+"，第"+c.start+"到"+c.end+"节，"+c.room+"，"+c.teacher+(content.isEmpty()?"":"，"+content)+(adjusted?"，调课":"")+(conflict?"，有冲突，共 "+group.courses.size()+" 门，点击更换显示课程":""));tile.setFocusable(true);tile.setTag("course-card");tile.setOnClickListener(v->{if(conflict)conflictPicker(group,week);else detail(c,week,()->home());});
    FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(Math.max(dp(14),(int)column-dp(3)),(c.end-c.start+1)*row-dp(4));lp.leftMargin=axis+Math.round((c.day-1)*column)+dp(1);lp.topMargin=(c.start-1)*row+dp(2);grid.addView(tile,lp);
   }
  }
@@ -272,13 +272,12 @@ public class MainActivity extends Activity {
   courseInformationRows(body,c,shownWeek);
  }
  private void courseInformationRows(LinearLayout body,Course c,int shownWeek){
-  String content=c.displayDetails();CourseAdjustment moved=movedAdjustment(c,shownWeek);
+  String content=c.displayDetails();
   TextView when=text("第 "+shownWeek+" 周 · 周"+"一二三四五六日".charAt(c.day-1)+" · 第 "+c.start+"–"+c.end+" 节（"+START_TIMES[c.start-1]+"–"+END_TIMES[c.end-1]+"）",12,MUTED);when.setPadding(0,0,0,dp(8));body.addView(when);
   courseInfoRow(body,R.drawable.ic_calendar,"教学周次",prettyWeeks(c)+(c.active(shownWeek)?"":" · 本周无课"));
   courseInfoRow(body,R.drawable.ic_person,"任课老师",SchoolParser.clean(c.teacher));
   courseInfoRow(body,R.drawable.ic_location,"上课教室",SchoolParser.clean(c.room));
   if(!content.isEmpty())courseInfoRow(body,R.drawable.ic_notes,"实验内容",SchoolParser.clean(content));
-  if(moved!=null)courseInfoRow(body,R.drawable.ic_calendar,"单次调课",arrangement(moved.original,moved.week)+" → "+arrangement(c,shownWeek));
  }
  private void courseInfoRow(LinearLayout body,int drawable,String label,String value){
   if(body.getTag()!=null&&body.getTag().toString().startsWith("conflict-comparison-")){sheetRow(body,label,value);return;}
@@ -588,6 +587,7 @@ public class MainActivity extends Activity {
     content=original.details;
     if(!name.equals(original.name)){List<String> visible=new ArrayList<>();for(String part:content.split("；"))if(Course.isTeachingClassName(original.name,part))classes=Course.optionalText(classes+"；"+part);else visible.add(part);content=String.join("；",visible);}
    }
+   if(original!=null&&original.schoolAdjusted()&&!Arrays.asList(content.split("；")).contains(Course.SCHOOL_ADJUSTED))content=Course.optionalText(content+"；"+Course.SCHOOL_ADJUSTED);
    Course next=new Course(day.getSelectedItemPosition()+1,start.getSelectedItemPosition()+1,end.getSelectedItemPosition()+1,name,SchoolParser.clean(room.getText().toString()),weeks.toString(),SchoolParser.clean(teacher.getText().toString()),content,classes);
    Course.parse(next.encode());return next;
   }

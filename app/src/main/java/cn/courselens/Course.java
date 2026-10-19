@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.regex.*;
 
 public final class Course {
+ public static final String SCHOOL_ADJUSTED="学校调课";
  public final int day, start, end;
  public final String name, room, weeks, teacher, details, className;
  public Course(int d,int s,int e,String n,String r,String w) { this(d,s,e,n,r,w,""); }
@@ -15,7 +16,8 @@ public final class Course {
   if(value.contains("；")||value.contains(";")||!value.startsWith(courseName+"-"))return false;String[] parts=value.substring(courseName.length()+1).split("-",2);
   return parts.length==2&&!parts[1].trim().isEmpty()&&(parts[0].trim().equals("本部")||parts[0].trim().endsWith("校区"));
  }
- public String displayDetails(){List<String> content=new ArrayList<>();for(String part:details.split("；"))if(!part.isEmpty()&&!isTeachingClassName(name,part))content.add(part);return String.join("；",content);}
+ public boolean schoolAdjusted(){return Arrays.asList(details.split("；")).contains(SCHOOL_ADJUSTED);}
+ public String displayDetails(){List<String> content=new ArrayList<>();for(String part:details.split("；"))if(!part.isEmpty()&&!part.equals(SCHOOL_ADJUSTED)&&!isTeachingClassName(name,part))content.add(part);return String.join("；",content);}
  // shortcut: only recognizable class prefixes are split; add a school adapter if its naming format changes.
  public static Course withLessonText(int d,int s,int e,String n,String r,String w,String t,String extra){
   String value=optionalText(extra),classes="";List<String> content=new ArrayList<>();

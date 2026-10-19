@@ -17,7 +17,7 @@ public final class SchoolParser {
     String value=part.replace("第","").replace("周","").replace("(","").replace(")","").replace("（","").replace("）","");String parsed=weeks(value);if(weeks.length()>0)weeks.append(',');weeks.append(parsed);
    }
    String name=clean(item.getString("kcmc")),room=clean(item.optString("xqmc","")+" "+item.optString("cdmc",""));
-   Course course=new Course(item.getInt("xqj"),Integer.parseInt(units[0]),Integer.parseInt(units[units.length-1]),name,room,weeks.toString(),clean(item.optString("xm","")),item.optString("jxbsftkbj").equals("1")?"学校调课":"",clean(item.optString("jxbzc","")));
+   Course course=new Course(item.getInt("xqj"),Integer.parseInt(units[0]),Integer.parseInt(units[units.length-1]),name,room,weeks.toString(),clean(item.optString("xm","")),item.optString("jxbsftkbj").equals("1")?Course.SCHOOL_ADJUSTED:"",clean(item.optString("jxbzc","")));
    Course.parse(course.encode());rows.add(course.encode());
   }
   return String.join("\n",rows);
