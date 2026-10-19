@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.regex.*;
 
 public final class Course {
+ public static final String SCHOOL_ADJUSTED="学校调课";
  public final int day, start, end;
  public final String name, room, weeks, teacher, details, className;
  public Course(int d,int s,int e,String n,String r,String w) { this(d,s,e,n,r,w,""); }
@@ -15,7 +16,8 @@ public final class Course {
   if(value.contains("；")||value.contains(";")||!value.startsWith(courseName+"-"))return false;String[] parts=value.substring(courseName.length()+1).split("-",2);
   return parts.length==2&&!parts[1].trim().isEmpty()&&(parts[0].trim().equals("本部")||parts[0].trim().endsWith("校区"));
  }
- public String displayDetails(){List<String> content=new ArrayList<>();for(String part:details.split("；"))if(!part.isEmpty()&&!isTeachingClassName(name,part))content.add(part);return String.join("；",content);}
+ public boolean schoolAdjusted(){return Arrays.asList(details.split("；")).contains(SCHOOL_ADJUSTED);}
+ public String displayDetails(){List<String> content=new ArrayList<>();for(String part:details.split("；"))if(!part.isEmpty()&&!part.equals(SCHOOL_ADJUSTED)&&!isTeachingClassName(name,part))content.add(part);return String.join("；",content);}
  // shortcut: only recognizable class prefixes are split; add a school adapter if its naming format changes.
  public static Course withLessonText(int d,int s,int e,String n,String r,String w,String t,String extra){
   String value=optionalText(extra),classes="";List<String> content=new ArrayList<>();
@@ -38,7 +40,7 @@ public final class Course {
    try {
     if(p.length<6||p.length>9)throw new IllegalArgumentException();
     int d=Integer.parseInt(p[0].trim()),s=Integer.parseInt(p[1].trim()),e=Integer.parseInt(p[2].trim());
-    if(d<1||d>7||s<1||e<s||e>12||p[3].trim().isEmpty())throw new IllegalArgumentException();
+    if(d<1||d>7||s<1||e<s||e>ClassTimes.MAX_PERIODS||p[3].trim().isEmpty())throw new IllegalArgumentException();
     String w=p[5].trim(); if(w.isEmpty())throw new IllegalArgumentException();
     for(String part:w.split(",",-1)) {
      String[] range=part.split("-",-1); if(range.length>2)throw new IllegalArgumentException();
@@ -47,7 +49,7 @@ public final class Course {
     }
     String teacher=p.length>=7?p[6].trim():"",extra=p.length>=8?optionalText(p[7]):"";
     out.add(p.length==8?withLessonText(d,s,e,p[3].trim(),p[4].trim(),w,teacher,extra):new Course(d,s,e,p[3].trim(),p[4].trim(),w,teacher,extra,p.length==9?optionalText(p[8]):""));
-   } catch(Exception ex) { throw new IllegalArgumentException("第 "+line+" 行格式不正确：星期1–7、节次1–12、周次1–30。",ex); }
+   } catch(Exception ex) { throw new IllegalArgumentException("第 "+line+" 行格式不正确：星期1–7、节次1–30、周次1–30。",ex); }
   }
   return out;
  }

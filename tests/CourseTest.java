@@ -54,6 +54,14 @@ public class CourseTest {
   assert Course.parse("1|1|2|测试课|A101|1||null").get(0).details.isEmpty();
   assert Course.parse(new Course(1,1,2,"测试课","A101","1","","测试一班","").encode()).get(0).details.equals("测试一班");
   assert added.details.isEmpty()&&legacy.details.isEmpty();
+  var schoolMoved=Course.parse("1|3|4|合成调课|A101|1|合成教师|学校调课|").get(0);
+  assert schoolMoved.displayDetails().isEmpty():"School adjustment status is displayed as experiment content";
+  assert schoolMoved.schoolAdjusted()&&Course.parse(schoolMoved.encode()).get(0).schoolAdjusted():"School adjustment status not preserved";
+  var schoolLab=Course.parse("1|3|4|合成实验|A101|1|合成教师|学校调课；测量误差分析|").get(0);
+  assert schoolLab.displayDetails().equals("测量误差分析"):"Adjustment status hid real experiment content";
+  assert schoolLab.schoolAdjusted();
+  var descriptiveLab=new Course(1,3,4,"合成实验","A101","1","","学校调课后的实验记录");
+  assert !descriptiveLab.schoolAdjusted()&&descriptiveLab.displayDetails().equals(descriptiveLab.details):"Actual experiment text was mistaken for a status";
   for(String bad:new String[]{"8|1|2|课程|地点|6","1|3|2|课程|地点|6","1|1|2|课程|地点|16-1","1|1|2||地点|6","1|1|2|课程|地点|6|老师|说明|班级|多余字段","1|1|2|课程|地点||老师"}) {
    boolean rejected=false;try{Course.parse(bad);}catch(IllegalArgumentException e){rejected=true;}assert rejected;
   }

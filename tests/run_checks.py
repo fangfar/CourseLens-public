@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 
 root = Path(__file__).resolve().parent.parent
-models = ("Course", "CourseDisplay", "NextClass", "CourseAdjustment", "WidgetSchedule", "ChaoxingHomework")
+models = ("Course", "ClassTimes", "CourseDisplay", "NextClass", "CourseAdjustment", "WidgetSchedule", "ChaoxingHomework")
 tests = sorted((root / "tests").glob("*Test.java"))
 with tempfile.TemporaryDirectory() as output:
     sources = [root / f"app/src/main/java/cn/courselens/{name}.java" for name in models]

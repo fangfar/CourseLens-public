@@ -21,7 +21,7 @@ public class CourseWidget extends AppWidgetProvider {
  static int count(Context context){AppWidgetManager manager=AppWidgetManager.getInstance(context);int count=0;for(Class<?> provider:new Class<?>[]{CourseWidget.class,CourseWidgetWide.class,CourseWidgetLarge.class})count+=manager.getAppWidgetIds(new ComponentName(context,provider)).length;return count;}
  static RemoteViews views(Context context,int id,LocalDateTime now){
   String activity=MainActivity.class.getName(),prefix=context.getPackageName()+".";
-  SharedPreferences prefs=context.getSharedPreferences(activity.startsWith(prefix)?activity.substring(prefix.length()):activity,Context.MODE_PRIVATE);
+  SharedPreferences prefs=Timetables.preferences(context);
   AppWidgetManager manager=AppWidgetManager.getInstance(context);AppWidgetProviderInfo info=manager.getAppWidgetInfo(id);Bundle options=manager.getAppWidgetOptions(id);android.graphics.Rect padding=AppWidgetHostView.getDefaultPaddingForWidget(context,new ComponentName(context,CourseWidget.class),null);float density=context.getResources().getDisplayMetrics().density;
   int width=options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,info!=null&&!info.provider.getClassName().equals(CourseWidget.class.getName())?340:164)-Math.round((padding.left+padding.right)/density),height=options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,info!=null&&info.provider.getClassName().equals(CourseWidgetLarge.class.getName())?340:190)-Math.round((padding.top+padding.bottom)/density);if(width<=0)width=148;if(height<=0)height=148;
   boolean compact=width<240&&height<260,large=height>=260;int limit=large?4:2;
@@ -33,13 +33,14 @@ public class CourseWidget extends AppWidgetProvider {
 
   String term=prefs.getString("term","2026-08-31");
   try{
-   WidgetSchedule schedule=WidgetSchedule.from(prefs.getString("courses",""),term,prefs.getString("courseAdjustments",""),prefs.getStringSet("displayChoices",Collections.emptySet()),now);
+   ClassTimes times=ClassTimes.parse(prefs.getString("classTimes",""));
+   WidgetSchedule schedule=WidgetSchedule.from(prefs.getString("courses",""),term,prefs.getString("courseAdjustments",""),prefs.getStringSet("displayChoices",Collections.emptySet()),now,times);
    views.setTextViewText(R.id.widget_header,"还剩 "+schedule.remainingCount+" 门");
-   int upcoming=0;while(upcoming<schedule.remaining.size()&&!now.toLocalTime().isBefore(LocalTime.parse(NextClass.START_TIMES[schedule.remaining.get(upcoming).start-1])))upcoming++;
+   int upcoming=0;while(upcoming<schedule.remaining.size()&&!now.toLocalTime().isBefore(LocalTime.parse(times.starts[schedule.remaining.get(upcoming).start-1])))upcoming++;
    for(int slot=0;slot<4;slot++){
     Course c=slot<limit&&slot<schedule.remaining.size()?schedule.remaining.get(slot):null;
     views.setViewVisibility(CONTENT[slot],c!=null?android.view.View.VISIBLE:android.view.View.GONE);
-    course(context,views,id,slot,c,term,now,"偷得浮生半日闲",compact,slot==upcoming);
+    course(context,views,id,slot,c,term,now,"偷得浮生半日闲",compact,slot==upcoming,times);
    }
    int missing=schedule.remainingCount==0?0:limit-Math.min(limit,schedule.remainingCount);views.setViewVisibility(R.id.widget_space_one,(missing&1)!=0?android.view.View.VISIBLE:android.view.View.GONE);views.setViewVisibility(R.id.widget_space_two,(missing&2)!=0?android.view.View.VISIBLE:android.view.View.GONE);
    if(schedule.remainingCount==0){
@@ -51,24 +52,24 @@ public class CourseWidget extends AppWidgetProvider {
     int inset=Math.round((compact?2:6)*density),badgeInset=Math.round((large?5:2)*density);views.setViewPadding(R.id.widget_empty_panel,inset,inset,inset,inset);views.setViewPadding(R.id.widget_empty_status,badgeInset,badgeInset,badgeInset,badgeInset);
     if(android.os.Build.VERSION.SDK_INT>=31){views.setInt(R.id.widget_empty_title,"setGravity",compact||large?android.view.Gravity.CENTER:android.view.Gravity.START);views.setInt(R.id.widget_empty_description,"setGravity",compact||large?android.view.Gravity.CENTER:android.view.Gravity.START);views.setInt(R.id.widget_empty_panel,"setGravity",(compact||large?android.view.Gravity.CENTER:android.view.Gravity.START|android.view.Gravity.CENTER_VERTICAL));}
     views.setOnClickPendingIntent(R.id.widget_empty_panel,open(context,id,4,null,term,now.toLocalDate()));
-    if(schedule.tomorrow!=null){Course tomorrow=schedule.tomorrow;String hint="明天第一节 "+NextClass.START_TIMES[tomorrow.start-1]+" · "+SchoolParser.clean(tomorrow.name)+(large&&!tomorrow.room.isEmpty()?" · "+SchoolParser.clean(tomorrow.room):"");views.setViewVisibility(R.id.widget_tomorrow,android.view.View.VISIBLE);views.setTextViewText(R.id.widget_tomorrow,hint);views.setTextViewTextSize(R.id.widget_tomorrow,android.util.TypedValue.COMPLEX_UNIT_SP,compact?9:12);views.setInt(R.id.widget_tomorrow,"setMaxLines",large?2:1);views.setOnClickPendingIntent(R.id.widget_tomorrow,open(context,id,5,tomorrow,term,now.toLocalDate().plusDays(1)));}
+    if(schedule.tomorrow!=null){Course tomorrow=schedule.tomorrow;String hint="明天第一节 "+times.starts[tomorrow.start-1]+" · "+SchoolParser.clean(tomorrow.name)+(large&&!tomorrow.room.isEmpty()?" · "+SchoolParser.clean(tomorrow.room):"");views.setViewVisibility(R.id.widget_tomorrow,android.view.View.VISIBLE);views.setTextViewText(R.id.widget_tomorrow,hint);views.setTextViewTextSize(R.id.widget_tomorrow,android.util.TypedValue.COMPLEX_UNIT_SP,compact?9:12);views.setInt(R.id.widget_tomorrow,"setMaxLines",large?2:1);views.setOnClickPendingIntent(R.id.widget_tomorrow,open(context,id,5,tomorrow,term,now.toLocalDate().plusDays(1)));}
    }
   }catch(RuntimeException e){
    views.setTextViewText(R.id.widget_header,"课表镜");views.setViewVisibility(CONTENT[0],android.view.View.VISIBLE);for(int slot=1;slot<4;slot++)views.setViewVisibility(CONTENT[slot],android.view.View.GONE);
-   course(context,views,id,0,null,term,now,"请检查课表设置",compact,false);
+   course(context,views,id,0,null,term,now,"请检查课表设置",compact,false,ClassTimes.DEFAULT);
   }
 
   views.setContentDescription(R.id.widget_refresh,"刷新课表，上次更新 "+now.format(DateTimeFormatter.ofPattern("HH:mm")));
   Intent refresh=new Intent(context,CourseWidget.class).setAction(REFRESH).setData(Uri.parse("courselens-widget://refresh/"+id));views.setOnClickPendingIntent(R.id.widget_refresh,PendingIntent.getBroadcast(context,id,refresh,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE));
   return views;
  }
- private static void course(Context context,RemoteViews views,int id,int slot,Course next,String term,LocalDateTime now,String empty,boolean compact,boolean upcoming){
+ private static void course(Context context,RemoteViews views,int id,int slot,Course next,String term,LocalDateTime now,String empty,boolean compact,boolean upcoming,ClassTimes times){
   int content=CONTENT[slot],title=TITLE[slot],time=TIME[slot],room=ROOM[slot];
   if(next==null){views.setTextViewText(title,empty);views.setTextViewText(time,"");views.setTextViewText(room,"");views.setContentDescription(content,empty+"，点击打开课表");}
   else{
    Course c=next;
-   String when=NextClass.START_TIMES[c.start-1]+(compact?"":"–"+NextClass.END_TIMES[c.end-1]),where=c.room.isEmpty()?"地点未填写":SchoolParser.clean(c.room);
-   String status=now.toLocalTime().isBefore(LocalTime.parse(NextClass.START_TIMES[c.start-1]))?(upcoming?"下一节":"待上课"):"上课中";views.setTextViewText(STATUS[slot],status);
+   String when=times.starts[c.start-1]+(compact?"":"–"+times.ends[c.end-1]),where=c.room.isEmpty()?"地点未填写":SchoolParser.clean(c.room);
+   String status=now.toLocalTime().isBefore(LocalTime.parse(times.starts[c.start-1]))?(upcoming?"下一节":"待上课"):"上课中";views.setTextViewText(STATUS[slot],status);
    boolean active=upcoming||status.equals("上课中");views.setInt(content,"setBackgroundResource",active?R.drawable.widget_next_background:R.drawable.widget_course_background);views.setInt(STATUS[slot],"setBackgroundResource",active?R.drawable.widget_status_background:R.drawable.widget_waiting_background);views.setTextColor(STATUS[slot],active?0xff188466:0xff2375cf);
    views.setTextViewText(title,SchoolParser.clean(c.name));views.setTextViewText(time,when);views.setTextViewText(room,where);
    views.setContentDescription(content,status+"，"+SchoolParser.clean(c.name)+"，"+when+"，第"+c.start+"到"+c.end+"节，"+where);
@@ -81,6 +82,7 @@ public class CourseWidget extends AppWidgetProvider {
  }
  private static PendingIntent open(Context context,int id,int slot,Course course,String term,LocalDate date){
   Intent intent=new Intent(context,MainActivity.class).setAction(OPEN).setData(Uri.parse("courselens-widget://open/"+id+"/"+slot)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+  intent.putExtra("widgetTimetable",Timetables.active(context));
   if(course!=null){int week=(int)(ChronoUnit.DAYS.between(LocalDate.parse(term),date)/7)+1;intent.putExtra("widgetWeek",week).putExtra("widgetCourse",CourseDisplay.key(week,course)).putExtra("widgetTerm",term);}
   return PendingIntent.getActivity(context,id,intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
  }
