@@ -44,7 +44,7 @@ public class MainActivity extends Activity {
  @Override public void onCreate(Bundle state){super.onCreate(state);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);data=getPreferences(0).getString("courses","");notes=getPreferences(0).getString("notes","");if((getApplicationInfo().flags&android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0)school.onDiagnostic=summary->{try(java.io.FileOutputStream out=openFileOutput("sync-diagnostic.txt",0)){out.write(summary.getBytes(java.nio.charset.StandardCharsets.UTF_8));}catch(Exception ignored){}};else deleteFile("sync-diagnostic.txt");week=getPreferences(0).getInt("week",6);term=getPreferences(0).getString("term",term);displayChoices=new HashSet<>(getPreferences(0).getStringSet("displayChoices",Collections.emptySet()));adjustments=getPreferences(0).getString("courseAdjustments","");home();openWidget(getIntent());widgetShortcut();
   if(state!=null){taskState=state.getBundle("taskPage");if(state.getBoolean("tasksVisible")&&!CourseWidget.OPEN.equals(getIntent().getAction())&&!ADD_WIDGET.equals(getIntent().getAction()))tasks();}
   View decor=getWindow().getDecorView();decor.getViewTreeObserver().addOnScrollChangedListener(remoteScroll);
-  decor.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener(){boolean drawn;public void onDraw(){if(drawn)return;drawn=true;decor.post(()->{if(decor.getViewTreeObserver().isAlive())decor.getViewTreeObserver().removeOnDrawListener(this);remoteHandler.postDelayed(()->{if(!isDestroyed()&&!isFinishing()){remote=RemoteConfigClient.get(MainActivity.this);remote.listen(remoteListener);remote.check(false);refreshRemoteStatus();}},1500);});}});
+  decor.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener(){boolean drawn;public void onDraw(){if(drawn)return;drawn=true;decor.post(()->{if(decor.getViewTreeObserver().isAlive())decor.getViewTreeObserver().removeOnDrawListener(this);remoteHandler.postDelayed(()->{if(!isDestroyed()&&!isFinishing()){remote=RemoteConfigClient.get(MainActivity.this);remote.listen(remoteListener);remote.check(false);refreshRemoteStatus();}},1500);Looper.myQueue().addIdleHandler(()->{prepareTasks();return false;});});}});
  }
  @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("tasksVisible",tasksVisible);Bundle page=new Bundle();if(taskPage!=null)taskPage.saveState(page);else if(taskState!=null)page.putAll(taskState);state.putBundle("taskPage",page);}
  private void saveWeek(){getPreferences(0).edit().putInt("week",week).apply();}
@@ -101,6 +101,12 @@ public class MainActivity extends Activity {
  private void updateBottomNavigation(){
   if(bottomNavigation==null)return;ImageButton[] tabs={timetableTab,tasksTab};int[] icons={R.drawable.ic_calendar,R.drawable.ic_tasks};
   for(int i=0;i<tabs.length;i++){ImageButton tab=tabs[i];boolean selected=tasksVisible==(i==1);tab.setSelected(selected);tab.setImageResource(selected?(i==0?R.drawable.ic_calendar_filled:R.drawable.ic_tasks_filled):icons[i]);tab.setImageTintList(android.content.res.ColorStateList.valueOf(selected?0xff171717:0xff999999));}
+ }
+ // Prepare only local task content after the first home frame, without delaying that frame or requesting the platform.
+ private void prepareTasks(){
+  if(isDestroyed()||isFinishing()||taskPage!=null||pageBack!=null||tasksVisible||navigationOverlay!=null||pageMotion.isRunning())return;
+  taskPage=new TaskPage(this,taskState);int width=stage.getWidth(),height=stage.getHeight();
+  if(width>0&&height>0){taskPage.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));taskPage.layout(0,0,width,height);}
  }
  private void tasks(){getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);tasksVisible=true;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,true,taskPage);root.setBackgroundColor(SURFACE);}
 
