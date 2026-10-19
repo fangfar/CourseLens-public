@@ -97,7 +97,7 @@ public class MainActivity extends Activity {
   timetableTab=navigationTab("课表","nav-timetable",()->{if(tasksVisible)home();});tasksTab=navigationTab("任务","nav-tasks",()->{if(!tasksVisible)tasks();});
   for(ImageButton tab:new ImageButton[]{timetableTab,tasksTab}){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(8),0,dp(8),0);items.addView(tab,lp);}return bar;
  }
- private ImageButton navigationTab(String label,String tag,Runnable action){ImageButton tab=new ImageButton(this);tab.setTag(tag);tab.setContentDescription(label);tab.setTooltipText(label);tab.setMinimumHeight(dp(48));tab.setPadding(dp(8),dp(10),dp(8),dp(10));tab.setScaleType(ImageView.ScaleType.CENTER);tab.setBackground(null);tab.setOnClickListener(v->action.run());ripple(tab);return tab;}
+ private ImageButton navigationTab(String label,String tag,Runnable action){ImageButton tab=new ImageButton(this);tab.setTag(tag);tab.setContentDescription(label);tab.setTooltipText(label);tab.setMinimumHeight(dp(48));tab.setPadding(dp(8),dp(10),dp(8),dp(10));tab.setScaleType(ImageView.ScaleType.CENTER);tab.setBackground(null);tab.setOnClickListener(v->action.run());return tab;}
  private void updateBottomNavigation(){
   if(bottomNavigation==null)return;ImageButton[] tabs={timetableTab,tasksTab};int[] icons={R.drawable.ic_calendar,R.drawable.ic_tasks};
   for(int i=0;i<tabs.length;i++){ImageButton tab=tabs[i];boolean selected=tasksVisible==(i==1);tab.setSelected(selected);tab.setImageResource(selected?(i==0?R.drawable.ic_calendar_filled:R.drawable.ic_tasks_filled):icons[i]);tab.setImageTintList(android.content.res.ColorStateList.valueOf(selected?0xff171717:0xff999999));}

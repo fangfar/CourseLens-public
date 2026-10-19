@@ -25,6 +25,7 @@ final class TaskPage extends LinearLayout {
  private final ViewPager pager;
  private final View capsule;
  private final LinearLayout choices;
+ private float pagePosition;
  private int[] restoredScrollY;
  private final Button refresh,configure;
  private final ProgressBar progress;
@@ -57,17 +58,18 @@ final class TaskPage extends LinearLayout {
    @Override public void destroyItem(ViewGroup parent,int position,Object page){parent.removeView((View)page);}
   });
   pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener(){
-   @Override public void onPageScrolled(int position,float offset,int pixels){moveCapsule(position+offset);}
+   @Override public void onPageScrolled(int position,float offset,int pixels){pagePosition=position+offset;moveCapsule();}
    @Override public void onPageSelected(int position){markFilter(position);}
   });
-  choices.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->moveCapsule(pager.getWidth()==0?filter:(float)pager.getScrollX()/pager.getWidth()));
-  int initial=state==null?0:state.getInt("filter",0);pager.setCurrentItem(Math.max(0,Math.min(2,initial)),false);markFilter(pager.getCurrentItem());
+  // ViewPager scrollX can use a relative origin after restoring a nonzero page.
+  choices.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->moveCapsule());
+  int initial=Math.max(0,Math.min(2,state==null?0:state.getInt("filter",0)));pagePosition=initial;pager.setCurrentItem(initial,false);markFilter(pager.getCurrentItem());
   if(state!=null){restoredScrollY=state.getIntArray("filterScrollY");if(restoredScrollY==null||restoredScrollY.length!=3){restoredScrollY=new int[3];restoredScrollY[filter]=state.getInt("scrollY",0);}}render();
   connected(false);if(account.configured()){platform.setText("学习通 · 已配置");platform.setContentDescription("已配置平台：学习通");status.setText("正在加载本机保存的作业…");loadLocal();}
  }
  private void selectFilter(int value){pager.setCurrentItem(value>=0&&value<filters.length?value:0,android.animation.ValueAnimator.areAnimatorsEnabled());}
  private void markFilter(int value){filter=value;for(int i=0;i<filters.length;i++){boolean selected=i==filter;filters[i].setSelected(selected);filters[i].setTextColor(selected?SecondaryUi.INK:SecondaryUi.MUTED);filters[i].setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);scrolls[i].setImportantForAccessibility(selected?IMPORTANT_FOR_ACCESSIBILITY_AUTO:IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);}}
- private void moveCapsule(float position){if(choices.getWidth()==0)return;int width=choices.getWidth()/filters.length;ViewGroup.LayoutParams size=capsule.getLayoutParams();if(size.width!=width||size.height!=choices.getHeight()){size.width=width;size.height=choices.getHeight();capsule.setLayoutParams(size);}capsule.setTranslationX(position*choices.getWidth()/filters.length);}
+ private void moveCapsule(){if(choices.getWidth()==0)return;int width=choices.getWidth()/filters.length;ViewGroup.LayoutParams size=capsule.getLayoutParams();if(size.width!=width||size.height!=choices.getHeight()){size.width=width;size.height=choices.getHeight();capsule.setLayoutParams(size);}capsule.setTranslationX(pagePosition*choices.getWidth()/filters.length);}
  private void render(){for(int i=0;i<lists.length;i++){final int page=i,y=restoredScrollY==null?scrolls[i].getScrollY():restoredScrollY[i];render(lists[i],i);scrolls[i].post(()->{if(!closed)scrolls[page].scrollTo(0,y);});}if(snapshot!=null)restoredScrollY=null;}
  private void render(LinearLayout list,int filter){
   list.removeAllViews();Map<String,List<ChaoxingClient.Work>> groups=new LinkedHashMap<>();
