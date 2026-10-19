@@ -62,8 +62,8 @@ final class TaskPage extends LinearLayout {
     TextView deadline=ui.text(work.deadline,13,SecondaryUi.MUTED);deadline.setTag("task-work-deadline");deadline.setTextIsSelectable(true);deadline.setLineSpacing(ui.dp(2),1);deadline.setContentDescription("截止："+work.deadline);android.graphics.drawable.Drawable clock=activity.getDrawable(R.drawable.ic_clock).mutate();clock.setTint(SecondaryUi.MUTED);clock.setBounds(0,0,ui.dp(16),ui.dp(16));deadline.setCompoundDrawables(clock,null,null,null);deadline.setCompoundDrawablePadding(ui.dp(6));LayoutParams time=new LayoutParams(-1,-2);time.topMargin=ui.dp(8);row.addView(deadline,time);
    }
   }
-  if(groups.isEmpty()){String[] titles={"还没有待处理任务","还没有已完成任务","还没有任务"};emptyTitle.setText(snapshot==null?"尚未读取作业":!snapshot.warnings.isEmpty()?"部分课程尚未读取完成":titles[filter]);list.addView(emptyTitle,new LayoutParams(-1,-2));}
-  if(snapshot!=null)for(String warning:snapshot.warnings){TextView note=ui.text(warning,13,0xff885564);note.setPadding(ui.dp(4),ui.dp(8),ui.dp(4),ui.dp(8));list.addView(note);}
+  if(groups.isEmpty()){String[] titles={"还没有待处理任务","还没有已完成任务","还没有任务"};emptyTitle.setText(snapshot==null?"尚未读取作业":snapshot.items.isEmpty()&&!snapshot.warnings.isEmpty()?"部分课程尚未读取完成":titles[filter]);list.addView(emptyTitle,new LayoutParams(-1,-2));}
+  if(snapshot!=null&&!snapshot.warnings.isEmpty()){TextView heading=ui.text("本次读取说明",13,SecondaryUi.MUTED);heading.setTag("task-read-notes");heading.setPadding(ui.dp(4),ui.dp(20),ui.dp(4),ui.dp(4));list.addView(heading);for(String warning:snapshot.warnings){TextView note=ui.text(warning,13,0xff885564);note.setPadding(ui.dp(4),ui.dp(8),ui.dp(4),ui.dp(8));list.addView(note);}}
  }
  private void connected(boolean value){platform.setText(value?"学习通 · 已连接":account.configured()?"学习通 · 待验证":"未连接平台");platform.setTextColor(value?SecondaryUi.NAVY:SecondaryUi.MUTED);platform.setContentDescription(platform.getText());}
  private void busy(boolean value){busy=value;configure.setEnabled(!value);platform.setEnabled(!value);refresh.setEnabled(!value&&account.configured());progress.setVisibility(value?VISIBLE:GONE);}
@@ -91,11 +91,10 @@ final class TaskPage extends LinearLayout {
  }
  private void sync(ChaoxingClient connection,int token,String username){
   try{
-   ChaoxingClient.Result result=connection.sync(message->activity.runOnUiThread(()->{if(current(token))status.setText(message);}));if(!current(token))return;
-   if(snapshot!=null&&!result.warnings.isEmpty()){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("本次读取不完整，已保留原有作业。"+result.warnings.get(0));}});return;}
-   boolean persisted;try{new ChaoxingCache(getContext(),username).save(result);persisted=true;}catch(Exception e){persisted=false;}boolean saved=persisted;
-   activity.runOnUiThread(()->{if(current(token)){snapshot=result;busy(false);status.setText("已读取 "+result.checked+" / "+result.total+" 门课程 · "+result.items.size()+" 份作业"+(result.warnings.isEmpty()?"":" · 部分信息未完成")+(saved?" · 已保存到本机":" · 本机保存失败，退出后可能无法保留"));render();}});
-  }catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("作业读取失败（"+ChaoxingClient.describe(e)+"）。原有作业和密码配置已保留。");}});}
+   ChaoxingClient.Result fresh=connection.sync(message->activity.runOnUiThread(()->{if(current(token))status.setText(message);}));if(!current(token))return;ChaoxingCache cache=new ChaoxingCache(getContext(),username);ChaoxingClient.Result result=ChaoxingCache.merge(snapshot==null?cache.load():snapshot,fresh);
+   boolean persisted;try{cache.save(result);persisted=true;}catch(Exception e){persisted=false;}boolean saved=persisted;
+   activity.runOnUiThread(()->{if(current(token)){snapshot=result;busy(false);status.setText("已更新 "+result.checked+" / "+result.total+" 门课程"+(saved?"":" · 本机保存失败，退出后可能无法保留"));render();}});
+  }catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("作业读取失败（"+ChaoxingClient.describe(e)+"）。原有作业和密码配置已保留。");}});}finally{connection.close();}
  }
  void saveState(Bundle state){state.putInt("filter",filter);state.putInt("scrollY",scroll.getScrollY());}
  void close(){closed=true;generation++;if(configuration!=null)configuration.dismiss();if(passwordField!=null)passwordField.setText("");if(client!=null)client.close();worker.shutdownNow();}

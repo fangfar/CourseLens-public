@@ -31,14 +31,16 @@ final class ChaoxingClient implements AutoCloseable {
  static final class Subject {
   final String name,id,clazz,cpi;
   Subject(String name,String id,String clazz,String cpi){this.name=name;this.id=id;this.clazz=clazz;this.cpi=cpi;}
+  String key(){return id+":"+clazz;}
  }
  static final class Work {
-  final String course,title,status,url;String deadline="截止时间未知";
+  final String course,title,status,url;String deadline="截止时间未知",courseKey="",workKey="";
   Work(String course,String title,String status,String url){this.course=course;this.title=title;this.status=status;this.url=url;}
   boolean completed(){return status.matches(".*(已完成|已提交|已批阅|待批阅|已批改).*");}
  }
  static final class Result {
   final List<Work> items=new ArrayList<>();final List<String> warnings=new ArrayList<>();int total,checked;
+  final List<Subject> courses=new ArrayList<>();final Set<String> requested=new LinkedHashSet<>();final Map<String,Boolean> readCourses=new LinkedHashMap<>();
  }
  private final CookieManager cookies=new CookieManager(null,CookiePolicy.ACCEPT_ORIGINAL_SERVER);
  private final Transport transport;
@@ -100,7 +102,7 @@ final class ChaoxingClient implements AutoCloseable {
    if(!path.startsWith("http")&&!path.startsWith("/"))try{path=decode(path);}catch(IllegalArgumentException e){throw new IOException("作业链接无法解析。");}
    String url;try{url=URI.create("https://mooc1.chaoxing.com/").resolve(path).toString();}catch(IllegalArgumentException e){throw new IOException("作业链接无法解析。");}
    if(title==null||title.text().isBlank()||!safeDetail(url))throw new IOException("作业条目结构变化，已停止该课程读取。");
-   if(seen.add(url))result.add(new Work(course,title.text(),status==null?"状态未知":status.text(),url));
+   if(seen.add(url)){Work work=new Work(course,title.text(),status==null?"状态未知":status.text(),url);for(Map.Entry<String,String> arg:query(url).entrySet())if(arg.getKey().equalsIgnoreCase("workId")&&arg.getValue().matches("[0-9]{1,256}"))work.workKey=arg.getValue();result.add(work);}
   }
   if(result.isEmpty()&&!page.text().matches(".*(暂无作业|没有作业|还没有作业|暂无相关作业|0/0).*"))throw new IOException("作业列表未识别，不能确认该课程没有作业。");
   return result;
@@ -116,8 +118,8 @@ final class ChaoxingClient implements AutoCloseable {
   progress.accept("正在读取账号信息…");String base=fetch("账号信息","https://i.chaoxing.com/base"),fid=institution(base);
   if(fid.isEmpty())throw new ReadFailure("账号信息","页面未提供机构编号");
   progress.accept("正在读取课程列表…");String courseUrl="https://mooc2-ans.chaoxing.com/mooc2-ans/visit/courselistdata?"+form("courseType","1","courseFid",fid,"courseTeacherid","0","courseOrderBy","0");
-  String courseHtml=fetch("课程列表",courseUrl);List<Subject> courses;try{courses=subjects(courseHtml);}catch(IOException e){throw new ReadFailure("课程列表","页面结构未识别，可能需要重新登录或适配页面");}Result result=new Result();result.total=courses.size();if(paged(courseHtml))result.warnings.add("课程列表存在分页，尚未读取后续课程。");
-  int visited=0;for(Subject course:courses){
+  String courseHtml=fetch("课程列表",courseUrl);Result result=new Result();try{result.courses.addAll(subjects(courseHtml));}catch(IOException e){throw new ReadFailure("课程列表","页面结构未识别，可能需要重新登录或适配页面");}result.total=result.courses.size();if(paged(courseHtml))result.warnings.add("课程列表存在分页，尚未读取后续课程。");for(Subject course:result.courses)result.requested.add(course.key());
+  int visited=0;for(Subject course:result.courses){
    progress.accept("正在识别 "+(++visited)+" / "+result.total+"："+course.name);
    try{
     Document page=Jsoup.parse(fetch("课程访问参数","https://mooc1.chaoxing.com/visit/stucoursemiddle?"+form("courseid",course.id,"clazzid",course.clazz,"cpi",course.cpi,"ismooc2","1","v","2")));
@@ -126,13 +128,14 @@ final class ChaoxingClient implements AutoCloseable {
     String listUrl="https://mooc1.chaoxing.com/mooc2/work/list?"+form("courseId",course.id,"classId",course.clazz,"cpi",course.cpi,"ut","s","openc",openc,"enc",enc,"t",String.valueOf(System.currentTimeMillis()),"stuenc",stuenc,"isdisplaytable","2");
     String html=fetch("作业列表",listUrl);List<Work> items;try{items=works(html,course.name);}catch(IOException e){throw new ReadFailure("作业列表","页面未识别或无访问权限");}
     // shortcut: unknown pagination is reported as partial; add a verified paging adapter when encountered.
-    if(paged(html))result.warnings.add(course.name+"：列表存在分页，当前仅识别首批作业。");
+    boolean complete=!paged(html);if(!complete)result.warnings.add(course.name+"：列表存在分页，仅更新已读取作业，其余保留本机信息。");
     for(Work work:items){
-     if(!work.completed())try{work.deadline=deadline(fetch("截止时间",work.url));}catch(InterruptedIOException e){throw e;}catch(Exception e){result.warnings.add(course.name+" · "+work.title+"："+describe(e));}
+     work.courseKey=course.key();
+     if(!work.completed())try{work.deadline=deadline(fetch("截止时间",work.url));if(work.deadline.equals("截止时间未知"))throw new ReadFailure("截止时间","未识别到日期，保留本机已知时间或显示未知");}catch(InterruptedIOException e){throw e;}catch(Exception e){result.warnings.add(course.name+" · "+work.title+"："+describe(e));}
      result.items.add(work);
     }
-    result.checked++;
-   }catch(InterruptedIOException e){throw e;}catch(Exception e){result.warnings.add(course.name+"："+describe(e));}
+    result.readCourses.put(course.key(),complete);result.checked++;
+   }catch(InterruptedIOException e){throw e;}catch(Exception e){result.warnings.add(course.name+"："+describe(e)+"；本次未更新，已有作业保留。");}
   }
   return result;
  }
