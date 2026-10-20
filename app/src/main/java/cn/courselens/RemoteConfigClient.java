@@ -13,7 +13,7 @@ import javax.net.ssl.HttpsURLConnection;
 // Process-owned work survives Activity recreation; only the current Activity receives results.
 @SuppressLint("ApplySharedPref") // Every commit runs on the worker; cache replacement checks disk success.
 final class RemoteConfigClient {
- static final String UPDATE="https://update.xvyan.cn/remote/config.json",PAGES="https://fangfar.github.io/CourseLens-public/remote/config.json",RAW="https://raw.githubusercontent.com/fangfar/CourseLens-public/main/remote/config.json";
+ static final String UPDATE="https://courselens.xvyan.cn/remote/config.json",PAGES="https://fangfar.github.io/CourseLens-public/remote/config.json",RAW="https://raw.githubusercontent.com/fangfar/CourseLens-public/main/remote/config.json";
  static final long REFRESH_MS=6*60*60*1000L,RETRY_MS=30*60*1000L,STALE_MS=7*24*60*60*1000L;
  interface Listener {void changed(String error,boolean manual);}
  interface Fetcher {String fetch()throws Exception;}
