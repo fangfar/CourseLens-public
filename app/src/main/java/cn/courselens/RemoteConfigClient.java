@@ -13,7 +13,7 @@ import javax.net.ssl.HttpsURLConnection;
 // Process-owned work survives Activity recreation; only the current Activity receives results.
 @SuppressLint("ApplySharedPref") // Every commit runs on the worker; cache replacement checks disk success.
 final class RemoteConfigClient {
- static final String PAGES="https://fangfar.github.io/CourseLens-public/remote/config.json",RAW="https://raw.githubusercontent.com/fangfar/CourseLens-public/main/remote/config.json";
+ static final String UPDATE="https://update.xvyan.cn/remote/config.json",PAGES="https://fangfar.github.io/CourseLens-public/remote/config.json",RAW="https://raw.githubusercontent.com/fangfar/CourseLens-public/main/remote/config.json";
  static final long REFRESH_MS=6*60*60*1000L,RETRY_MS=30*60*1000L,STALE_MS=7*24*60*60*1000L;
  interface Listener {void changed(String error,boolean manual);}
  interface Fetcher {String fetch()throws Exception;}
@@ -47,7 +47,7 @@ final class RemoteConfigClient {
  void read(String id){readIds.add(id);Set<String> snapshot=new HashSet<>(readIds);worker.execute(()->{if(prefs!=null)prefs.edit().putStringSet("readIds",snapshot).commit();});}
  void snooze(long version){snoozedVersions.add(Long.toString(version));Set<String> snapshot=new HashSet<>(snoozedVersions);worker.execute(()->{if(prefs!=null)prefs.edit().putStringSet("snoozedVersions",snapshot).commit();});}
  private static final class InvalidResponse extends IOException {InvalidResponse(String message){super(message);}}
- private static String fetch()throws Exception {String json;try{json=request(PAGES);}catch(InvalidResponse e){throw e;}catch(IOException e){json=request(RAW);}return json;}
+ private static String fetch()throws Exception {String json;try{json=request(UPDATE);}catch(InvalidResponse e){throw e;}catch(IOException e){try{json=request(PAGES);}catch(InvalidResponse invalid){throw invalid;}catch(IOException unavailable){json=request(RAW);}}return json;}
  static String request(String address)throws Exception {
   HttpsURLConnection connection=(HttpsURLConnection)new URL(address).openConnection();connection.setConnectTimeout(5000);connection.setReadTimeout(5000);connection.setInstanceFollowRedirects(false);connection.setRequestProperty("Accept","application/json");connection.setRequestProperty("User-Agent","CourseLens");
   try{if(connection.getResponseCode()!=200)throw new IOException("配置服务暂不可用");if(connection.getContentLengthLong()>RemoteConfig.MAX_BYTES)throw new InvalidResponse("远程配置过大");try(InputStream in=connection.getInputStream()){return readBody(in);}}finally{connection.disconnect();}
