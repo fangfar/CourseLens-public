@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="课表镜 CourseLens，轻量的 Android 课表应用。按周查看课程，管理多份课表，灵活调课，用桌面小组件查看安排。已导入课表可离线查看。">
+  <title>课表镜 CourseLens · 让校园日常更清晰</title>
+  <link rel="canonical" href="https://courselens.xvyan.cn/">
+  <link rel="icon" type="image/webp" href="assets/courselens-icon.webp">
+  <link rel="stylesheet" href="styles.css">
+  <script src="download.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <header class="site-header wrap">
+    <a class="brand" href="#main" aria-label="课表镜首页">
+      <img src="assets/courselens-icon.webp" width="56" height="56" alt="">
+      <span><strong>课表镜</strong><span class="brand-en" translate="no">CourseLens</span></span>
+    </a>
+    <nav aria-label="主导航">
+      <a href="#features">功能</a>
+      <a href="#guide">使用指南</a>
+      <a href="#privacy">隐私</a>
+      <a href="https://github.com/fangfar/CourseLens-public" translate="no">GitHub</a>
+    </nav>
+    <a class="button header-download" data-download href="https://github.com/fangfar/CourseLens-public/releases/latest">下载 Android 版</a>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">你的校园日常，轻装上阵。</p>
+        <h1 id="hero-title"><span>把课表装进口袋，</span><span class="blue">把安排放在心上。</span></h1>
+        <p class="hero-description">每周课程、临时调课与桌面小组件，<br class="desktop-break">让校园日常更清晰。</p>
+        <div class="actions">
+          <a class="button" data-download href="https://github.com/fangfar/CourseLens-public/releases/latest"><img class="light-icon" src="assets/android2.svg" width="24" height="24" alt="">下载 Android 版</a>
+          <a class="button secondary" href="#guide">查看使用指南</a>
+        </div>
+        <p class="fine-print">适用于 Android 8.0 及以上<br>从 GitHub 下载最新正式版 APK</p>
+      </div>
+      <figure class="product-preview">
+        <img class="timetable" src="assets/timetable-demo.webp" width="841" height="1870" fetchpriority="high" alt="课表镜界面参考：七列周课表以不同颜色区分课程，展示节次、上课地点和冲突标记；所有课程与教室均为合成示例。">
+        <figcaption>界面参考 · 示例数据</figcaption>
+      </figure>
+    </section>
+
+    <section class="features wrap" id="features" aria-label="主要功能">
+      <article>
+        <h2>一周课程，一目了然</h2>
+        <p>按周查看课程安排，上课时间与教室清晰呈现。左右滑动，提前看看下一周。</p>
+      </article>
+      <article>
+        <h2>安排有变，轻松调整</h2>
+        <p>支持单次调课、停课和冲突课程选择，让临时变化也有处安放。</p>
+      </article>
+      <article>
+        <h2>桌面一瞥，就知道</h2>
+        <p>提供多种尺寸的桌面小组件，不必打开应用，也能快速查看课程安排。</p>
+      </article>
+    </section>
+
+    <section class="everyday" aria-labelledby="everyday-title">
+      <div class="wrap">
+        <div class="everyday-intro">
+          <h2 id="everyday-title">多份课表，<br>各有安排。</h2>
+          <div>
+            <p class="section-description">创建并切换多份课表。课程、学期与作息分别保存，<br class="desktop-break">不同安排之间，切换自如。</p>
+            <p class="keywords">课表 <span aria-hidden="true">/</span> 作息 <span aria-hidden="true">/</span> 备注</p>
+            <p class="supporting-copy">不只是上课时间，也留得下你的课程备注与学期安排。</p>
+          </div>
+        </div>
+
+        <details class="guide" id="guide">
+          <summary><span>第一次使用？从这里开始</span><span class="summary-hint">查看指南</span></summary>
+          <ol>
+            <li><strong>创建或导入课表。</strong>从右上角更多菜单进入“新增课表”。支持宿迁学院与徐州工程学院学校导入，其他学校可手动添加。</li>
+            <li><strong>核对开学日期与作息。</strong>在完整设置中确认学期和上课时间，导入后检查课程、周次和地点。重新同步学校课表会覆盖手动修改。</li>
+            <li><strong>把课表放到桌面。</strong>通过完整设置申请添加小组件，或在手机桌面的小组件列表中选择课表镜。实际尺寸和刷新时机取决于系统及启动器。</li>
+          </ol>
+        </details>
+
+        <details class="privacy" id="privacy">
+          <summary>
+            <img src="assets/shield-lock.svg" width="36" height="36" alt="">
+            <span class="privacy-heading"><strong>课表保存在本机，离线也能查看。</strong><span>公告和更新服务不接收课表、账号或密码。</span></span>
+            <span class="summary-hint">了解数据与隐私</span>
+          </summary>
+          <div class="privacy-copy">
+            <p>课表、备注和学期设置保存在手机本机。学校账号密码不长期保存，仅在主动同步时发送至学校服务；同步失败保留已有课表。</p>
+            <p>学习通账号密码在验证成功后使用 Android Keystore 加密保存在本机，仅在主动验证或刷新时用于学习通认证；作业数据保存在应用私有目录。</p>
+            <p>徐州工程学院当前教务入口使用 HTTP。密码按学校协议加密，但账号、课表和会话传输不受 HTTPS 保护，请在可信网络中同步。</p>
+            <p>课表不会通过系统备份自动迁移。更换手机、卸载或清空应用数据前，请保存重要信息。</p>
+            <a href="https://github.com/fangfar/CourseLens-public#数据与隐私">阅读完整数据与隐私说明</a>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="download wrap" id="download" aria-labelledby="download-title">
+      <h2 id="download-title">下一周，从清晰开始。</h2>
+      <div class="actions">
+        <a class="button" data-download href="https://github.com/fangfar/CourseLens-public/releases/latest"><img class="light-icon" src="assets/android2.svg" width="24" height="24" alt="">下载 Android 版</a>
+        <a class="button secondary" href="https://github.com/fangfar/CourseLens-public"><img src="assets/github.svg" width="24" height="24" alt="">GitHub 仓库</a>
+      </div>
+      <p class="fine-print">Android 8.0 及以上 · 已导入课表可离线查看</p>
+    </section>
+  </main>
+
+  <footer class="site-footer wrap">
+    <a class="brand" href="#main" aria-label="返回顶部">
+      <img src="assets/courselens-icon.webp" width="48" height="48" alt="">
+      <span><strong>课表镜</strong><span class="brand-en" translate="no">CourseLens</span></span>
+    </a>
+    <nav aria-label="页脚导航">
+      <a href="#guide">使用指南</a><a href="#privacy">数据与隐私</a><a href="https://github.com/fangfar/CourseLens-public/issues">问题反馈</a>
+    </nav>
+    <p>课表镜 <span translate="no">CourseLens</span><br><a href="https://github.com/fangfar/CourseLens-public/blob/main/LICENSE">基于 MIT 协议开源</a> · <span translate="no">courselens.xvyan.cn</span></p>
+  </footer>
+  <aside class="download-feedback" hidden aria-label="下载状态">
+    <p role="status" aria-live="polite" data-download-status></p>
+    <a href="https://github.com/fangfar/CourseLens-public/releases/latest">手动下载</a>
+    <button type="button" aria-label="关闭下载提示">关闭</button>
+  </aside>
+</body>
+</html>
