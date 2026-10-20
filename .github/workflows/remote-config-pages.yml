@@ -3,9 +3,9 @@ name: Remote configuration
 on:
   push:
     branches: [main]
-    paths: ['remote/config.json', '.github/workflows/remote-config-pages.yml']
+    paths: ['web/**', 'tests/Website*', 'remote/config.json', '.github/workflows/remote-config-pages.yml']
   pull_request:
-    paths: ['remote/config.json', '.github/workflows/remote-config-pages.yml']
+    paths: ['web/**', 'tests/Website*', 'remote/config.json', '.github/workflows/remote-config-pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -63,13 +63,13 @@ jobs:
           assert link(config, 'repositoryUrl') in ('', 'https://github.com/fangfar/CourseLens-public')
           print('Valid configuration')
           PY
+      - name: Validate website
+        run: |
+          python3 tests/WebsiteChecks.py
+          node tests/WebsiteDownloadChecks.cjs
       - name: Prepare site
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        run: |
-          mkdir -p site/remote
-          cp remote/config.json site/remote/config.json
-          touch site/.nojekyll
-          printf '%s\n' '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>CourseLens</title><a href="https://github.com/fangfar/CourseLens-public">CourseLens · 课表镜</a></html>' > site/index.html
+        run: python3 web/build.py site
       - uses: actions/upload-pages-artifact@v4
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         with:

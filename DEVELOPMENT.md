@@ -103,6 +103,8 @@ COURSELENS_KEY_PASSWORD
 
 ## 公告配置与旧版兼容
 
+网站介绍页在 `web/`，使用静态 HTML/CSS；`python tests/WebsiteChecks.py` 检查下载地址、站内锚点、图片属性及本地资源。预览时先运行 `python web/build.py`，再以 `preview/site/` 为站点根目录启动静态服务器。`Remote configuration` 在相关文件变化时检查页面与配置，main 部署时运行 `python web/build.py site`，将网站和 `remote/config.json` 打包到同一 Pages 站点，配置路径仍为 `/remote/config.json`。三个下载入口由 `web/download.js` 在点击时读取同站点的 `remote/config.json`，校验 `android.apkUrl` 后从 GitHub 直接下载 APK，不调用 GitHub 查询 API。最新版以更新配置为准；正式 APK 发布后按发布流程更新配置即可。配置请求超时、失败或地址无效时显示重试及 GitHub 手动下载入口；禁用 JavaScript 时直接进入 GitHub 最新发布页。`node tests/WebsiteDownloadChecks.cjs` 检查下载选择、失败处理及重复点击。图片仅使用经过检查的合成示例，原始手机截图与设计验收截图保存在仓库外。
+
 2.7.3 起优先读取 `https://courselens.xvyan.cn/remote/config.json`，连接或 HTTP 请求失败时依次使用原 Pages、Raw 地址。已发布的 2.7.2 首选地址为 `https://update.xvyan.cn/remote/config.json`。保留 `schemaVersion: 1`、`remote/config.json`、现有 Pages/Raw 地址及仓库名，供旧客户端及备用请求使用。v2.6 的请求地址写在 APK 中，不跟随 HTTP 重定向，仓库入口校验也限定为当前公开仓库。改名必须先制定旧版兼容方案。
 
 公告 ID 唯一；修改同一 ID 不会重新提醒，需要新公告时用新 ID。配置最多 64 KiB / 20 条公告，链接为 HTTPS，版本以实际 versionCode 判断；检查失败保留有效缓存，不冒充“已是最新版”。线上配置校验与 App 的 `remoteOnly` 专项分别验证。
