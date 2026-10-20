@@ -103,7 +103,7 @@ COURSELENS_KEY_PASSWORD
 
 ## 公告配置与旧版兼容
 
-2.7.2 起优先读取 `https://update.xvyan.cn/remote/config.json`，连接或 HTTP 请求失败时依次使用原 Pages、Raw 地址。保留 `schemaVersion: 1`、`remote/config.json`、现有 Pages/Raw 地址及仓库名，供旧客户端及备用请求使用。v2.6 的请求地址写在 APK 中，不跟随 HTTP 重定向，仓库入口校验也限定为当前公开仓库。改名必须先制定旧版兼容方案。
+2.7.3 起优先读取 `https://courselens.xvyan.cn/remote/config.json`，连接或 HTTP 请求失败时依次使用原 Pages、Raw 地址。已发布的 2.7.2 首选地址为 `https://update.xvyan.cn/remote/config.json`。保留 `schemaVersion: 1`、`remote/config.json`、现有 Pages/Raw 地址及仓库名，供旧客户端及备用请求使用。v2.6 的请求地址写在 APK 中，不跟随 HTTP 重定向，仓库入口校验也限定为当前公开仓库。改名必须先制定旧版兼容方案。
 
 公告 ID 唯一；修改同一 ID 不会重新提醒，需要新公告时用新 ID。配置最多 64 KiB / 20 条公告，链接为 HTTPS，版本以实际 versionCode 判断；检查失败保留有效缓存，不冒充“已是最新版”。线上配置校验与 App 的 `remoteOnly` 专项分别验证。
 
