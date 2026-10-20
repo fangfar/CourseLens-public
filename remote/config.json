@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "announcements": [],
   "android": {
-    "versionCode": 13,
-    "versionName": "2.7.1",
-    "changelog": "新增多课表管理，独立保存课程、调课、冲突选择和作息。\n新增徐州工程学院个人课表导入，支持对应实验分组和学校作息。\n支持按节编辑作息，课程编辑、晚课显示和小组件跟随当前课表时间。\n新增课表后按原入口返回，支持长按课表名称改名。\n底部弹层统一为半屏，长内容可在弹层内滚动。\n学校调课以简洁的调标记展示，保留实际实验内容。",
-    "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.7.1/CourseLens-2.7.1-vc13.apk",
+    "versionCode": 14,
+    "versionName": "2.7.2",
+    "changelog": "更新服务切换到新地址，改善版本信息与公告的获取。\n暂时保留原更新地址，新地址请求失败时自动使用备用地址。",
+    "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.7.2/CourseLens-2.7.2-vc14.apk",
     "diskUrl": "https://pan.baidu.com/s/5Q7q-93RIXFczWfL1i3cvQg"
   },
   "repositoryUrl": "https://github.com/fangfar/CourseLens-public"
