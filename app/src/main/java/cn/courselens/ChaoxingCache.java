@@ -17,7 +17,7 @@ final class ChaoxingCache {
   file=new AtomicFile(new File(context.getFilesDir(),"chaoxing-work-"+key+".json"));
  }
  private static JSONArray encodeWorks(List<ChaoxingClient.Work> works)throws JSONException {
-  if(works.size()>20000)throw new JSONException("Cache entries exceed limit");JSONArray items=new JSONArray();for(ChaoxingClient.Work work:works)items.put(new JSONObject().put("course",work.course).put("title",work.title).put("status",work.status).put("deadline",work.deadline).put("courseKey",work.courseKey).put("workKey",work.workKey).put("deletedAt",work.deletedAt));return items;
+  if(works.size()>20000)throw new JSONException("Cache entries exceed limit");JSONArray items=new JSONArray();for(ChaoxingClient.Work work:works)items.put(new JSONObject().put("course",work.course).put("title",work.title).put("status",work.status).put("deadline",work.deadline).put("courseKey",work.courseKey).put("workKey",work.workKey).put("deletedAt",work.deletedAt).put("edited",work.edited).put("originalTitle",work.originalTitle));return items;
  }
  static String encode(ChaoxingClient.Result result)throws JSONException {
   if(result.warnings.size()>20000||result.courses.size()>20000||result.disabledCourses.size()>20000)throw new JSONException("Cache entries exceed limit");JSONArray warnings=new JSONArray(),courses=new JSONArray(),disabled=new JSONArray();for(String warning:result.warnings)warnings.put(warning);for(String key:result.disabledCourses)disabled.put(key);
@@ -27,7 +27,7 @@ final class ChaoxingCache {
  private static String text(JSONObject value,String key)throws JSONException {String text=value.getString(key);if(text.length()>8192)throw new JSONException("Cached field too large");return text;}
  private static JSONArray array(JSONObject value,String key)throws JSONException {JSONArray items=value.has(key)?value.getJSONArray(key):new JSONArray();if(items.length()>20000)throw new JSONException("Cache entries exceed limit");return items;}
  private static void decodeWorks(JSONArray items,List<ChaoxingClient.Work> result)throws JSONException {
-  for(int i=0;i<items.length();i++){JSONObject item=items.getJSONObject(i);ChaoxingClient.Work work=new ChaoxingClient.Work(text(item,"course"),text(item,"title"),text(item,"status"),"");work.deadline=text(item,"deadline");work.courseKey=item.has("courseKey")?text(item,"courseKey"):"";work.workKey=item.has("workKey")?text(item,"workKey"):"";work.deletedAt=item.has("deletedAt")?item.getLong("deletedAt"):0;if(work.deletedAt<0)throw new JSONException("Invalid deletion time");result.add(work);}
+  for(int i=0;i<items.length();i++){JSONObject item=items.getJSONObject(i);ChaoxingClient.Work work=new ChaoxingClient.Work(text(item,"course"),text(item,"title"),text(item,"status"),"");work.deadline=text(item,"deadline");work.courseKey=item.has("courseKey")?text(item,"courseKey"):"";work.workKey=item.has("workKey")?text(item,"workKey"):"";work.edited=item.optBoolean("edited",false);work.originalTitle=item.has("originalTitle")?text(item,"originalTitle"):"";work.deletedAt=item.has("deletedAt")?item.getLong("deletedAt"):0;if(work.deletedAt<0)throw new JSONException("Invalid deletion time");result.add(work);}
  }
  static ChaoxingClient.Result decode(String json)throws JSONException {
   JSONObject value=new JSONObject(json);if(value.getInt("schema")!=1)throw new JSONException("Unsupported cache schema");ChaoxingClient.Result result=new ChaoxingClient.Result();result.total=value.getInt("total");result.checked=value.getInt("checked");if(result.total<0||result.checked<0||result.checked>result.total)throw new JSONException("Invalid cached counts");
@@ -46,11 +46,11 @@ final class ChaoxingCache {
   byte[] data=encode(result).getBytes(StandardCharsets.UTF_8);if(data.length>MAX_BYTES)throw new IOException("Offline data too large");FileOutputStream out=null;
   try{out=file.startWrite();out.write(data);file.finishWrite(out);}catch(Exception e){if(out!=null)file.failWrite(out);throw e;}
  }
- private static ChaoxingClient.Work copy(ChaoxingClient.Work value){ChaoxingClient.Work copy=new ChaoxingClient.Work(value.course,value.title,value.status,value.url);copy.deadline=value.deadline;copy.courseKey=value.courseKey;copy.workKey=value.workKey;copy.deletedAt=value.deletedAt;return copy;}
+ private static ChaoxingClient.Work copy(ChaoxingClient.Work value){ChaoxingClient.Work copy=new ChaoxingClient.Work(value.course,value.title,value.status,value.url);copy.deadline=value.deadline;copy.courseKey=value.courseKey;copy.workKey=value.workKey;copy.deletedAt=value.deletedAt;copy.edited=value.edited;copy.originalTitle=value.originalTitle;return copy;}
  private static ChaoxingClient.Work previous(ChaoxingClient.Work item,List<ChaoxingClient.Work> old,List<ChaoxingClient.Work> fresh){
   ChaoxingClient.Work match=null;
   if(!item.workKey.isEmpty()){for(ChaoxingClient.Work candidate:old)if(item.workKey.equals(candidate.workKey)){if(match!=null)return null;match=candidate;}if(match!=null)return match;}
-  int oldCount=0,newCount=0;for(ChaoxingClient.Work candidate:old)if(item.title.equals(candidate.title)){oldCount++;if(item.workKey.isEmpty()||candidate.workKey.isEmpty())match=candidate;}for(ChaoxingClient.Work candidate:fresh)if(item.title.equals(candidate.title))newCount++;
+  int oldCount=0,newCount=0;for(ChaoxingClient.Work candidate:old)if(item.title.equals(candidate.originalTitle.isEmpty()?candidate.title:candidate.originalTitle)){oldCount++;if(item.workKey.isEmpty()||candidate.workKey.isEmpty())match=candidate;}for(ChaoxingClient.Work candidate:fresh)if(item.title.equals(candidate.title))newCount++;
   return oldCount==1&&newCount==1?match:null;
  }
  static ChaoxingClient.Result copy(ChaoxingClient.Result source){
@@ -73,8 +73,8 @@ final class ChaoxingCache {
   Set<String> keys=new LinkedHashSet<>(before.keySet());keys.addAll(after.keySet());int retained=0;
   for(String key:keys){List<ChaoxingClient.Work> previous=before.getOrDefault(key,Collections.emptyList()),updated=after.getOrDefault(key,Collections.emptyList());
    Map<ChaoxingClient.Work,ChaoxingClient.Work> matches=new IdentityHashMap<>();Set<ChaoxingClient.Work> replaced=Collections.newSetFromMap(new IdentityHashMap<>());for(ChaoxingClient.Work work:updated){ChaoxingClient.Work earlier=previous(work,previous,updated);matches.put(work,earlier);if(earlier!=null)replaced.add(earlier);}
-   if(!Boolean.TRUE.equals(fresh.readCourses.get(key))){for(ChaoxingClient.Work work:previous)if(!replaced.contains(work))result.items.add(work);if(!previous.isEmpty()&&!fresh.requested.contains(key)&&!result.disabledCourses.contains(key))retained++;}
-   for(ChaoxingClient.Work value:updated){ChaoxingClient.Work work=copy(value),earlier=matches.get(value);if(work.deadline.equals("截止时间未知")&&earlier!=null)work.deadline=earlier.deadline;result.items.add(work);}
+   for(ChaoxingClient.Work work:previous)if(!replaced.contains(work)&&(work.edited||!Boolean.TRUE.equals(fresh.readCourses.get(key))))result.items.add(work);if(!Boolean.TRUE.equals(fresh.readCourses.get(key))&&!previous.isEmpty()&&!fresh.requested.contains(key)&&!result.disabledCourses.contains(key))retained++;
+   for(ChaoxingClient.Work value:updated){ChaoxingClient.Work work=copy(value),earlier=matches.get(value);if(earlier!=null&&earlier.edited){work=copy(earlier);work.courseKey=value.courseKey;work.workKey=value.workKey;}else if(work.deadline.equals("截止时间未知")&&earlier!=null)work.deadline=earlier.deadline;result.items.add(work);}
   }
   Map<String,List<ChaoxingClient.Work>> combined=new LinkedHashMap<>();for(ChaoxingClient.Work work:result.items)combined.computeIfAbsent(courseKey(work,result.courses),k->new ArrayList<>()).add(work);
   for(Map.Entry<String,List<ChaoxingClient.Work>> group:combined.entrySet())for(ChaoxingClient.Work work:group.getValue()){

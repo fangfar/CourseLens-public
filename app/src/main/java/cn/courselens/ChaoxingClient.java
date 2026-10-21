@@ -34,8 +34,9 @@ final class ChaoxingClient implements AutoCloseable {
   String key(){return id+":"+clazz;}
  }
  static final class Work {
-  final String course,title,status,url;String deadline="截止时间未知",courseKey="",workKey="";long deletedAt;
+  final String course,title,status,url;String deadline="截止时间未知",courseKey="",workKey="",originalTitle="";long deletedAt;boolean edited;
   Work(String course,String title,String status,String url){this.course=course;this.title=title;this.status=status;this.url=url;}
+  boolean local(){return workKey.startsWith("local:");}
   boolean completed(){return status.matches(".*(已完成|已提交|已批阅|待批阅|已批改).*");}
  }
  static final class Result {
