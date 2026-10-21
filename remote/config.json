@@ -4,6 +4,9 @@
   "android": {
     "versionCode": 15,
     "versionName": "2.7.3",
+    "forcePrompt": false,
+    "promptTitle": "",
+    "promptMessage": "",
     "changelog": "更新服务地址调整为 courselens.xvyan.cn。\n保留原更新地址，新地址请求失败时自动使用备用地址。",
     "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.7.3/CourseLens-2.7.3-vc15.apk",
     "diskUrl": "https://pan.baidu.com/s/5Q7q-93RIXFczWfL1i3cvQg"

@@ -22,22 +22,24 @@ final class RemoteConfigClient {
  private final Context context;private final String preferenceName;private final Fetcher fetcher;
  private final ExecutorService worker=Executors.newSingleThreadExecutor();private final Handler main=new Handler(Looper.getMainLooper());
  private SharedPreferences prefs;private Listener listener;private boolean manualRequested;
- RemoteConfig config;boolean checking,loaded;long validatedAt,lastAttempt;final Set<String> readIds=new HashSet<>(),snoozedVersions=new HashSet<>(),sessionShown=new HashSet<>();
+ RemoteConfig config;boolean checking,loaded;long validatedAt,lastAttempt;final Set<String> readIds=new HashSet<>(),sessionShown=new HashSet<>();
  RemoteConfigClient(Context context,String preferenceName,Fetcher fetcher){this.context=context.getApplicationContext();this.preferenceName=preferenceName;this.fetcher=fetcher;}
  void listen(Listener next){listener=next;}
  void unlisten(Listener previous){if(listener==previous)listener=null;}
  boolean fresh(long now){return config!=null&&validatedAt>0&&now>=validatedAt&&now-validatedAt<=STALE_MS;}
  static boolean due(long now,long success,long attempt,boolean manual){long interval=manual?3000:RETRY_MS;if(attempt>0&&now>=attempt&&now-attempt<interval)return false;return manual||success<=0||now<success||now-success>=REFRESH_MS;}
- void check(boolean manual){
+ void opened(){sessionShown.removeIf(key->key.startsWith("update:"));check(false,true);}
+ void check(boolean manual){check(manual,false);}
+ private void check(boolean manual,boolean startup){
   if(checking){manualRequested|=manual;return;}
-  long now=System.currentTimeMillis();if(loaded&&!due(now,validatedAt,lastAttempt,manual)){if(manual&&listener!=null)listener.changed("请稍后再检查更新",true);return;}
+  long now=System.currentTimeMillis();if(loaded&&!startup&&!due(now,validatedAt,lastAttempt,manual)){if(manual&&listener!=null)listener.changed("请稍后再检查更新",true);return;}
   checking=true;manualRequested=manual;
   worker.execute(()->{
    if(prefs==null){prefs=context.getSharedPreferences(preferenceName,0);RemoteConfig cached=null;try{String json=prefs.getString("json","");if(!json.isEmpty())cached=RemoteConfig.parse(json);}catch(Exception ignored){}if(cached==null)prefs.edit().remove("validatedAt").commit();
-    RemoteConfig previous=cached;long time=prefs.getLong("validatedAt",0),attempt=prefs.getLong("lastAttempt",0);Set<String> read=new HashSet<>(prefs.getStringSet("readIds",Collections.emptySet())),snoozed=new HashSet<>(prefs.getStringSet("snoozedVersions",Collections.emptySet()));
-    main.post(()->{config=previous;validatedAt=time;lastAttempt=attempt;snoozedVersions.addAll(snoozed);readIds.addAll(read);loaded=true;if(listener!=null)listener.changed(null,false);});
+    RemoteConfig previous=cached;long time=prefs.getLong("validatedAt",0),attempt=prefs.getLong("lastAttempt",0);Set<String> read=new HashSet<>(prefs.getStringSet("readIds",Collections.emptySet()));
+    main.post(()->{config=previous;validatedAt=time;lastAttempt=attempt;readIds.addAll(read);loaded=true;if(listener!=null)listener.changed(null,false);});
    }
-   long success=prefs.getLong("validatedAt",0),attempt=prefs.getLong("lastAttempt",0);boolean shouldFetch=due(now,success,attempt,manual);
+   long success=prefs.getLong("validatedAt",0),attempt=prefs.getLong("lastAttempt",0);boolean shouldFetch=startup||due(now,success,attempt,manual);
    RemoteConfig result=null;String error=null;long completed=0;
    if(shouldFetch){prefs.edit().putLong("lastAttempt",now).commit();try{String json=fetcher.fetch();result=RemoteConfig.parse(json);completed=System.currentTimeMillis();if(!prefs.edit().putString("json",json).putLong("validatedAt",completed).commit())throw new IOException("无法保存更新信息");}catch(Exception e){result=null;completed=0;error=e instanceof SocketTimeoutException?"检查更新超时，请稍后重试":"检查更新失败，已保留上次信息";}}
    RemoteConfig next=result;String failure=error;long time=completed;
@@ -45,7 +47,6 @@ final class RemoteConfigClient {
   });
  }
  void read(String id){readIds.add(id);Set<String> snapshot=new HashSet<>(readIds);worker.execute(()->{if(prefs!=null)prefs.edit().putStringSet("readIds",snapshot).commit();});}
- void snooze(long version){snoozedVersions.add(Long.toString(version));Set<String> snapshot=new HashSet<>(snoozedVersions);worker.execute(()->{if(prefs!=null)prefs.edit().putStringSet("snoozedVersions",snapshot).commit();});}
  private static final class InvalidResponse extends IOException {InvalidResponse(String message){super(message);}}
  private static String fetch()throws Exception {String json;try{json=request(UPDATE);}catch(InvalidResponse e){throw e;}catch(IOException e){try{json=request(PAGES);}catch(InvalidResponse invalid){throw invalid;}catch(IOException unavailable){json=request(RAW);}}return json;}
  static String request(String address)throws Exception {

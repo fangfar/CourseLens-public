@@ -10,7 +10,7 @@ import org.json.*;
 final class RemoteConfig {
  static final int MAX_BYTES=64*1024;
  static final String REPOSITORY="https://github.com/fangfar/CourseLens-public";
- final List<Announcement> announcements;final long versionCode;final String versionName,changelog,apkUrl,diskUrl,repositoryUrl;
+ final List<Announcement> announcements;final long versionCode;final boolean forcePrompt;final String versionName,changelog,promptTitle,promptMessage,apkUrl,diskUrl,repositoryUrl;
  static final class Announcement {
   final String id,title,body,publishedAt;final boolean enabled;
   Announcement(JSONObject value)throws Exception{id=string(value,"id",120,false);title=string(value,"title",160,false);body=string(value,"body",8000,false);publishedAt=string(value,"publishedAt",40,true);if(!publishedAt.isEmpty())Instant.parse(publishedAt);Object flag=value.get("enabled");if(!(flag instanceof Boolean))throw new IOException("公告启用状态无效");enabled=(Boolean)flag;}
@@ -20,6 +20,7 @@ final class RemoteConfig {
   JSONArray items=value.getJSONArray("announcements");if(items.length()>20)throw new IOException("公告数量过多");List<Announcement> list=new ArrayList<>();Set<String> ids=new HashSet<>();
   for(int i=0;i<items.length();i++){Announcement item=new Announcement(items.getJSONObject(i));if(!ids.add(item.id))throw new IOException("公告 ID 重复");list.add(item);}announcements=Collections.unmodifiableList(list);
   JSONObject android=value.getJSONObject("android");versionCode=integer(android,"versionCode");if(versionCode<1)throw new IOException("版本号无效");versionName=string(android,"versionName",80,false);changelog=string(android,"changelog",12000,true);
+  Object force=android.has("forcePrompt")?android.get("forcePrompt"):Boolean.FALSE;if(!(force instanceof Boolean))throw new IOException("强制更新提示状态无效");forcePrompt=(Boolean)force;promptTitle=android.has("promptTitle")?string(android,"promptTitle",160,true):"";promptMessage=android.has("promptMessage")?string(android,"promptMessage",12000,true):"";
   apkUrl=link(android,"apkUrl");diskUrl=link(android,"diskUrl");repositoryUrl=link(value,"repositoryUrl");if(!repositoryUrl.isEmpty()&&!REPOSITORY.equals(repositoryUrl))throw new IOException("仓库入口必须为公开发布仓库");
  }
  static RemoteConfig parse(String text)throws Exception {
