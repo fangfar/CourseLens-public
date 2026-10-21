@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "announcements": [],
+  "announcements": [测试],
   "android": {
     "versionCode": 15,
     "versionName": "2.7.3",
