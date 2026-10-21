@@ -133,8 +133,9 @@ final class TaskPage extends LinearLayout {
   });
  }
  private EditText field(LinearLayout form,String label,String hint,boolean secret){TextView caption=ui.text(label,13,SecondaryUi.MUTED);caption.setPadding(0,ui.dp(16),0,ui.dp(8));form.addView(caption);EditText input=new EditText(getContext());input.setTextSize(15);input.setSingleLine(true);input.setHint(hint);input.setContentDescription(label);input.setTextColor(SecondaryUi.INK);input.setHintTextColor(SecondaryUi.MUTED);input.setPadding(ui.dp(16),0,ui.dp(16),0);input.setBackgroundResource(R.drawable.form_field);input.setInputType(InputType.TYPE_CLASS_TEXT|(secret?InputType.TYPE_TEXT_VARIATION_PASSWORD:InputType.TYPE_TEXT_VARIATION_NORMAL));input.setSaveEnabled(false);input.setImportantForAutofill(IMPORTANT_FOR_AUTOFILL_NO);form.addView(input,new LayoutParams(-1,ui.dp(54)));return input;}
- private void refresh(){
-  if(busy||closed)return;if(!account.configured()){configure();return;}busy(true);retryAfter=System.currentTimeMillis()+60000;int token=++generation;status.setText("正在使用保存的配置登录学习通…");if(client!=null)client.close();client=new ChaoxingClient();ChaoxingClient connection=client;
+ private void refresh(){refresh(new ChaoxingClient());}
+ private void refresh(ChaoxingClient connection){
+  if(busy||closed){connection.close();return;}if(!account.configured()){connection.close();configure();return;}busy(true);retryAfter=System.currentTimeMillis()+60000;int token=++generation;status.setText("正在使用保存的配置登录学习通…");if(client!=null)client.close();client=connection;
   worker.execute(()->{try{ChaoxingAccount.Saved saved=account.load();ChaoxingCache cache=new ChaoxingCache(getContext(),saved.account);ChaoxingClient.Result before=ChaoxingCache.copy(snapshot==null||!platformReady?cache.load():snapshot);before.lastAttempt=System.currentTimeMillis();cache.save(before);activity.runOnUiThread(()->{if(current(token)){snapshot=before;platformReady=true;}});connection.login(saved.account,saved.password);activity.runOnUiThread(()->{if(current(token))connected(true);});sync(connection,token,saved.account);}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);connected(false);status.setText("更新未成功，请检查网络、本机存储或重新配置密码。已有作业保留。");}});}finally{connection.close();}});
  }
  private void loadLocal(){
