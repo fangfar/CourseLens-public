@@ -1,6 +1,14 @@
 {
   "schemaVersion": 1,
-  "announcements": [],
+  "announcements": [
+    {
+      "id": "test-20261021-01",
+      "title": "测试公告",
+      "body": "这是一条用于测试公告推送的消息。看到后点击“我知道了”即可。",
+      "publishedAt": "2026-10-21T15:21:35+08:00",
+      "enabled": true
+    }
+  ],
   "android": {
     "versionCode": 15,
     "versionName": "2.7.3",
