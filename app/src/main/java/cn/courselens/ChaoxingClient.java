@@ -34,13 +34,14 @@ final class ChaoxingClient implements AutoCloseable {
   String key(){return id+":"+clazz;}
  }
  static final class Work {
-  final String course,title,status,url;String deadline="截止时间未知",courseKey="",workKey="";
+  final String course,title,status,url;String deadline="截止时间未知",courseKey="",workKey="";long deletedAt;
   Work(String course,String title,String status,String url){this.course=course;this.title=title;this.status=status;this.url=url;}
   boolean completed(){return status.matches(".*(已完成|已提交|已批阅|待批阅|已批改).*");}
  }
  static final class Result {
   final List<Work> items=new ArrayList<>();final List<String> warnings=new ArrayList<>();int total,checked;
   final List<Subject> courses=new ArrayList<>();final Set<String> requested=new LinkedHashSet<>();final Map<String,Boolean> readCourses=new LinkedHashMap<>();
+  final Set<String> disabledCourses=new LinkedHashSet<>();final List<Work> deleted=new ArrayList<>();int intervalMinutes=60;long lastAttempt;
  }
  private final CookieManager cookies=new CookieManager(null,CookiePolicy.ACCEPT_ORIGINAL_SERVER);
  private final Transport transport;
@@ -115,11 +116,15 @@ final class ChaoxingClient implements AutoCloseable {
   return range.find()?range.group(1):"截止时间未知";
  }
  Result sync(Consumer<String> progress)throws Exception {
+  return sync(progress,Collections.emptySet());
+ }
+ Result sync(Consumer<String> progress,Set<String> disabled)throws Exception {
   progress.accept("正在读取账号信息…");String base=fetch("账号信息","https://i.chaoxing.com/base"),fid=institution(base);
   if(fid.isEmpty())throw new ReadFailure("账号信息","页面未提供机构编号");
   progress.accept("正在读取课程列表…");String courseUrl="https://mooc2-ans.chaoxing.com/mooc2-ans/visit/courselistdata?"+form("courseType","1","courseFid",fid,"courseTeacherid","0","courseOrderBy","0");
-  String courseHtml=fetch("课程列表",courseUrl);Result result=new Result();try{result.courses.addAll(subjects(courseHtml));}catch(IOException e){throw new ReadFailure("课程列表","页面结构未识别，可能需要重新登录或适配页面");}result.total=result.courses.size();if(paged(courseHtml))result.warnings.add("课程列表存在分页，尚未读取后续课程。");for(Subject course:result.courses)result.requested.add(course.key());
+  String courseHtml=fetch("课程列表",courseUrl);Result result=new Result();try{result.courses.addAll(subjects(courseHtml));}catch(IOException e){throw new ReadFailure("课程列表","页面结构未识别，可能需要重新登录或适配页面");}for(Subject course:result.courses)if(!disabled.contains(course.key()))result.requested.add(course.key());result.total=result.requested.size();if(paged(courseHtml))result.warnings.add("课程列表存在分页，尚未读取后续课程。");
   int visited=0;for(Subject course:result.courses){
+   if(disabled.contains(course.key()))continue;
    progress.accept("正在识别 "+(++visited)+" / "+result.total+"："+course.name);
    try{
     Document page=Jsoup.parse(fetch("课程访问参数","https://mooc1.chaoxing.com/visit/stucoursemiddle?"+form("courseid",course.id,"clazzid",course.clazz,"cpi",course.cpi,"ismooc2","1","v","2")));

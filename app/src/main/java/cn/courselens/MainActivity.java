@@ -105,12 +105,13 @@ public class MainActivity extends Activity {
   if(bottomNavigation==null)return;ImageButton[] tabs={timetableTab,tasksTab};int[] icons={R.drawable.ic_calendar,R.drawable.ic_tasks};
   for(int i=0;i<tabs.length;i++){ImageButton tab=tabs[i];boolean selected=tasksVisible==(i==1);tab.setSelected(selected);tab.setImageResource(selected?(i==0?R.drawable.ic_calendar_filled:R.drawable.ic_tasks_filled):icons[i]);tab.setImageTintList(android.content.res.ColorStateList.valueOf(selected?0xff171717:0xff999999));}
  }
- // Prepare only local task content after the first home frame, without delaying that frame or requesting the platform.
+ // Prepare cached task content after the first home frame; due refreshes run on the task worker.
  private void prepareTasks(){
-  if(isDestroyed()||isFinishing()||taskPage!=null||pageBack!=null||tasksVisible||navigationOverlay!=null||pageMotion.isRunning())return;
+  if(isDestroyed()||isFinishing()||taskPage!=null)return;
   taskPage=new TaskPage(this,taskState);int width=stage.getWidth(),height=stage.getHeight();
   if(width>0&&height>0){taskPage.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));taskPage.layout(0,0,width,height);}
  }
+ boolean taskRefreshActive(){return remoteResumed&&navigationOverlay==null;}
  private void tasks(){getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);tasksVisible=true;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,true,taskPage);root.setBackgroundColor(SURFACE);}
 
  private Calendar date(){Calendar c=Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));c.set(Calendar.HOUR_OF_DAY,12);c.set(Calendar.MINUTE,0);c.set(Calendar.SECOND,0);c.set(Calendar.MILLISECOND,0);return c;}
@@ -141,7 +142,7 @@ public class MainActivity extends Activity {
  }
  private void menuItem(NavigationOverlay overlay,String label,String tag,Runnable run){TextView item=text(label,14,INK);item.setTag(tag);item.setGravity(Gravity.CENTER_VERTICAL);item.setPadding(dp(12),dp(10),dp(12),dp(10));item.setMinHeight(dp(48));item.setFocusable(true);item.setOnClickListener(v->{overlay.close(false);run.run();});ripple(item);overlay.body.addView(item,new LinearLayout.LayoutParams(-1,-2));}
  private NavigationOverlay sheetMenu(String title){return new NavigationOverlay(true,title);}
- private class NavigationOverlay extends FrameLayout {
+ class NavigationOverlay extends FrameLayout {
   final boolean corner;final LinearLayout panel,body;final View shade;final LinearLayout underneath;final Runnable underneathBack;final NavigationOverlay previous;
   final int accessibility;final boolean underneathDetail;boolean open=true;int generation;ViewTreeObserver observer;ViewTreeObserver.OnPreDrawListener pending;
   NavigationOverlay(boolean corner,String title){
@@ -180,7 +181,7 @@ public class MainActivity extends Activity {
   LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(16),dp(16),dp(16),dp(16));card.setBackground(bg(Color.WHITE,20));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(12);body.addView(card,lp);return card;
  }
  private Button action(LinearLayout body,String label,Runnable run){return secondaryUi.action(body,label,run);}
- private LinearLayout option(LinearLayout body,int drawable,String title,String description,Runnable run){
+ LinearLayout option(LinearLayout body,int drawable,String title,String description,Runnable run){
   LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setMinimumHeight(dp(56));row.setPadding(dp(16),dp(12),dp(16),dp(12));boolean grouped="settings-group".equals(body.getTag());if(grouped&&body.getChildCount()>0){View line=new View(this);line.setBackgroundColor(0xffe7e7e7);LinearLayout.LayoutParams divider=new LinearLayout.LayoutParams(-1,dp(1));divider.leftMargin=dp(16);divider.rightMargin=dp(16);body.addView(line,divider);}row.setBackground(bg(Color.WHITE,grouped?0:22));LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);rowParams.bottomMargin=grouped?0:dp(10);body.addView(row,rowParams);
   ImageView symbol=new ImageView(this);symbol.setImageResource(drawable);symbol.setImageTintList(android.content.res.ColorStateList.valueOf(0xff171717));symbol.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams glyph=new LinearLayout.LayoutParams(dp(22),dp(22));glyph.rightMargin=dp(14);row.addView(symbol,glyph);
   LinearLayout copy=new LinearLayout(this);copy.setOrientation(LinearLayout.VERTICAL);TextView heading=text(title,16,0xff171717);copy.addView(heading);if(!description.isEmpty()){TextView note=text(description,13,0xff707070);note.setPadding(0,dp(3),0,0);copy.addView(note);}row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));TextView arrow=text("›",20,0xffaaaaaa);arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);arrow.setPadding(dp(12),0,0,0);row.addView(arrow);
@@ -213,8 +214,8 @@ public class MainActivity extends Activity {
   final int restoreY=timetableScrollY;scroll.addOnLayoutChangeListener(new View.OnLayoutChangeListener(){public void onLayoutChange(View v,int l,int t,int r,int b,int oldL,int oldT,int oldR,int oldB){scroll.removeOnLayoutChangeListener(this);scroll.scrollTo(0,restoreY);}});
   homePage=new HomePage();
  }
- @Override protected void onResume(){super.onResume();remoteResumed=true;scheduleRemoteNotice();if(pager!=null&&pager.isAttachedToWindow())updateHeader();Context context=getApplicationContext();worker.execute(()->CourseWidget.updateAll(context));getWindow().getDecorView().postDelayed(()->checkWidgetPin(),250);}
- @Override protected void onPause(){remoteResumed=false;touching=false;remoteHandler.removeCallbacks(remoteNotice);super.onPause();}
+ @Override protected void onResume(){super.onResume();remoteResumed=true;if(taskPage!=null)taskPage.scheduleRefresh();scheduleRemoteNotice();if(pager!=null&&pager.isAttachedToWindow())updateHeader();Context context=getApplicationContext();worker.execute(()->CourseWidget.updateAll(context));getWindow().getDecorView().postDelayed(()->checkWidgetPin(),250);}
+ @Override protected void onPause(){remoteResumed=false;if(taskPage!=null)taskPage.pauseRefresh();touching=false;remoteHandler.removeCallbacks(remoteNotice);super.onPause();}
  @Override protected void onStop(){if(remoteDialog!=null)remoteDialog.dismiss();super.onStop();}
  @Override public boolean dispatchTouchEvent(MotionEvent event){if(event.getActionMasked()==MotionEvent.ACTION_DOWN)touching=true;interactionAt=SystemClock.uptimeMillis();try{return super.dispatchTouchEvent(event);}finally{if(event.getActionMasked()==MotionEvent.ACTION_UP||event.getActionMasked()==MotionEvent.ACTION_CANCEL){touching=false;scheduleRemoteNotice();}}}
  private String weekCaption(){String name=Timetables.names(this).get(Timetables.active(this));return "第 "+week+" 周  当前为第 "+currentWeek()+" 周"+(Timetables.names(this).size()>1?" · "+name:"");}

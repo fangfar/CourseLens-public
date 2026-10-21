@@ -14,7 +14,7 @@ import java.util.concurrent.*;
 
 @android.annotation.SuppressLint("ViewConstructor")
 final class TaskPage extends LinearLayout {
- private final Activity activity;
+ private final MainActivity activity;
  private final SecondaryUi ui;
  private final ChaoxingAccount account;
  private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -28,7 +28,10 @@ final class TaskPage extends LinearLayout {
  private float pagePosition;
  private int[] restoredScrollY,renderRestoreY;
  private Runnable renderNext;private int renderGeneration;
- private final Button refresh,configure;
+ private final Button refresh,configure,settings;
+ private final android.os.Handler timer=new android.os.Handler(android.os.Looper.getMainLooper());
+ private final Runnable autoRefresh=this::autoRefresh;
+ private boolean localReady;private long retryAfter;
  private final ProgressBar progress;
  private ChaoxingClient client;
  private ChaoxingClient.Result snapshot;
@@ -38,11 +41,12 @@ final class TaskPage extends LinearLayout {
  private boolean busy;private volatile boolean closed;
 
  TaskPage(Context context,Bundle state){
-  super(context);activity=(Activity)context;ui=new SecondaryUi(activity);account=new ChaoxingAccount(context);setTag("tasks-page");setOrientation(VERTICAL);
+  super(context);activity=(MainActivity)context;ui=new SecondaryUi(activity);account=new ChaoxingAccount(context);setTag("tasks-page");setOrientation(VERTICAL);
   LinearLayout header=new LinearLayout(context);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(20),ui.dp(12),ui.dp(20),0);addView(header,new LayoutParams(-1,-2));
   LinearLayout heading=new LinearLayout(context);heading.setOrientation(VERTICAL);header.addView(heading,new LayoutParams(0,-2,1));TextView title=ui.text("任务",24,SecondaryUi.INK);title.setTypeface(null,Typeface.BOLD);heading.addView(title);
   platform=ui.text("未连接平台",12,SecondaryUi.MUTED);platform.setTag("task-connected-platforms");
   configure=ui.iconAction(header,R.drawable.ic_person,"账号密码配置",this::configure);configure.setTag("chaoxing-connect");
+  settings=ui.iconAction(header,R.drawable.ic_task_settings,"任务设置",this::settings);settings.setTag("task-settings");settings.setEnabled(false);
   refresh=ui.iconAction(header,R.drawable.ic_sync,"刷新作业",this::refresh);refresh.setTag("chaoxing-refresh");refresh.setEnabled(account.configured());
   LinearLayout summary=new LinearLayout(context);summary.setPadding(ui.dp(20),ui.dp(4),ui.dp(20),ui.dp(8));addView(summary,new LayoutParams(-1,-2));summary.addView(platform,new LayoutParams(-2,-2));TextView separator=ui.text("|",12,SecondaryUi.MUTED);separator.setPadding(ui.dp(8),0,ui.dp(8),0);separator.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);summary.addView(separator);
   status=ui.text("请先配置学习通账号密码，登录验证成功后才会保存。",12,SecondaryUi.MUTED);status.setTag("chaoxing-status");status.setLineSpacing(ui.dp(3),1);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);summary.addView(status,new LayoutParams(0,-2,1));
@@ -93,7 +97,7 @@ final class TaskPage extends LinearLayout {
  private ScrollView render(LinearLayout list,int filter,ArrayDeque<Runnable> steps){
   ScrollView measuring=new ScrollView(getContext());measuring.setFillViewport(true);measuring.setClipToPadding(false);measuring.addView(list,new ScrollView.LayoutParams(-1,-2));
   Map<String,List<ChaoxingClient.Work>> groups=new LinkedHashMap<>();
-  if(snapshot!=null)for(ChaoxingClient.Work work:snapshot.items){if(filter==0&&work.completed()||filter==1&&!work.completed())continue;groups.computeIfAbsent(work.course,key->new ArrayList<>()).add(work);}
+  if(snapshot!=null)for(ChaoxingClient.Work work:snapshot.items){if(!ChaoxingCache.visible(snapshot,work)||filter==0&&work.completed()||filter==1&&!work.completed())continue;groups.computeIfAbsent(work.course,key->new ArrayList<>()).add(work);}
   for(Map.Entry<String,List<ChaoxingClient.Work>> group:groups.entrySet()){
    LinearLayout[] card={null};steps.add(()->{TextView course=ui.text(group.getKey().isEmpty()?"课程名称未识别":group.getKey(),13,SecondaryUi.MUTED);course.setTag("task-course-label");course.setPadding(ui.dp(4),ui.dp(16),ui.dp(4),ui.dp(8));course.setLineSpacing(ui.dp(2),1);if(android.os.Build.VERSION.SDK_INT>=28)course.setAccessibilityHeading(true);list.addView(course,new LayoutParams(-1,-2));
     card[0]=new LinearLayout(getContext());card[0].setTag("task-course-group");card[0].setOrientation(VERTICAL);card[0].setBackground(ui.bg(android.graphics.Color.WHITE,14));list.addView(card[0],new LayoutParams(-1,-2));measurePending(measuring,filter);});
@@ -109,10 +113,10 @@ final class TaskPage extends LinearLayout {
     LinearLayout heading=new LinearLayout(getContext());heading.setGravity(Gravity.TOP);row.addView(heading,new LayoutParams(-1,-2));
     TextView name=ui.text(work.title,16,SecondaryUi.INK);name.setTag("task-work-title");name.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));name.setLineSpacing(ui.dp(2),1);name.setTextIsSelectable(true);heading.addView(name,new LayoutParams(0,-2,1));
     TextView state=ui.text(work.status.isEmpty()?"状态未知":work.status,13,SecondaryUi.MUTED);state.setTag("task-work-status");state.setMaxWidth(ui.dp(96));state.setLineSpacing(ui.dp(2),1);state.setPadding(ui.dp(12),ui.dp(2),0,0);heading.addView(state,new LayoutParams(-2,-2));
-    TextView deadline=ui.text(work.deadline,13,SecondaryUi.MUTED);deadline.setTag("task-work-deadline");deadline.setTextIsSelectable(true);deadline.setLineSpacing(ui.dp(2),1);deadline.setContentDescription("截止："+work.deadline);android.graphics.drawable.Drawable clock=activity.getDrawable(R.drawable.ic_clock).mutate();clock.setTint(SecondaryUi.MUTED);clock.setBounds(0,0,ui.dp(16),ui.dp(16));deadline.setCompoundDrawables(clock,null,null,null);deadline.setCompoundDrawablePadding(ui.dp(6));LayoutParams time=new LayoutParams(-1,-2);time.topMargin=ui.dp(8);row.addView(deadline,time);
+    TextView deadline=ui.text(work.deadline,13,SecondaryUi.MUTED);deadline.setTag("task-work-deadline");deadline.setTextIsSelectable(true);deadline.setLineSpacing(ui.dp(2),1);deadline.setContentDescription("截止："+work.deadline);android.graphics.drawable.Drawable clock=activity.getDrawable(R.drawable.ic_clock).mutate();clock.setTint(SecondaryUi.MUTED);clock.setBounds(0,0,ui.dp(16),ui.dp(16));deadline.setCompoundDrawables(clock,null,null,null);deadline.setCompoundDrawablePadding(ui.dp(6));LayoutParams time=new LayoutParams(-1,-2);time.topMargin=ui.dp(8);LinearLayout details=new LinearLayout(getContext());details.setGravity(Gravity.CENTER_VERTICAL);row.addView(details,time);details.addView(deadline,new LayoutParams(0,-2,1));Button remove=ui.action(details,"删除",()->delete(work));remove.setTag("task-delete");remove.setContentDescription("删除任务："+work.title);remove.setTextSize(13);remove.setPadding(ui.dp(8),ui.dp(8),ui.dp(8),ui.dp(8));remove.setTextColor(SecondaryUi.INK);remove.setBackgroundTintList(null);remove.setBackground(ui.bg(SecondaryUi.SOFT,24));LayoutParams removeSize=new LayoutParams(-2,-2);removeSize.leftMargin=ui.dp(8);details.updateViewLayout(remove,removeSize);
  }
  private void connected(boolean value){platform.setText(value?"学习通 · 已连接":account.configured()?"学习通 · 待验证":"未连接平台");platform.setTextColor(value?SecondaryUi.NAVY:SecondaryUi.MUTED);platform.setContentDescription(platform.getText());}
- private void busy(boolean value){busy=value;configure.setEnabled(!value);platform.setEnabled(!value);refresh.setEnabled(!value&&account.configured());progress.setVisibility(value?VISIBLE:GONE);}
+ private void busy(boolean value){busy=value;configure.setEnabled(!value);platform.setEnabled(!value);refresh.setEnabled(!value&&account.configured());settings.setEnabled(!value&&localReady);if(value)pauseRefresh();else scheduleRefresh();progress.setVisibility(value?VISIBLE:GONE);}
  private boolean current(int token){return !closed&&token==generation&&!activity.isFinishing()&&!activity.isDestroyed();}
  private void configure(){
   if(busy||closed)return;LinearLayout form=new LinearLayout(getContext());form.setOrientation(VERTICAL);form.setPadding(ui.dp(24),ui.dp(8),ui.dp(24),ui.dp(8));
@@ -124,24 +128,60 @@ final class TaskPage extends LinearLayout {
   if(account.configured())try{username.setText(account.load().account);}catch(Exception e){feedback.setText("原配置无法解密，请重新输入账号密码。");}
   dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{String name=username.getText().toString().trim(),secret=password.getText().toString();if(name.isEmpty()||secret.isEmpty()){feedback.setText("请输入账号和密码。");return;}password.setText("");username.setEnabled(false);password.setEnabled(false);dialog.setCancelable(false);dialog.getButton(-1).setEnabled(false);dialog.getButton(-2).setEnabled(false);feedback.setText("正在验证登录，请稍候…");busy(true);int token=++generation;
    if(client!=null)client.close();client=new ChaoxingClient();ChaoxingClient connection=client;
-   worker.execute(()->{try{connection.login(name,secret);if(!current(token))return;account.save(name,secret);activity.runOnUiThread(()->{if(current(token)){connected(true);dialog.dismiss();busy(false);status.setText("登录验证成功，密码配置已加密保存。点击“刷新作业”更新数据。");snapshot=null;render();loadLocal();}});connection.close();}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);dialog.setCancelable(true);username.setEnabled(true);password.setEnabled(true);dialog.getButton(-1).setEnabled(true);dialog.getButton(-2).setEnabled(true);feedback.setText("登录验证或保存失败，未更新配置。请核对账号密码和网络；验证码或机构认证需先在学习通完成。");status.setText("配置未更新，原配置及作业保留。");}});}});
+   worker.execute(()->{try{connection.login(name,secret);if(!current(token))return;account.save(name,secret);activity.runOnUiThread(()->{if(current(token)){connected(true);dialog.dismiss();busy(false);status.setText("登录验证成功，密码配置已加密保存。");snapshot=null;localReady=false;render();loadLocal();}});connection.close();}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);dialog.setCancelable(true);username.setEnabled(true);password.setEnabled(true);dialog.getButton(-1).setEnabled(true);dialog.getButton(-2).setEnabled(true);feedback.setText("登录验证或保存失败，未更新配置。请核对账号密码和网络；验证码或机构认证需先在学习通完成。");status.setText("配置未更新，原配置及作业保留。");}});}});
   });
  }
  private EditText field(LinearLayout form,String label,String hint,boolean secret){TextView caption=ui.text(label,13,SecondaryUi.MUTED);caption.setPadding(0,ui.dp(16),0,ui.dp(8));form.addView(caption);EditText input=new EditText(getContext());input.setTextSize(15);input.setSingleLine(true);input.setHint(hint);input.setContentDescription(label);input.setTextColor(SecondaryUi.INK);input.setHintTextColor(SecondaryUi.MUTED);input.setPadding(ui.dp(16),0,ui.dp(16),0);input.setBackgroundResource(R.drawable.form_field);input.setInputType(InputType.TYPE_CLASS_TEXT|(secret?InputType.TYPE_TEXT_VARIATION_PASSWORD:InputType.TYPE_TEXT_VARIATION_NORMAL));input.setSaveEnabled(false);input.setImportantForAutofill(IMPORTANT_FOR_AUTOFILL_NO);form.addView(input,new LayoutParams(-1,ui.dp(54)));return input;}
  private void refresh(){
-  if(busy||closed)return;if(!account.configured()){configure();return;}busy(true);int token=++generation;status.setText("正在使用保存的配置登录学习通…");if(client!=null)client.close();client=new ChaoxingClient();ChaoxingClient connection=client;
-  worker.execute(()->{try{ChaoxingAccount.Saved saved=account.load();connection.login(saved.account,saved.password);activity.runOnUiThread(()->{if(current(token))connected(true);});sync(connection,token,saved.account);}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);connected(false);status.setText("登录未成功，请检查网络或重新配置密码。已有作业保留。");}});}});
+  if(busy||closed)return;if(!account.configured()){configure();return;}busy(true);retryAfter=System.currentTimeMillis()+60000;int token=++generation;status.setText("正在使用保存的配置登录学习通…");if(client!=null)client.close();client=new ChaoxingClient();ChaoxingClient connection=client;
+  worker.execute(()->{try{ChaoxingAccount.Saved saved=account.load();ChaoxingCache cache=new ChaoxingCache(getContext(),saved.account);ChaoxingClient.Result before=ChaoxingCache.copy(snapshot==null?cache.load():snapshot);before.lastAttempt=System.currentTimeMillis();cache.save(before);activity.runOnUiThread(()->{if(current(token)){snapshot=before;localReady=true;}});connection.login(saved.account,saved.password);activity.runOnUiThread(()->{if(current(token))connected(true);});sync(connection,token,saved.account);}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);connected(false);status.setText("更新未成功，请检查网络、本机存储或重新配置密码。已有作业保留。");}});}finally{connection.close();}});
  }
  private void loadLocal(){
-  busy(true);int token=++generation;worker.execute(()->{try{ChaoxingAccount.Saved saved=account.load();ChaoxingClient.Result local=new ChaoxingCache(getContext(),saved.account).load();activity.runOnUiThread(()->{if(current(token)){snapshot=local;busy(false);status.setText(local==null?"账号密码已保存在本机，点击“刷新作业”读取作业。":"本机已保存 "+local.items.size()+" 份作业");render();}});}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("本机作业暂时无法读取，请点击刷新；原文件未删除。");}});}});
+  busy(true);int token=++generation;worker.execute(()->{try{ChaoxingAccount.Saved saved=account.load();ChaoxingClient.Result local=new ChaoxingCache(getContext(),saved.account).load();activity.runOnUiThread(()->{if(current(token)){snapshot=local==null?new ChaoxingClient.Result():local;localReady=true;busy(false);status.setText(local==null?"账号密码已保存在本机，点击“刷新作业”读取作业。":"本机已保存 "+local.items.size()+" 份作业");render();}});}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("本机作业暂时无法读取，请点击刷新；原文件未删除。");}});}});
  }
  private void sync(ChaoxingClient connection,int token,String username){
   try{
-   ChaoxingClient.Result fresh=connection.sync(message->activity.runOnUiThread(()->{if(current(token))status.setText(message);}));if(!current(token))return;ChaoxingCache cache=new ChaoxingCache(getContext(),username);ChaoxingClient.Result result=ChaoxingCache.merge(snapshot==null?cache.load():snapshot,fresh);
+   ChaoxingCache cache=new ChaoxingCache(getContext(),username);ChaoxingClient.Result before=cache.load();ChaoxingClient.Result fresh=connection.sync(message->activity.runOnUiThread(()->{if(current(token))status.setText(message);}),before==null?Collections.emptySet():before.disabledCourses);if(!current(token))return;ChaoxingClient.Result result=ChaoxingCache.merge(before,fresh);
    boolean persisted;try{cache.save(result);persisted=true;}catch(Exception e){persisted=false;}boolean saved=persisted;
    activity.runOnUiThread(()->{if(current(token)){snapshot=result;busy(false);status.setText("已更新 "+result.checked+" / "+result.total+" 门课程"+(saved?"":" · 本机保存失败，退出后可能无法保留"));render();}});
   }catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("作业读取失败（"+ChaoxingClient.describe(e)+"）。原有作业和密码配置已保留。");}});}finally{connection.close();}
  }
+ void pauseRefresh(){timer.removeCallbacks(autoRefresh);}
+ void scheduleRefresh(){pauseRefresh();if(closed||busy||!localReady||snapshot==null||!account.configured()||!activity.taskRefreshActive())return;long now=System.currentTimeMillis();timer.postDelayed(autoRefresh,Math.max(Math.max(0,retryAfter-now),TaskRefresh.delay(snapshot.lastAttempt,snapshot.intervalMinutes,now)));}
+ private void autoRefresh(){if(closed)return;if(!activity.taskRefreshActive()||configuration!=null){timer.postDelayed(autoRefresh,60000);return;}if(!busy&&localReady){if(TaskRefresh.delay(snapshot.lastAttempt,snapshot.intervalMinutes,System.currentTimeMillis())==0)refresh();else scheduleRefresh();}}
+ private void saveChange(ChaoxingClient.Result next,String message){
+  if(busy||closed)return;busy(true);int token=++generation;status.setText("正在保存任务设置…");worker.execute(()->{try{new ChaoxingCache(getContext(),account.load().account).save(next);activity.runOnUiThread(()->{if(current(token)){snapshot=next;busy(false);status.setText(message);render();}});}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("保存失败，原有任务和设置已保留，请重试。");}});}});
+ }
+ private void delete(ChaoxingClient.Work work){
+  if(busy||closed||snapshot==null)return;int at=snapshot.items.indexOf(work);if(at<0)return;ChaoxingClient.Result next=ChaoxingCache.copy(snapshot);ChaoxingClient.Work removed=next.items.remove(at);removed.deletedAt=System.currentTimeMillis();next.deleted.add(removed);saveChange(next,"任务已删除，可在任务设置的删除历史中恢复。");
+ }
+ private void settings(){
+  if(busy||closed||!localReady)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"任务设置");
+  activity.option(sheet.body,R.drawable.ic_tasks,"加载的课程","选择要加载和展示任务的课程",()->{sheet.close(false);courses();}).setTag("task-course-settings");
+  activity.option(sheet.body,R.drawable.ic_notes,"删除历史","已删除 "+snapshot.deleted.size()+" 份任务，可恢复",()->{sheet.close(false);history();}).setTag("task-deletion-history");
+  activity.option(sheet.body,R.drawable.ic_clock,"自动刷新",snapshot.intervalMinutes==0?"仅每天首次打开时刷新":"每 "+snapshot.intervalMinutes+" 分钟 · 每天首次打开也刷新",()->{sheet.close(false);interval();}).setTag("task-refresh-settings");
+ }
+ private void courses(){
+  if(busy||closed)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"加载的课程");sheet.body.setTag("task-course-selection");
+  TextView intro=ui.text("关闭后停止加载并隐藏该课程任务，已保存的任务仍保留。重新开启后可点击刷新。",14,SecondaryUi.MUTED);intro.setPadding(0,0,0,ui.dp(12));sheet.body.addView(intro);
+  Set<String> disabled=new LinkedHashSet<>(snapshot.disabledCourses);
+  if(snapshot.courses.isEmpty())sheet.body.addView(ui.text("请先刷新一次，获取可选择的课程。",14,SecondaryUi.MUTED));
+  Map<String,Integer> names=new HashMap<>();for(ChaoxingClient.Subject course:snapshot.courses)names.put(course.name,names.getOrDefault(course.name,0)+1);
+  for(ChaoxingClient.Subject course:snapshot.courses){CheckBox choice=new CheckBox(getContext());choice.setText(course.name+(names.get(course.name)>1?"（"+course.key()+"）":""));choice.setTextColor(SecondaryUi.INK);choice.setTextSize(15);choice.setMinHeight(ui.dp(48));choice.setTag("task-course-"+course.key());choice.setChecked(!disabled.contains(course.key()));choice.setOnCheckedChangeListener((button,checked)->{if(checked)disabled.remove(course.key());else disabled.add(course.key());});sheet.body.addView(choice,new LayoutParams(-1,-2));}
+  ui.action(sheet.body,"保存",()->{if(busy)return;ChaoxingClient.Result next=ChaoxingCache.copy(snapshot);next.disabledCourses.clear();next.disabledCourses.addAll(disabled);sheet.close(false);saveChange(next,"课程加载设置已保存。");}).setTag("task-courses-save");
+ }
+ private void history(){
+  if(busy||closed)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"删除历史");sheet.body.setTag("task-history");
+  if(snapshot.deleted.isEmpty())sheet.body.addView(ui.text("还没有删除记录。",14,SecondaryUi.MUTED));
+  List<ChaoxingClient.Work> removed=new ArrayList<>(snapshot.deleted);Collections.reverse(removed);for(ChaoxingClient.Work work:removed){String when=work.deletedAt==0?"":new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.getDefault()).format(new Date(work.deletedAt));
+   activity.option(sheet.body,R.drawable.ic_tasks,work.title,work.course+" · "+when+" · 点击恢复",()->{if(busy)return;int at=snapshot.deleted.indexOf(work);if(at<0)return;ChaoxingClient.Result next=ChaoxingCache.copy(snapshot);ChaoxingClient.Work restored=next.deleted.remove(at);restored.deletedAt=0;next.items.add(restored);sheet.close(false);saveChange(next,ChaoxingCache.visible(next,restored)?"任务已恢复。":"任务已恢复；该课程已关闭加载，开启后即可显示。");}).setTag("task-restore");
+  }
+ }
+ private void interval(){
+  if(busy||closed)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"自动刷新");sheet.body.setTag("task-refresh-interval");TextView intro=ui.text("软件使用期间按间隔刷新，每天第一次打开时也会自动刷新。失败时保留已有任务。",14,SecondaryUi.MUTED);sheet.body.addView(intro);
+  EditText minutes=field(sheet.body,"刷新间隔（分钟）","1–10080；0 表示仅每天首次打开刷新",false);minutes.setTag("task-interval-minutes");minutes.setInputType(InputType.TYPE_CLASS_NUMBER);minutes.setText(String.valueOf(snapshot.intervalMinutes));
+  ui.action(sheet.body,"保存",()->{if(busy)return;int value;try{value=Integer.parseInt(minutes.getText().toString().trim());if(value<0||value>TaskRefresh.MAX_MINUTES)throw new NumberFormatException();}catch(NumberFormatException e){minutes.setError("请输入 0–10080 之间的整数分钟");return;}ChaoxingClient.Result next=ChaoxingCache.copy(snapshot);next.intervalMinutes=value;sheet.close(false);saveChange(next,"自动刷新间隔已保存。");}).setTag("task-interval-save");
+ }
  void saveState(Bundle state){state.putInt("filter",filter);int[] positions=new int[scrolls.length];for(int i=0;i<positions.length;i++)positions[i]=renderRestoreY!=null&&renderRestoreY[i]>=0?renderRestoreY[i]:scrolls[i].getScrollY();state.putIntArray("filterScrollY",restoredScrollY==null?positions:restoredScrollY);}
- void close(){closed=true;generation++;renderGeneration++;if(renderNext!=null)activity.getWindow().getDecorView().removeCallbacks(renderNext);renderNext=null;if(configuration!=null)configuration.dismiss();if(passwordField!=null)passwordField.setText("");if(client!=null)client.close();worker.shutdownNow();}
+ void close(){closed=true;pauseRefresh();generation++;renderGeneration++;if(renderNext!=null)activity.getWindow().getDecorView().removeCallbacks(renderNext);renderNext=null;if(configuration!=null)configuration.dismiss();if(passwordField!=null)passwordField.setText("");if(client!=null)client.close();worker.shutdownNow();}
 }
