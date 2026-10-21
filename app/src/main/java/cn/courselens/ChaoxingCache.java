@@ -46,12 +46,16 @@ final class ChaoxingCache {
   byte[] data=encode(result).getBytes(StandardCharsets.UTF_8);if(data.length>MAX_BYTES)throw new IOException("Offline data too large");FileOutputStream out=null;
   try{out=file.startWrite();out.write(data);file.finishWrite(out);}catch(Exception e){if(out!=null)file.failWrite(out);throw e;}
  }
- private static ChaoxingClient.Work copy(ChaoxingClient.Work value){ChaoxingClient.Work copy=new ChaoxingClient.Work(value.course,value.title,value.status,value.url);copy.deadline=value.deadline;copy.courseKey=value.courseKey;copy.workKey=value.workKey;copy.deletedAt=value.deletedAt;copy.edited=value.edited;copy.originalTitle=value.originalTitle;return copy;}
+ static ChaoxingClient.Work copy(ChaoxingClient.Work value){ChaoxingClient.Work copy=new ChaoxingClient.Work(value.course,value.title,value.status,value.url);copy.deadline=value.deadline;copy.courseKey=value.courseKey;copy.workKey=value.workKey;copy.deletedAt=value.deletedAt;copy.edited=value.edited;copy.originalTitle=value.originalTitle;return copy;}
  private static ChaoxingClient.Work previous(ChaoxingClient.Work item,List<ChaoxingClient.Work> old,List<ChaoxingClient.Work> fresh){
   ChaoxingClient.Work match=null;
   if(!item.workKey.isEmpty()){for(ChaoxingClient.Work candidate:old)if(item.workKey.equals(candidate.workKey)){if(match!=null)return null;match=candidate;}if(match!=null)return match;}
   int oldCount=0,newCount=0;for(ChaoxingClient.Work candidate:old)if(item.title.equals(candidate.originalTitle.isEmpty()?candidate.title:candidate.originalTitle)){oldCount++;if(item.workKey.isEmpty()||candidate.workKey.isEmpty())match=candidate;}for(ChaoxingClient.Work candidate:fresh)if(item.title.equals(candidate.title))newCount++;
   return oldCount==1&&newCount==1?match:null;
+ }
+ static ChaoxingClient.Work find(List<ChaoxingClient.Work> items,ChaoxingClient.Work target){
+  List<ChaoxingClient.Work> course=new ArrayList<>();for(ChaoxingClient.Work item:items)if(!target.courseKey.isEmpty()&&!item.courseKey.isEmpty()?target.courseKey.equals(item.courseKey):target.course.equals(item.course))course.add(item);
+  ChaoxingClient.Work lookup=new ChaoxingClient.Work(target.course,target.originalTitle.isEmpty()?target.title:target.originalTitle,target.status,"");lookup.workKey=target.workKey;return previous(lookup,course,Collections.singletonList(lookup));
  }
  static ChaoxingClient.Result copy(ChaoxingClient.Result source){
   ChaoxingClient.Result result=new ChaoxingClient.Result();if(source==null)return result;result.total=source.total;result.checked=source.checked;result.courses.addAll(source.courses);result.warnings.addAll(source.warnings);result.disabledCourses.addAll(source.disabledCourses);result.intervalMinutes=source.intervalMinutes;result.lastAttempt=source.lastAttempt;for(ChaoxingClient.Work item:source.items)result.items.add(copy(item));for(ChaoxingClient.Work item:source.deleted)result.deleted.add(copy(item));return result;
