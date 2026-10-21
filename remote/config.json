@@ -10,13 +10,13 @@
     }
   ],
   "android": {
-    "versionCode": 15,
-    "versionName": "2.7.3",
+    "versionCode": 16,
+    "versionName": "2.7.4",
     "forcePrompt": false,
     "promptTitle": "",
     "promptMessage": "",
-    "changelog": "更新服务地址调整为 courselens.xvyan.cn。\n保留原更新地址，新地址请求失败时自动使用备用地址。",
-    "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.7.3/CourseLens-2.7.3-vc15.apk",
+    "changelog": "新增学校课表刷新入口，完善任务管理与自动刷新设置。\n修复任务刷新期间操作不可用的问题，优化返回当前周入口及界面图标。\n完善启动检查更新和更新设置。",
+    "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.7.4/CourseLens-2.7.4-vc16.apk",
     "diskUrl": "https://pan.baidu.com/s/5Q7q-93RIXFczWfL1i3cvQg"
   },
   "repositoryUrl": "https://github.com/fangfar/CourseLens-public"
