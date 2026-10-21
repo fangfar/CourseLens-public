@@ -201,7 +201,7 @@ public final class MotionChecks {
    }catch(Exception e){throw new RuntimeException(e);}});
    runner.waitForIdleSync();SystemClock.sleep(350);
    main(runner,()->{try{
-    call(a,"menu");call(a,"about");View about=(View)field("root").get(a);check(about.findViewWithTag("about-app-icon") instanceof ImageView,"About does not use the App icon");check(about.findViewWithTag("check-app-update")==null,"About duplicates update action");
+    call(a,"menu");call(a,"about");View about=(View)field("root").get(a);check(about.findViewWithTag("about-app-icon") instanceof ImageView,"About does not use the App icon");check(about.findViewWithTag("update-settings")!=null&&about.findViewWithTag("check-app-update")==null,"About update submenu missing or duplicate manual action");
    }catch(Exception e){throw new RuntimeException(e);}});runner.waitForIdleSync();SystemClock.sleep(350);capture(runner,"about");
    main(runner,()->{try{
     call(a,"home");call(a,"weekPicker");android.content.SharedPreferences stored=a.getPreferences(0);boolean had=stored.contains("week");int previous=stored.getInt("week",6);

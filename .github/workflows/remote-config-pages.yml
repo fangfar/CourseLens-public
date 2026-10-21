@@ -58,6 +58,12 @@ jobs:
           assert type(android['versionCode']) is int and 0 < android['versionCode'] <= 9223372036854775807
           text(android, 'versionName', 80)
           text(android, 'changelog', 12000, True)
+          if 'forcePrompt' in android:
+              assert type(android['forcePrompt']) is bool
+          if 'promptTitle' in android:
+              text(android, 'promptTitle', 160, True)
+          if 'promptMessage' in android:
+              text(android, 'promptMessage', 12000, True)
           link(android, 'apkUrl')
           link(android, 'diskUrl')
           assert link(config, 'repositoryUrl') in ('', 'https://github.com/fangfar/CourseLens-public')

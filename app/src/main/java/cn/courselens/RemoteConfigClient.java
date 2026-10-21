@@ -28,18 +28,18 @@ final class RemoteConfigClient {
  void unlisten(Listener previous){if(listener==previous)listener=null;}
  boolean fresh(long now){return config!=null&&validatedAt>0&&now>=validatedAt&&now-validatedAt<=STALE_MS;}
  static boolean due(long now,long success,long attempt,boolean manual){long interval=manual?3000:RETRY_MS;if(attempt>0&&now>=attempt&&now-attempt<interval)return false;return manual||success<=0||now<success||now-success>=REFRESH_MS;}
- void opened(boolean automatic){sessionShown.removeIf(key->key.startsWith("update:"));check(false,automatic,automatic);}
- void check(boolean manual){check(manual,false,true);}
- private void check(boolean manual,boolean startup,boolean network){
+ void opened(){sessionShown.removeIf(key->key.startsWith("update:"));check(false,true);}
+ void check(boolean manual){check(manual,false);}
+ private void check(boolean manual,boolean startup){
   if(checking){manualRequested|=manual;return;}
-  long now=System.currentTimeMillis();if(loaded&&!startup&&(!network||!due(now,validatedAt,lastAttempt,manual))){if(manual&&listener!=null)listener.changed("请稍后再检查更新",true);return;}
+  long now=System.currentTimeMillis();if(loaded&&!startup&&!due(now,validatedAt,lastAttempt,manual)){if(manual&&listener!=null)listener.changed("请稍后再检查更新",true);return;}
   checking=true;manualRequested=manual;
   worker.execute(()->{
    if(prefs==null){prefs=context.getSharedPreferences(preferenceName,0);RemoteConfig cached=null;try{String json=prefs.getString("json","");if(!json.isEmpty())cached=RemoteConfig.parse(json);}catch(Exception ignored){}if(cached==null)prefs.edit().remove("validatedAt").commit();
     RemoteConfig previous=cached;long time=prefs.getLong("validatedAt",0),attempt=prefs.getLong("lastAttempt",0);Set<String> read=new HashSet<>(prefs.getStringSet("readIds",Collections.emptySet()));
     main.post(()->{config=previous;validatedAt=time;lastAttempt=attempt;readIds.addAll(read);loaded=true;if(listener!=null)listener.changed(null,false);});
    }
-   long success=prefs.getLong("validatedAt",0),attempt=prefs.getLong("lastAttempt",0);boolean shouldFetch=network&&(startup||due(now,success,attempt,manual));
+   long success=prefs.getLong("validatedAt",0),attempt=prefs.getLong("lastAttempt",0);boolean shouldFetch=startup||due(now,success,attempt,manual);
    RemoteConfig result=null;String error=null;long completed=0;
    if(shouldFetch){prefs.edit().putLong("lastAttempt",now).commit();try{String json=fetcher.fetch();result=RemoteConfig.parse(json);completed=System.currentTimeMillis();if(!prefs.edit().putString("json",json).putLong("validatedAt",completed).commit())throw new IOException("无法保存更新信息");}catch(Exception e){result=null;completed=0;error=e instanceof SocketTimeoutException?"检查更新超时，请稍后重试":"检查更新失败，已保留上次信息";}}
    RemoteConfig next=result;String failure=error;long time=completed;
