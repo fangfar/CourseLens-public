@@ -36,6 +36,43 @@ Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用
 
 普通贡献者使用 `-PqaBuild`：Debug 包名为 `cn.courselens.qa`，使用开发签名；测试数据在测试 APK 中，Release 变体禁用。正式构建保持 `cn.courselens`，必须提供既有签名密钥并通过固定证书检查。
 
+## 快递中心
+
+- 入口在底部导航的「快递」，保留「课表设置 → 软件与下载 → 快递中心」入口，也可由 Android 文字 / 图片分享打开。三个底栏入口在主界面与快递页共用 `AppNavigation`，选中使用实心图标；返回课表 / 任务时复用主 Activity、保留原页面和相应选中项，并清除其上的快递页，避免返回键循环。独立 `ParcelActivity` 使用现有 `SecondaryUi`、原生 View 和半高滚动表单，浅色沿用原色板，深色资源仅作用于快递模块。没有迁移课表、学习通缓存或账号数据，也没有改包名、版本号或正式签名。
+- `ParcelDatabase` 是独立 Room schema 1 数据库 `parcels.db`，schema 保存在 `app/schemas/`。Java 使用 annotationProcessor，无 Compose / Hilt / Kotlin 插件；Room 2.6.1、WorkManager 2.9.1 保持现有 SDK 34 / JDK 17 构建兼容。升级 schema 时添加保留数据的 migration，不使用 destructive fallback。取件码和运单号分别保存；同运单或同地址同码去重，同码不同驿站保留。完成记录不因通知复活。运输中记录收到同运单取件通知时补全原记录，低评分信息需确认。单条删除保留最长 14 天的 SHA-256 去重摘要，删除全部会清除记录、摘要和设置，并执行 Room 的 WAL checkpoint / VACUUM。
+- `ParcelRules` 是本地版本化规则，评分是规则强度而非统计概率。只提取明确取件语境，排除验证码和动态身份码。只有单码、明确地址的高评分通知可以直接进入待取件；其他结果在「待确认」中人工核对，截图 / 分享一律确认。多码文本不自动配地址或运单，避免串件。没有保存通知全文或图片，没有短信、无障碍、相机或媒体库读取权限。截图使用文档选择器 / 分享授权和随包中文 ML Kit；只接收 content URI，限 10 MB / 8000 万输入像素并下采样处理，识别后释放图片和识别器。
+- 通知识别默认关闭，需 App 内同意和系统通知访问两步授权。默认来源为菜鸟、淘宝、拼多多，可单独选微信、QQ、默认短信应用的**通知**；不访问短信数据库。`ParcelNotificationListener` 由系统绑定权限保护，不扫描历史通知、不启动前台服务保活。关闭或清空数据会使排队中的旧识别结果失效。通知显示权限和读取通知访问相互独立。Android 15 及以上的敏感通知过滤、侧载应用受限设置、工作资料隔离和厂商限制都可能导致通知正文不可见；提供手动 / 分享入口，不绕过系统限制。
+- `ParcelIdentity` 只打开包限定的官方路由，捕获跳转失败后打开应用首页或提示用户手动查找。深链成功发出 Intent 不证明已到身份码页面。当前路由有上游测试记录，本地尚无官方 App 真机验收；不得据此称为当前所有版本有效。页面不生成、读取、抓取或缓存官方动态令牌。
+- `TrackingProvider` 与 `ProxyTrackingProvider` 分开，默认无 endpoint、无联网。用户填写信任的 HTTPS 代理并明确开启后，只发送 `trackingNumber`、`carrier` 和协议版本，不发送取件码、地址、全文或截图。快递100 / 快递鸟的供应商密钥与签名只能留在服务端；本仓库不包含代理部署、供应商凭据或真实物流服务验收。服务端应完成供应商适配、调用者认证、限流和日志脱敏，不要把公开无鉴权代理当成生产配置。
+- 代理合同：固定 HTTPS POST 地址，标准 443 端口，无 URL 账号、查询参数或 fragment，不跟随重定向；请求为 `{"schema":1,"trackingNumber":"SF00000000001","carrier":"SF"}`（合成示例）。响应为 `{"schema":1,"state":"IN_TRANSIT","events":[{"time":"2026-10-22 12:00","description":"合成运输事件"}]}`。`state` 可为 `UNKNOWN` / `IN_TRANSIT` / `READY` / `DELIVERED`；最多 100 条事件、64 KiB 正文，字段长度和类型严格校验。204/404 映射无结果，429 映射限流，其他非 200 映射服务不可用；网络、无效响应均保留旧物流。同一记录最短 5 分钟间隔并防止并发；429 / 服务不可用启用代理整体退避，Retry-After 秒数限制在 1 分钟至 24 小时。编辑、删除、清空或更改代理后忽略旧响应。物流签收不自动标记为本人已取件。
+- 新识别、状态变化和自定义未领取提醒共用独立通知频道，默认提醒关闭；Android 13 起只在用户开启提醒时请求 `POST_NOTIFICATIONS`。通知不包含码值和地址，按记录替换，识别去重避免重复推送；完成 / 删除取消通知。未领取提醒用 WorkManager 每 15 分钟检查，后台物流查询另需主动开启，每 6 小时且仅联网时运行。无精确闹钟 / 前台保活，不承诺准点；强行停止、Doze、重启和厂商省电均需实机检查。关闭开关取消对应周期任务。
+- `ParcelWidget` 独立于课表小组件，支持系统固定请求与手动添加。默认只显示待取数量；显示取件码与地址需在快递设置中主动开启。数据库修改后刷新，支持深色资源和 sp 字号。真实启动器添加、尺寸、大字体、点击与隐私开关需实机验收，不能以 `requestPinAppWidget` 返回值充当添加成功。
+
+### 参考来源与许可边界
+
+2026-10-22 检查了以下固定提交的 LICENSE、Android 配置和对应源码；没有整体合并第三方应用，也没有复制其实现代码。所有本模块实现独立编写；参考不改变 CourseLens 本身的许可状态。
+
+| 来源 | 核查文件与兼容性 | 使用方式 |
+| --- | --- | --- |
+| [shareven/parcel @ d7e4c97](https://github.com/shareven/parcel/tree/d7e4c974ffd1e4de2da9291df0d295856cd89818) | MIT；`util/SmsParser.kt`、`util/ThirdPartyEntry.kt`、`service/ParcelNotificationListenerService.kt`、`app/build.gradle.kts`；Kotlin / Compose，minSdk 29 / compileSdk 35 | 参考本地规则、分组和官方入口思路；不移植其短信权限、保活或完整 UI |
+| [pickup-code-app @ f5075d3](https://github.com/zixij644-elaborate/pickup-code-app/tree/f5075d3e4d2f4ffe4da259c699f472a790ec7013) | GPL-3.0；`extractor/CodeExtractor.kt`、`util/IdentityCodeLauncher.kt`、Gradle；Compose，minSdk 26 / compileSdk 35 | 仅参考确认流程、来源评分和包限定路由事实；未复制或翻译 GPL 实现 |
+| [ExpressOCR @ b1aad68](https://github.com/baso4/ExpressOCR/tree/b1aad68b51bf8dc4b2bdead655489a99691647c1) | MIT；`MainActivity.kt`、`CameraActivity.kt`、Gradle；CameraX / ML Kit，minSdk 26 / compileSdk 35 | 参考截图 → 本机 ML Kit 的流程；直接使用官方 SDK，自行处理大小限制和释放；不采用敏感日志、相机扫描 |
+| [KdAPI_Demo @ 603063c](https://github.com/APIGI/KdAPI_Demo/tree/603063c8a8e0a2acbf75f4de23def39f78982711) | 未找到 LICENSE；`2-Services/OrderService.cs`、README；.NET Core 3.1，不能直接作为 Android 库 | 仅核对服务端签名 / 查询职责，未移植代码、示例凭据或签名算法 |
+
+Android 实现依据：[Room Java 配置](https://developer.android.com/training/data-storage/room)、[ML Kit 中文识别](https://developers.google.com/ml-kit/vision/text-recognition/v2/android)、[NotificationListenerService](https://developer.android.com/reference/android/service/notification/NotificationListenerService)、[Android 13 通知权限](https://developer.android.com/develop/ui/views/notifications/notification-permission)、[Android 15 行为变化](https://developer.android.com/about/versions/15/behavior-changes-all)、[WorkManager](https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started)。这些依赖有各自许可和条款，不代表 CourseLens 采用相同项目许可。
+
+### 快递测试
+
+```powershell
+python tests/run_checks.py
+.\gradlew.bat --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug
+adb -s SERIAL shell am instrument -w -e parcelOnly true cn.courselens.qa.test/cn.courselens.NativeChecks
+```
+
+`ParcelRulesTest` 使用合成语料；JUnit 覆盖代理协议和退避，`ParcelAndroidTest` 用 Robolectric 模拟 Android 13 / 14 / 15，检查 Room 去重、运输中补全、删除/完成防复活、权限开关、查询合并与旧响应保护。Android 16 需 JDK 21，可使用 `-PparcelTestSdks=33,34,35,36`；默认 JDK 17 不运行 API 36，不把未运行版本算通过。`ParcelChecks` 仪器专项使用唯一临时数据库并恢复查询退避偏好，测试包名必须为 QA；设备安装和备份仍按「设备验证」执行。CI 运行 JVM / Robolectric 检查并保留报告，不运行设备测试。Mock 测试均不代表真实快递100 / 快递鸟调用已通过。
+
+每个可用 Android 13 / 14 / 15 / 16 及以上的 QA 设备还需检查：首次拒绝/允许通知、频道关闭、通知访问授权/撤销与重新绑定、后台识别关闭后无写入；不同来源/重复通知/敏感通知过滤；分享 grant、过大图片、截图 OCR 和多码确认；深色及 2 倍字体；Doze / 重启 / 强行停止后的提醒延迟和查询开关；代理失联 / 429 / 旧响应；真实启动器固定请求、尺寸、取件后刷新和隐藏码值。无设备时只能交付构建及模拟结果，不能宣称这些端到端检查通过。64 位 ML Kit 原生库的 16 KiB ELF / APK 对齐检查也不能代替 Android 15+ 16 KiB 页设备运行。
+
 ## 多份课表与学校适配
 
 - 当前课表 ID 和名称列表放在 `timetables` SharedPreferences；原有课表继续使用 Activity 原偏好文件，不复制或改写已有课程格式。设置中的当前课表与切换列表支持长按名称改名，名称校验沿用 1–40 个字；只更新索引，不搬移课程数据。从设置进入新增页，取消或手动创建后返回设置；首页入口返回课表页。新增课表使用独立偏好文件，课程、学期、备注、冲突选择、调课与 `classTimes` 随课表切换。小组件读取同一当前 ID，旧课表的小组件点击不会误匹配新课表。学习通账号和作业仍使用原有独立存储。

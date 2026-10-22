@@ -1,0 +1,5 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/parcel_widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center_vertical" android:padding="16dp" android:background="@drawable/parcel_widget_background">
+ <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/parcel_widget_label" android:textSize="13sp" android:textColor="@color/parcel_muted"/>
+ <TextView android:id="@+id/parcel_widget_count" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/parcel_widget_empty" android:textSize="20sp" android:textStyle="bold" android:textColor="@color/parcel_ink"/>
+ <TextView android:id="@+id/parcel_widget_codes" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/parcel_widget_hint" android:textSize="15sp" android:textColor="@color/parcel_ink" android:maxLines="4" android:ellipsize="end"/>
+</LinearLayout>
