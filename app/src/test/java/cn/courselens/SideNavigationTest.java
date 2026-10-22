@@ -45,5 +45,13 @@ public class SideNavigationTest {
    drawer.open(0);activity.setContentView(new FrameLayout(activity));assertFalse(drawer.isOpen());assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_YES,page.getImportantForAccessibility());
   }
  }
+ @Test public void settingsIsAnAccessibleCircleAtTheBottomLeft(){
+  try(ActivityController<Activity> controller=Robolectric.buildActivity(Activity.class).setup()){
+   SideNavigation drawer=drawer(controller.get(),new FrameLayout(controller.get()),new int[]{-1},new int[]{0});drawer.open(0);drawer.measure(View.MeasureSpec.makeMeasureSpec(390,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(844,View.MeasureSpec.EXACTLY));drawer.layout(0,0,390,844);
+   View gear=drawer.findViewWithTag("drawer-settings");int target=Math.round(48*drawer.getResources().getDisplayMetrics().density);assertEquals(target,gear.getWidth());assertEquals(target,gear.getHeight());assertEquals("设置",gear.getContentDescription());assertTrue(gear.isFocusable());
+   android.graphics.Rect bounds=new android.graphics.Rect();gear.getDrawingRect(bounds);drawer.offsetDescendantRectToMyCoords(gear,bounds);assertTrue(bounds.left<drawer.getWidth()/4);assertTrue(bounds.bottom>drawer.getHeight()*3/4);
+  }
+ }
+
 }
 

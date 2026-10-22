@@ -28,7 +28,7 @@ final class TaskPage extends LinearLayout {
  private float pagePosition;
  private int[] restoredScrollY,renderRestoreY;
  private Runnable renderNext;private int renderGeneration;
- private TextView refresh,configure,settings,add;
+ private TextView refresh,configure,add;private View settings;
  private MainActivity.NavigationOverlay actionMenu;
  private final android.os.Handler timer=new android.os.Handler(android.os.Looper.getMainLooper());
  private final Runnable autoRefresh=this::autoRefresh;
@@ -79,7 +79,7 @@ final class TaskPage extends LinearLayout {
   add=activity.menuItem(actionMenu,"添加任务","task-add",()->editTask(null));
   refresh=activity.menuItem(actionMenu,"刷新作业","chaoxing-refresh",this::refresh);
   configure=activity.menuItem(actionMenu,"账号密码配置","chaoxing-connect",this::configure);
-  settings=activity.menuItem(actionMenu,"任务设置","task-settings",this::settings);controls();
+  controls();
  }
  private void selectFilter(int value){pager.setCurrentItem(value>=0&&value<filters.length?value:0,android.animation.ValueAnimator.areAnimatorsEnabled());}
  private void markFilter(int value){filter=value;for(int i=0;i<filters.length;i++){boolean selected=i==filter;filters[i].setSelected(selected);filters[i].setTextColor(selected?SecondaryUi.INK:SecondaryUi.MUTED);filters[i].setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);scrolls[i].setImportantForAccessibility(selected?IMPORTANT_FOR_ACCESSIBILITY_AUTO:IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);}}
@@ -169,6 +169,7 @@ final class TaskPage extends LinearLayout {
  private void delete(ChaoxingClient.Work work){
   if(busy||closed||snapshot==null)return;saveChange(next->{ChaoxingClient.Work removed=ChaoxingCache.find(next.items,work);if(removed!=null)next.items.remove(removed);else removed=ChaoxingCache.copy(work);if(ChaoxingCache.find(next.deleted,work)==null){removed.deletedAt=System.currentTimeMillis();next.deleted.add(removed);}},"任务已删除，可在任务设置的删除历史中恢复。",work.local());
  }
+ void settingsEntry(LinearLayout parent){settings=activity.option(parent,R.drawable.ic_tasks,"任务设置","课程加载、删除历史与自动刷新",this::settings);settings.setTag("task-settings");controls();}
  void settings(){
   if(busy||closed||!localReady)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"任务设置");
   View courses=activity.option(sheet.body,R.drawable.ic_tasks,"加载的课程",account.configured()?"选择要加载和展示任务的课程":"配置学习通后可选择课程",()->{sheet.close(false);courses();});courses.setTag("task-course-settings");courses.setEnabled(account.configured()&&platformReady);courses.setAlpha(account.configured()&&platformReady?1f:.45f);

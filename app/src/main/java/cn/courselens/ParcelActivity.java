@@ -11,6 +11,7 @@ import androidx.room.InvalidationTracker;
 import java.util.*;
 
 public class ParcelActivity extends Activity {
+ static final String OPEN_SETTINGS="cn.courselens.PARCEL_SETTINGS";
  private SecondaryUi ui;
  private SideNavigation sideNavigation;
  private LinearLayout root,list;
@@ -27,7 +28,7 @@ public class ParcelActivity extends Activity {
  };
  @Override public void onCreate(Bundle state){
   super.onCreate(state);ui=new SecondaryUi(this);ink=getColor(R.color.parcel_ink);muted=getColor(R.color.parcel_muted);card=getColor(R.color.parcel_card);surface=getColor(R.color.parcel_surface);
-  filter=state==null?0:state.getInt("filter",0);root=column();root.setBackgroundColor(surface);root.setPadding(0,ui.dp(8),0,0);root.setTag("parcel-center");sideNavigation=new SideNavigation(this,root,surface,card,ink,this::selectPrimaryPage,this::settings);sideNavigation.select(2);setContentView(sideNavigation);
+  filter=state==null?0:state.getInt("filter",0);root=column();root.setBackgroundColor(surface);root.setPadding(0,ui.dp(8),0,0);root.setTag("parcel-center");sideNavigation=new SideNavigation(this,root,surface,card,ink,this::selectPrimaryPage,()->startActivity(new Intent(this,MainActivity.class).setAction(MainActivity.OPEN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)));sideNavigation.select(2);setContentView(sideNavigation);
   root.setOnApplyWindowInsetsListener((view,insets)->{view.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop()+ui.dp(8),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
   LinearLayout pinned=column();LinearLayout header=new LinearLayout(this);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(12),0,ui.dp(12),0);pinned.addView(header);
   Button menu=ui.menuAction(header,()->sideNavigation.open(2));menu.setBackground(ui.bg(card,24));menu.getCompoundDrawables()[0].setTint(ink);TextView title=text("快递中心",24,ink);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);header.addView(title,new LinearLayout.LayoutParams(0,-2,1));icon(header,R.drawable.ic_more,"快递操作",this::showActions);header.getChildAt(header.getChildCount()-1).setTag("quick-menu-button");
@@ -39,15 +40,16 @@ public class ParcelActivity extends Activity {
   ParcelRepository.IO.execute(()->{if(!isDestroyed())ParcelDatabase.get(this).getInvalidationTracker().addObserver(observer);});
   boolean dark=(getResources().getConfiguration().uiMode&android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES;getWindow().getDecorView().setSystemUiVisibility(dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
   if(state!=null&&state.containsKey("draftCode")){ParcelRecord restored=new ParcelRecord();restored.id=state.getLong("draftId");restored.code=state.getString("draftCode","");restored.station=state.getString("draftStation","");restored.trackingNumber=state.getString("draftTracking","");restored.carrier=state.getString("draftCarrier","");restored.state=state.getInt("draftState");restoreDraft(restored);}
-  if(state==null)receive(getIntent());
+  if(state==null){receive(getIntent());openSettings(getIntent());}
  }
+ private void openSettings(Intent intent){if(OPEN_SETTINGS.equals(intent.getAction())){intent.setAction(Intent.ACTION_MAIN);settings();}}
+ @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);openSettings(intent);}
  private void restoreDraft(ParcelRecord restored){ParcelRepository.IO.execute(()->{ParcelRecord existing=restored.id==0?restored:ParcelDatabase.get(this).parcels().get(restored.id);runOnUiThread(()->{if(isDestroyed()||existing==null)return;existing.code=restored.code;existing.station=restored.station;existing.trackingNumber=restored.trackingNumber;existing.carrier=restored.carrier;existing.state=restored.state;edit(existing);});});}
  private void showActions(){
   LinearLayout body=sheet("快递操作");
   button(body,"添加快递",()->edit(new ParcelRecord())).setTag("parcel-add");
   button(body,"识别文本 / 截图",this::importSheet).setTag("parcel-import");
   button(body,"官方身份码",()->{currentSheet.dismiss();identity();}).setTag("parcel-identity");
-  button(body,"快递设置",this::settings).setTag("parcel-settings");
  }
  private void selectPrimaryPage(int selected){if(selected!=2)startActivity(new Intent(this,MainActivity.class).setAction(MainActivity.OPEN_TAB).putExtra("primaryTab",selected).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP));}
  private void selectBottomPage(int selected){if(selected==2)return;startActivity(new Intent(this,MainActivity.class).setAction(MainActivity.OPEN_TAB).putExtra("primaryTab",selected).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_NO_ANIMATION));overridePendingTransition(0,0);}

@@ -25,7 +25,7 @@ public class MainActivity extends Activity {
  private boolean remoteResumed,touching,manualUpdatePending;private int pagerState,manualCheckScreen=-1;private long interactionAt;private final Runnable remoteNotice=this::showRemoteNotice;private final RemoteConfigClient.Listener remoteListener=this::remoteChanged;
  private final ViewTreeObserver.OnScrollChangedListener remoteScroll=()->{interactionAt=SystemClock.uptimeMillis();scheduleRemoteNotice();};
  private static final String ADD_WIDGET="cn.courselens.ADD_WIDGET";
- static final String OPEN_TAB="cn.courselens.OPEN_TAB";
+ static final String OPEN_TAB="cn.courselens.OPEN_TAB",OPEN_SETTINGS="cn.courselens.OPEN_SETTINGS";
  private Set<String> displayChoices=new HashSet<>();
  private String adjustments="";
  private String cachedData,cachedAdjustments,cachedTerm;private List<Course> cachedCourses;
@@ -34,7 +34,7 @@ public class MainActivity extends Activity {
  private HomePage homePage;
  private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible,switchingBottomTab;
  private FrameLayout windowContent;private AppNavigation bottomNavigation;private SideNavigation sideNavigation;
- private LinearLayout settingsPage;private int settingsScrollY;
+ private LinearLayout settingsPage;private int settingsScrollY;private boolean settingsFromParcel;
  private ScrollView timetableScroll;private int timetableScrollY;
  private final PageMotion pageMotion=new PageMotion();private android.window.OnBackInvokedCallback systemBack;private boolean backRegistered;
  private ViewPager pager;private TextView weekLabel;private FrameLayout daysBar; private LinearLayout root;private FrameLayout stage;private boolean returningPage;private int week=6;private String data="",notes="",term="2026-08-31";
@@ -44,11 +44,11 @@ public class MainActivity extends Activity {
 
  @Override public void onCreate(Bundle state){super.onCreate(state);schoolAccount=new SchoolAccount(this);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);setTimes(ClassTimes.parse(getPreferences(0).getString("classTimes","")));schoolId=getPreferences(0).getString("school","squ");loginSchool=schoolId;school=schoolClient(schoolId);data=getPreferences(0).getString("courses","");notes=getPreferences(0).getString("notes","");if((getApplicationInfo().flags&android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0)school.onDiagnostic=summary->{try(java.io.FileOutputStream out=openFileOutput("sync-diagnostic.txt",0)){out.write(summary.getBytes(java.nio.charset.StandardCharsets.UTF_8));}catch(Exception ignored){}};else deleteFile("sync-diagnostic.txt");week=getPreferences(0).getInt("week",6);term=getPreferences(0).getString("term",term);displayChoices=new HashSet<>(getPreferences(0).getStringSet("displayChoices",Collections.emptySet()));adjustments=getPreferences(0).getString("courseAdjustments","");home();openWidget(getIntent());widgetShortcut();
   if(state!=null){taskState=state.getBundle("taskPage");if(state.getBoolean("tasksVisible")&&!CourseWidget.OPEN.equals(getIntent().getAction())&&!ADD_WIDGET.equals(getIntent().getAction()))tasks();}
-  openPrimaryTab(getIntent());
+  if(state!=null&&state.getBoolean("appSettingsVisible")){settingsFromParcel=state.getBoolean("settingsFromParcel");menu();}openPrimaryTab(getIntent());
   View decor=getWindow().getDecorView();decor.getViewTreeObserver().addOnScrollChangedListener(remoteScroll);
   decor.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener(){boolean drawn;public void onDraw(){if(drawn)return;drawn=true;decor.post(()->{if(decor.getViewTreeObserver().isAlive())decor.getViewTreeObserver().removeOnDrawListener(this);remoteHandler.postDelayed(()->{if(!isDestroyed()&&!isFinishing()){remote=RemoteConfigClient.get(MainActivity.this);remote.listen(remoteListener);if(state==null||!remote.loaded)remote.opened();refreshRemoteStatus();}},1500);Looper.myQueue().addIdleHandler(()->{prepareTasks();return false;});});}});
  }
- @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("tasksVisible",tasksVisible);Bundle page=new Bundle();if(taskPage!=null)taskPage.saveState(page);else if(taskState!=null)page.putAll(taskState);state.putBundle("taskPage",page);}
+ @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("tasksVisible",tasksVisible);state.putBoolean("appSettingsVisible",root==settingsPage&&settingsPage!=null);state.putBoolean("settingsFromParcel",settingsFromParcel);Bundle page=new Bundle();if(taskPage!=null)taskPage.saveState(page);else if(taskState!=null)page.putAll(taskState);state.putBundle("taskPage",page);}
  @Override public SharedPreferences getPreferences(int mode){return Timetables.preferences(this);}
  private void setTimes(ClassTimes value){classTimes=value;START_TIMES=value.starts;END_TIMES=value.ends;}
  private SchoolClient schoolClient(String id){return id.equals("xzit")?new XzitClient():new SchoolClient();}
@@ -69,7 +69,7 @@ public class MainActivity extends Activity {
   if(choiceSheet!=null){choiceSheet.close(false);choiceSheet=null;}
   LinearLayout previous=root;boolean backwards=returningPage||!secondary;
   pageBack=null;updateSystemBack();showingDetail=false;screen++;pager=null;
-  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));sideNavigation=new SideNavigation(this,windowContent,SURFACE,Color.WHITE,INK,this::selectPrimaryPage,()->{if(tasksVisible)taskPage.settings();else menu();});setContentView(sideNavigation);}
+  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));sideNavigation=new SideNavigation(this,windowContent,SURFACE,Color.WHITE,INK,this::selectPrimaryPage,()->{settingsFromParcel=false;menu();});setContentView(sideNavigation);}
   bottomNavigation.setVisibility(secondary?View.GONE:View.VISIBLE);updateBottomNavigation();
   for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();
   stage.removeAllViews();
@@ -106,7 +106,7 @@ public class MainActivity extends Activity {
  private void updateBottomNavigation(){
   if(bottomNavigation!=null)bottomNavigation.select(tasksVisible?1:0);if(sideNavigation!=null)sideNavigation.select(tasksVisible?1:0);
  }
- private void openPrimaryTab(Intent intent){if(!OPEN_TAB.equals(intent.getAction()))return;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);switchingBottomTab=(intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION)!=0;try{if(selected==0)home();else if(selected==1)tasks();}finally{switchingBottomTab=false;}}
+ private void openPrimaryTab(Intent intent){if(OPEN_SETTINGS.equals(intent.getAction())){intent.setAction(Intent.ACTION_MAIN);settingsFromParcel=true;menu();return;}if(!OPEN_TAB.equals(intent.getAction()))return;settingsFromParcel=false;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);switchingBottomTab=(intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION)!=0;try{if(selected==0)home();else if(selected==1)tasks();}finally{switchingBottomTab=false;}}
  // Prepare cached task content after the first home frame; due refreshes run on the task worker.
  private void prepareTasks(){
   if(isDestroyed()||isFinishing()||taskPage!=null)return;
@@ -137,9 +137,9 @@ public class MainActivity extends Activity {
  private void quickMenu(){
   if(navigationOverlay!=null&&navigationOverlay.corner){navigationOverlay.close(true);return;}
   NavigationOverlay overlay=new NavigationOverlay(true,"更多操作");
-  String[] labels={"课程管理","完整设置","学校登录","切换课表","新增课表"};
-  Runnable[] actions={()->edit(),()->menu(),()->login(),()->timetablePicker(),()->newTimetable()};
-  for(int i=0;i<labels.length;i++)menuItem(overlay,labels[i],"quick-action-"+i,actions[i]);
+  String[] labels={"课程管理","学校登录","切换课表","新增课表"};
+  Runnable[] actions={()->edit(),()->login(),()->timetablePicker(),()->newTimetable()};int[] tags={0,2,3,4};
+  for(int i=0;i<labels.length;i++)menuItem(overlay,labels[i],"quick-action-"+tags[i],actions[i]);
   menuItem(overlay,"回到本周","return-current-week",()->changeWeek(currentWeek())).setEnabled(week!=currentWeek());
   if(getPreferences(0).getBoolean("schoolImported",notes.startsWith("已从学校同步")))menuItem(overlay,"刷新课表","refresh-timetable",this::refreshTimetable).setEnabled(!busy);
  }
@@ -309,14 +309,15 @@ public class MainActivity extends Activity {
   if(!title.isEmpty()){TextView label=text(title,12,0xff707070);label.setPadding(dp(4),dp(4),0,dp(6));body.addView(label);}
   LinearLayout group=new LinearLayout(this);group.setOrientation(LinearLayout.VERTICAL);group.setTag("settings-group");group.setBackground(bg(Color.WHITE,18));group.setClipToOutline(true);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(12);body.addView(group,lp);return group;
  }
+ private void closeSettings(){boolean parcel=settingsFromParcel;settingsFromParcel=false;if(tasksVisible)tasks();else home();if(parcel)startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));}
  private void menu(){
   if(returningPage&&settingsPage!=null){
    settingsPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(true,false,settingsPage);
    root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);
-   pageBack=()->home();updateSystemBack();remoteStatus=root.findViewWithTag("update-status");refreshRemoteStatus();
+   pageBack=this::closeSettings;updateSystemBack();remoteStatus=root.findViewWithTag("update-status");refreshRemoteStatus();
    ((ScrollView)root.getChildAt(1)).scrollTo(0,settingsScrollY);return;
   }
-  LinearLayout body=secondary("课表设置","",()->home());
+  LinearLayout body=secondary("设置","",this::closeSettings);
   LinearLayout tables=settingsGroup(body,"课表");LinearLayout current=option(tables,R.drawable.ic_grid,"当前课表",Timetables.names(this).get(Timetables.active(this)),this::timetablePicker);current.setTag("switch-timetable");current.setTooltipText("长按修改课表名称");current.setOnLongClickListener(v->{renameTimetable(Timetables.active(this));return true;});option(tables,R.drawable.ic_grid,"新增课表","",this::newTimetable).setTag("add-timetable");
   LinearLayout semester=settingsGroup(body,"学期");
   option(semester,R.drawable.ic_calendar,"开学日期",term,()->termPicker()).setTag("settings-term");option(semester,R.drawable.ic_calendar,"作息时间","每天 "+START_TIMES.length+" 节",this::timesForm).setTag("settings-times");
@@ -324,6 +325,7 @@ public class MainActivity extends Activity {
   option(courses,R.drawable.ic_notes,"课程管理","",()->edit(()->menu()));
   option(courses,R.drawable.ic_calendar,"单次调课 / 停课","",()->adjustmentManager()).setTag("adjustment-manager");
   option(courses,R.drawable.ic_grid,"桌面小组件","",()->widgetAddPage()).setTag("add-home-widget");
+  LinearLayout modules=settingsGroup(body,"任务与快递");prepareTasks();taskPage.settingsEntry(modules);option(modules,R.drawable.ic_parcel,"快递设置","通知识别、提醒与小组件",()->startActivity(new Intent(this,ParcelActivity.class).setAction(ParcelActivity.OPEN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))).setTag("parcel-settings");
   LinearLayout software=settingsGroup(body,"软件与下载");
   option(software,R.drawable.ic_parcel,"快递中心","取件码与物流",()->startActivity(new Intent(this,ParcelActivity.class))).setTag("parcel-center");
   remoteStatus=null;option(software,R.drawable.ic_notes,"关于软件","",this::about).setTag("about-app");
