@@ -35,7 +35,7 @@ public class ParcelActivity extends Activity {
   LinearLayout selector=new LinearLayout(this);selector.setPadding(ui.dp(16),0,ui.dp(16),ui.dp(8));pinned.addView(selector);
   String[] names={"待取件","运输中","已完成"};for(int i=0;i<3;i++){final int selected=i;TextView tab=text(names[i],15,ink);tab.setTag("parcel-filter-"+i);tab.setGravity(Gravity.CENTER);tab.setMinHeight(ui.dp(48));tab.setPadding(ui.dp(4),ui.dp(12),ui.dp(4),ui.dp(12));tab.setFocusable(true);tab.setOnClickListener(v->{filter=selected;load();});selector.addView(tab,new LinearLayout.LayoutParams(0,-2,1));tabs[i]=tab;}
   ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);root.addView(new ScrollHeader(this,pinned,scroll,surface,scroll),new LinearLayout.LayoutParams(-1,0,1));list=column();list.setTag("parcel-list");list.setPadding(ui.dp(20),0,ui.dp(20),ui.dp(24));scroll.addView(list);
-  root.addView(new AppNavigation(this,surface,ink,2,this::selectPrimaryPage),new LinearLayout.LayoutParams(-1,-2));
+  root.addView(new AppNavigation(this,surface,ink,2,this::selectBottomPage),new LinearLayout.LayoutParams(-1,-2));
   ParcelRepository.IO.execute(()->{if(!isDestroyed())ParcelDatabase.get(this).getInvalidationTracker().addObserver(observer);});
   boolean dark=(getResources().getConfiguration().uiMode&android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES;getWindow().getDecorView().setSystemUiVisibility(dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
   if(state!=null&&state.containsKey("draftCode")){ParcelRecord restored=new ParcelRecord();restored.id=state.getLong("draftId");restored.code=state.getString("draftCode","");restored.station=state.getString("draftStation","");restored.trackingNumber=state.getString("draftTracking","");restored.carrier=state.getString("draftCarrier","");restored.state=state.getInt("draftState");restoreDraft(restored);}
@@ -50,6 +50,7 @@ public class ParcelActivity extends Activity {
   button(body,"快递设置",this::settings).setTag("parcel-settings");
  }
  private void selectPrimaryPage(int selected){if(selected!=2)startActivity(new Intent(this,MainActivity.class).setAction(MainActivity.OPEN_TAB).putExtra("primaryTab",selected).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP));}
+ private void selectBottomPage(int selected){if(selected==2)return;startActivity(new Intent(this,MainActivity.class).setAction(MainActivity.OPEN_TAB).putExtra("primaryTab",selected).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_NO_ANIMATION));overridePendingTransition(0,0);}
  @Override public void onBackPressed(){if(sideNavigation!=null&&sideNavigation.close(true))return;super.onBackPressed();}
  @Override protected void onResume(){super.onResume();load();}
  @Override protected void onDestroy(){if(sideNavigation!=null)sideNavigation.close(false);ParcelDatabase.get(this).getInvalidationTracker().removeObserver(observer);if(currentSheet!=null)currentSheet.dismiss();super.onDestroy();}

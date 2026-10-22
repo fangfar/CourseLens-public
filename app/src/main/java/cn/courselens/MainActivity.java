@@ -32,7 +32,7 @@ public class MainActivity extends Activity {
  private Map<String,CourseAdjustment> cachedMoves=Collections.emptyMap();
  private Map<Course,String> cachedCardText=new HashMap<>();
  private HomePage homePage;
- private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible;
+ private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible,switchingBottomTab;
  private FrameLayout windowContent;private AppNavigation bottomNavigation;private SideNavigation sideNavigation;
  private LinearLayout settingsPage;private int settingsScrollY;
  private ScrollView timetableScroll;private int timetableScrollY;
@@ -75,7 +75,7 @@ public class MainActivity extends Activity {
   stage.removeAllViews();
   root=retained!=null?retained:new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setClickable(true);
   root.setBackgroundColor(SURFACE);
-  boolean animate=previous!=null&&previous.getWidth()>0&&android.animation.ValueAnimator.areAnimatorsEnabled();
+  boolean animate=!switchingBottomTab&&previous!=null&&previous.getWidth()>0&&android.animation.ValueAnimator.areAnimatorsEnabled();
   if(animate){
    stage.addView(previous,new FrameLayout.LayoutParams(-1,-1));
   }
@@ -98,11 +98,15 @@ public class MainActivity extends Activity {
 
  private void selectPrimaryPage(int selected){if(selected==0){if(tasksVisible)home();}else if(selected==1){if(!tasksVisible)tasks();}else startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));}
  void openSideMenu(){if(busy)return;pageMotion.cancel();sideNavigation.open(tasksVisible?1:0);}
- private AppNavigation createBottomNavigation(){return new AppNavigation(this,SURFACE,INK,tasksVisible?1:0,this::selectPrimaryPage);}
+ private void selectBottomPage(int selected){
+  if(selected==2){startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_NO_ANIMATION));overridePendingTransition(0,0);return;}
+  switchingBottomTab=true;try{selectPrimaryPage(selected);}finally{switchingBottomTab=false;}
+ }
+ private AppNavigation createBottomNavigation(){return new AppNavigation(this,SURFACE,INK,tasksVisible?1:0,this::selectBottomPage);}
  private void updateBottomNavigation(){
   if(bottomNavigation!=null)bottomNavigation.select(tasksVisible?1:0);if(sideNavigation!=null)sideNavigation.select(tasksVisible?1:0);
  }
- private void openPrimaryTab(Intent intent){if(!OPEN_TAB.equals(intent.getAction()))return;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);if(selected==0)home();else if(selected==1)tasks();}
+ private void openPrimaryTab(Intent intent){if(!OPEN_TAB.equals(intent.getAction()))return;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);switchingBottomTab=(intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION)!=0;try{if(selected==0)home();else if(selected==1)tasks();}finally{switchingBottomTab=false;}}
  // Prepare cached task content after the first home frame; due refreshes run on the task worker.
  private void prepareTasks(){
   if(isDestroyed()||isFinishing()||taskPage!=null)return;
