@@ -25,19 +25,19 @@ public class MainActivity extends Activity {
  private boolean remoteResumed,touching,manualUpdatePending;private int pagerState,manualCheckScreen=-1;private long interactionAt;private final Runnable remoteNotice=this::showRemoteNotice;private final RemoteConfigClient.Listener remoteListener=this::remoteChanged;
  private final ViewTreeObserver.OnScrollChangedListener remoteScroll=()->{interactionAt=SystemClock.uptimeMillis();scheduleRemoteNotice();};
  private static final String ADD_WIDGET="cn.courselens.ADD_WIDGET";
- static final String OPEN_TAB="cn.courselens.OPEN_TAB";
+ static final String OPEN_TAB="cn.courselens.OPEN_TAB",OPEN_SETTINGS="cn.courselens.OPEN_SETTINGS";
  private Set<String> displayChoices=new HashSet<>();
  private String adjustments="";
  private String cachedData,cachedAdjustments,cachedTerm;private List<Course> cachedCourses;
  private Map<String,CourseAdjustment> cachedMoves=Collections.emptyMap();
  private Map<Course,String> cachedCardText=new HashMap<>();
  private HomePage homePage;
- private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible;
- private FrameLayout windowContent;private AppNavigation bottomNavigation;
- private LinearLayout settingsPage;private int settingsScrollY;
+ private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible,switchingBottomTab;
+ private FrameLayout windowContent;private AppNavigation bottomNavigation;private SideNavigation sideNavigation;
+ private LinearLayout settingsPage;private int settingsScrollY;private boolean settingsFromParcel;
  private ScrollView timetableScroll;private int timetableScrollY;
  private final PageMotion pageMotion=new PageMotion();private android.window.OnBackInvokedCallback systemBack;private boolean backRegistered;
- private ViewPager pager;private TextView weekLabel,returnWeekButton;private FrameLayout daysBar; private LinearLayout root;private FrameLayout stage;private boolean returningPage;private int week=6;private String data="",notes="",term="2026-08-31";
+ private ViewPager pager;private TextView weekLabel;private FrameLayout daysBar; private LinearLayout root;private FrameLayout stage;private boolean returningPage;private int week=6;private String data="",notes="",term="2026-08-31";
  private SchoolClient school=new SchoolClient();private final ExecutorService worker=Executors.newSingleThreadExecutor();private boolean busy=false,showingDetail=false;private int screen=0;private Runnable pageBack;private CourseChoiceSheet choiceSheet;private NavigationOverlay navigationOverlay;
  private EditText account,password,captcha;private TextView loginStatus;private ProgressBar loginProgress;private Button loginButton;private LinearLayout captchaBox;private ImageView captchaImage;private SchoolAccount schoolAccount;private String loginAccountPrefill;
  private int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
@@ -45,11 +45,11 @@ public class MainActivity extends Activity {
  @Override protected void attachBaseContext(Context base){super.attachBaseContext(Appearance.wrap(base));}
  @Override public void onCreate(Bundle state){super.onCreate(state);applyPalette();schoolAccount=new SchoolAccount(this);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);Appearance.systemBars(this);setTimes(ClassTimes.parse(getPreferences(0).getString("classTimes","")));schoolId=getPreferences(0).getString("school","squ");loginSchool=schoolId;school=schoolClient(schoolId);data=getPreferences(0).getString("courses","");notes=getPreferences(0).getString("notes","");if((getApplicationInfo().flags&android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0)school.onDiagnostic=summary->{try(java.io.FileOutputStream out=openFileOutput("sync-diagnostic.txt",0)){out.write(summary.getBytes(java.nio.charset.StandardCharsets.UTF_8));}catch(Exception ignored){}};else deleteFile("sync-diagnostic.txt");week=getPreferences(0).getInt("week",6);term=getPreferences(0).getString("term",term);displayChoices=new HashSet<>(getPreferences(0).getStringSet("displayChoices",Collections.emptySet()));adjustments=getPreferences(0).getString("courseAdjustments","");home();openWidget(getIntent());widgetShortcut();
   if(state!=null){taskState=state.getBundle("taskPage");if(state.getBoolean("tasksVisible")&&!CourseWidget.OPEN.equals(getIntent().getAction())&&!ADD_WIDGET.equals(getIntent().getAction()))tasks();}
-  openPrimaryTab(getIntent());
+  if(state!=null&&state.getBoolean("appSettingsVisible")){settingsFromParcel=state.getBoolean("settingsFromParcel");menu();}openPrimaryTab(getIntent());
   View decor=getWindow().getDecorView();decor.getViewTreeObserver().addOnScrollChangedListener(remoteScroll);
   decor.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener(){boolean drawn;public void onDraw(){if(drawn)return;drawn=true;decor.post(()->{if(decor.getViewTreeObserver().isAlive())decor.getViewTreeObserver().removeOnDrawListener(this);remoteHandler.postDelayed(()->{if(!isDestroyed()&&!isFinishing()){remote=RemoteConfigClient.get(MainActivity.this);remote.listen(remoteListener);if(state==null||!remote.loaded)remote.opened();refreshRemoteStatus();}},1500);Looper.myQueue().addIdleHandler(()->{prepareTasks();return false;});});}});
  }
- @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("tasksVisible",tasksVisible);Bundle page=new Bundle();if(taskPage!=null)taskPage.saveState(page);else if(taskState!=null)page.putAll(taskState);state.putBundle("taskPage",page);}
+ @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("tasksVisible",tasksVisible);state.putBoolean("appSettingsVisible",root==settingsPage&&settingsPage!=null);state.putBoolean("settingsFromParcel",settingsFromParcel);Bundle page=new Bundle();if(taskPage!=null)taskPage.saveState(page);else if(taskState!=null)page.putAll(taskState);state.putBundle("taskPage",page);}
  @Override public SharedPreferences getPreferences(int mode){return Timetables.preferences(this);}
  private void setTimes(ClassTimes value){classTimes=value;START_TIMES=value.starts;END_TIMES=value.ends;}
  private SchoolClient schoolClient(String id){return id.equals("xzit")?new XzitClient():new SchoolClient();}
@@ -62,7 +62,7 @@ public class MainActivity extends Activity {
  private void base(boolean secondary,boolean fadeThrough){base(secondary,fadeThrough,null);}
  private void base(boolean secondary,boolean fadeThrough,LinearLayout retained){
   manualUpdatePending=false;pagerState=ViewPager.SCROLL_STATE_IDLE;if(remoteDialog!=null)remoteDialog.dismiss();scheduleRemoteNotice();
-  pageMotion.cancel();
+  pageMotion.cancel();if(sideNavigation!=null)sideNavigation.close(false);
   if(unsavedDialog!=null){unsavedDialog.dismiss();unsavedDialog=null;}
   while(navigationOverlay!=null)navigationOverlay.close(false);
   if(root==settingsPage&&settingsPage!=null)settingsScrollY=((ScrollView)settingsPage.getChildAt(1)).getScrollY();
@@ -70,13 +70,13 @@ public class MainActivity extends Activity {
   if(choiceSheet!=null){choiceSheet.close(false);choiceSheet=null;}
   LinearLayout previous=root;boolean backwards=returningPage||!secondary;
   pageBack=null;updateSystemBack();showingDetail=false;screen++;pager=null;
-  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));setContentView(windowContent);}
+  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));sideNavigation=new SideNavigation(this,windowContent,SURFACE,CARD,INK,this::selectPrimaryPage,()->{settingsFromParcel=false;menu();});setContentView(sideNavigation);}
   bottomNavigation.setVisibility(secondary?View.GONE:View.VISIBLE);updateBottomNavigation();
   for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();
   stage.removeAllViews();
   root=retained!=null?retained:new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setClickable(true);
   root.setBackgroundColor(SURFACE);
-  boolean animate=previous!=null&&previous.getWidth()>0&&android.animation.ValueAnimator.areAnimatorsEnabled();
+  boolean animate=!switchingBottomTab&&previous!=null&&previous.getWidth()>0&&android.animation.ValueAnimator.areAnimatorsEnabled();
   if(animate){
    stage.addView(previous,new FrameLayout.LayoutParams(-1,-1));
   }
@@ -97,18 +97,24 @@ public class MainActivity extends Activity {
  }
  private void ripple(View view){secondaryUi.ripple(view);}
 
- private AppNavigation createBottomNavigation(){return new AppNavigation(this,SURFACE,INK,NAV_MUTED,tasksVisible?1:0,selected->{if(selected==0){if(tasksVisible)home();}else if(selected==1){if(!tasksVisible)tasks();}else startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));});}
- private void updateBottomNavigation(){
-  if(bottomNavigation!=null)bottomNavigation.select(tasksVisible?1:0);
+ private void selectPrimaryPage(int selected){if(selected==0){if(tasksVisible)home();}else if(selected==1){if(!tasksVisible)tasks();}else startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));}
+ void openSideMenu(){if(busy)return;pageMotion.cancel();sideNavigation.open(tasksVisible?1:0);}
+ private void selectBottomPage(int selected){
+  if(selected==2){startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_NO_ANIMATION));overridePendingTransition(0,0);return;}
+  switchingBottomTab=true;try{selectPrimaryPage(selected);}finally{switchingBottomTab=false;}
  }
- private void openPrimaryTab(Intent intent){if(!OPEN_TAB.equals(intent.getAction()))return;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);if(selected==0)home();else if(selected==1)tasks();}
+ private AppNavigation createBottomNavigation(){return new AppNavigation(this,SURFACE,INK,NAV_MUTED,tasksVisible?1:0,this::selectBottomPage);}
+ private void updateBottomNavigation(){
+  if(bottomNavigation!=null)bottomNavigation.select(tasksVisible?1:0);if(sideNavigation!=null)sideNavigation.select(tasksVisible?1:0);
+ }
+ private void openPrimaryTab(Intent intent){if(OPEN_SETTINGS.equals(intent.getAction())){intent.setAction(Intent.ACTION_MAIN);settingsFromParcel=true;menu();return;}if(!OPEN_TAB.equals(intent.getAction()))return;settingsFromParcel=false;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);switchingBottomTab=(intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION)!=0;try{if(selected==0)home();else if(selected==1)tasks();}finally{switchingBottomTab=false;}}
  // Prepare cached task content after the first home frame; due refreshes run on the task worker.
  private void prepareTasks(){
   if(isDestroyed()||isFinishing()||taskPage!=null)return;
   taskPage=new TaskPage(this,taskState);int width=stage.getWidth(),height=stage.getHeight();
   if(width>0&&height>0){taskPage.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));taskPage.layout(0,0,width,height);}
  }
- boolean taskRefreshActive(){return remoteResumed&&navigationOverlay==null;}
+ boolean taskRefreshActive(){return remoteResumed&&navigationOverlay==null&&(sideNavigation==null||!sideNavigation.isOpen());}
  private void tasks(){getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);tasksVisible=true;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,true,taskPage);root.setBackgroundColor(SURFACE);}
 
  private Calendar date(){Calendar c=Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));c.set(Calendar.HOUR_OF_DAY,12);c.set(Calendar.MINUTE,0);c.set(Calendar.SECOND,0);c.set(Calendar.MILLISECOND,0);return c;}
@@ -132,11 +138,13 @@ public class MainActivity extends Activity {
  private void quickMenu(){
   if(navigationOverlay!=null&&navigationOverlay.corner){navigationOverlay.close(true);return;}
   NavigationOverlay overlay=new NavigationOverlay(true,"更多操作");
-  String[] labels={"课程管理","完整设置","学校登录","切换课表","新增课表"};
-  Runnable[] actions={()->edit(),()->menu(),()->login(),()->timetablePicker(),()->newTimetable()};
-  for(int i=0;i<labels.length;i++)menuItem(overlay,labels[i],"quick-action-"+i,actions[i]);
+  String[] labels={"课程管理","学校登录","切换课表","新增课表"};
+  Runnable[] actions={()->edit(),()->login(),()->timetablePicker(),()->newTimetable()};int[] tags={0,2,3,4};
+  for(int i=0;i<labels.length;i++)menuItem(overlay,labels[i],"quick-action-"+tags[i],actions[i]);
+  menuItem(overlay,"回到本周","return-current-week",()->changeWeek(currentWeek())).setEnabled(week!=currentWeek());
+  if(getPreferences(0).getBoolean("schoolImported",notes.startsWith("已从学校同步")))menuItem(overlay,"刷新课表","refresh-timetable",this::refreshTimetable).setEnabled(!busy);
  }
- private void menuItem(NavigationOverlay overlay,String label,String tag,Runnable run){TextView item=text(label,14,INK);item.setTag(tag);item.setGravity(Gravity.CENTER_VERTICAL);item.setPadding(dp(12),dp(10),dp(12),dp(10));item.setMinHeight(dp(48));item.setFocusable(true);item.setOnClickListener(v->{overlay.close(false);run.run();});ripple(item);overlay.body.addView(item,new LinearLayout.LayoutParams(-1,-2));}
+ TextView menuItem(NavigationOverlay overlay,String label,String tag,Runnable run){TextView item=text(label,14,INK);item.setTag(tag);item.setTextColor(new android.content.res.ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{DISABLED,INK}));item.setGravity(Gravity.CENTER_VERTICAL);item.setPadding(dp(12),dp(10),dp(12),dp(10));item.setMinHeight(dp(48));item.setFocusable(true);item.setOnClickListener(v->{overlay.close(false);run.run();});ripple(item);overlay.body.addView(item,new LinearLayout.LayoutParams(-1,-2));return item;}
  private NavigationOverlay sheetMenu(String title){return new NavigationOverlay(true,title);}
  class NavigationOverlay extends FrameLayout {
   final boolean corner;final LinearLayout panel,body;final View shade;final LinearLayout underneath;final Runnable underneathBack;final NavigationOverlay previous;
@@ -196,22 +204,18 @@ public class MainActivity extends Activity {
   boolean fromTasks=tasksVisible;tasksVisible=false;
   if(homePage!=null&&(pageBack!=null||fromTasks)&&navigationOverlay==null&&homePage.matches()){
    HomePage page=homePage;page.view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,false,page.view);
-   pager=page.pages;timetableScroll=page.scroll;daysBar=page.days;weekLabel=page.label;returnWeekButton=page.button;
+   pager=page.pages;timetableScroll=page.scroll;daysBar=page.days;weekLabel=page.label;
    pager.setCurrentItem(week-1,false);updateHeader();timetableScroll.scrollTo(0,timetableScrollY);return;
   }
-  base(false);LinearLayout header=new LinearLayout(this);header.setTag("home-header");header.setOrientation(LinearLayout.VERTICAL);root.addView(header);LinearLayout toolbar=new LinearLayout(this);toolbar.setGravity(Gravity.CENTER_VERTICAL);toolbar.setPadding(dp(16),dp(10),dp(8),dp(6));header.addView(toolbar);
-  LinearLayout dates=new LinearLayout(this);dates.setOrientation(LinearLayout.VERTICAL);Calendar today=date();TextView title=text(today.get(Calendar.YEAR)+"/"+(today.get(Calendar.MONTH)+1)+"/"+today.get(Calendar.DAY_OF_MONTH),25,INK);title.setTypeface(null,Typeface.BOLD);dates.addView(title);TextView sub=text(weekCaption(),14,INK);weekLabel=sub;LinearLayout.LayoutParams subp=new LinearLayout.LayoutParams(-1,-2);subp.topMargin=dp(4);dates.addView(sub,subp);dates.setTag("home-date");toolbar.addView(dates,new LinearLayout.LayoutParams(0,-2,1));
-  Button returnWeek=new Button(this);returnWeek.setText("本周");returnWeek.setTextSize(13);returnWeek.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));returnWeek.setTextColor(INK);returnWeek.setAllCaps(false);returnWeek.setSingleLine(true);returnWeek.setIncludeFontPadding(false);returnWeek.setGravity(Gravity.CENTER);returnWeek.setMinWidth(0);returnWeek.setMinimumWidth(0);returnWeek.setMinHeight(dp(48));returnWeek.setMinimumHeight(dp(48));returnWeek.setStateListAnimator(null);returnWeek.setBackgroundTintList(null);
-  android.graphics.drawable.Drawable calendar=getDrawable(R.drawable.ic_calendar).mutate();calendar.setTint(INK);calendar.setBounds(0,0,dp(18),dp(18));returnWeek.setCompoundDrawablesRelative(calendar,null,null,null);returnWeek.setCompoundDrawablePadding(dp(6));
-  android.graphics.drawable.StateListDrawable returnStates=new android.graphics.drawable.StateListDrawable();for(int[] state:new int[][]{new int[]{android.R.attr.state_pressed},new int[]{android.R.attr.state_focused},new int[]{}}){GradientDrawable shape=bg(state.length==0?CARD:AQUA,16);shape.setStroke(dp(1),state.length==0?SOFT:PRIMARY);returnStates.addState(state,new android.graphics.drawable.InsetDrawable(shape,0,dp(8),0,dp(8)));}returnWeek.setBackground(returnStates);returnWeek.setPadding(dp(12),dp(8),dp(12),dp(8));
-  returnWeek.setContentDescription("回到本周");returnWeek.setTooltipText("回到本周");returnWeek.setOnClickListener(v->changeWeek(currentWeek()));returnWeekButton=returnWeek;returnWeekButton.setTag("return-current-week");returnWeekButton.setVisibility(Math.abs(week-currentWeek())>=2?View.VISIBLE:View.GONE);LinearLayout.LayoutParams returnParams=new LinearLayout.LayoutParams(-2,-2);returnParams.rightMargin=dp(8);toolbar.addView(returnWeekButton,returnParams);
-  if(getPreferences(0).getBoolean("schoolImported",notes.startsWith("已从学校同步"))){Button refresh=secondaryUi.iconAction(toolbar,R.drawable.ic_sync,"刷新课表",this::refreshTimetable);refresh.setTag("refresh-timetable");refresh.setEnabled(!busy);LinearLayout.LayoutParams refreshParams=(LinearLayout.LayoutParams)refresh.getLayoutParams();refreshParams.leftMargin=0;refreshParams.rightMargin=dp(8);}
-  TextView more=icon(R.drawable.ic_more,"更多操作",()->quickMenu());more.setTag("quick-menu-button");toolbar.addView(more,new LinearLayout.LayoutParams(dp(48),dp(48)));
-  daysBar=new FrameLayout(this);daysBar.setTag("week-days-viewport");root.addView(daysBar,new LinearLayout.LayoutParams(-1,dp(55)));
-  TimetableScrollView scroll=new TimetableScrollView(this);timetableScroll=scroll;scroll.setFillViewport(false);scroll.setVerticalScrollBarEnabled(false);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);scroll.addView(content);
+  base(false);LinearLayout header=new LinearLayout(this);header.setTag("home-header");header.setOrientation(LinearLayout.VERTICAL);LinearLayout toolbar=new LinearLayout(this);toolbar.setGravity(Gravity.CENTER_VERTICAL);toolbar.setPadding(dp(16),dp(10),dp(16),dp(6));header.addView(toolbar);secondaryUi.menuAction(toolbar,this::openSideMenu);
+  LinearLayout dates=new LinearLayout(this);dates.setOrientation(LinearLayout.VERTICAL);dates.setGravity(Gravity.CENTER);Calendar today=date();TextView title=text((today.get(Calendar.MONTH)+1)+"月"+today.get(Calendar.DAY_OF_MONTH)+"日",25,INK);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);dates.addView(title);TextView sub=text(weekCaption(),14,MUTED);sub.setGravity(Gravity.CENTER);weekLabel=sub;LinearLayout.LayoutParams subp=new LinearLayout.LayoutParams(-1,-2);subp.topMargin=dp(4);dates.addView(sub,subp);dates.setTag("home-date");toolbar.addView(dates,new LinearLayout.LayoutParams(0,-2,1));
+  TextView more=icon(R.drawable.ic_more,"更多操作",()->quickMenu());more.setTag("quick-menu-button");LinearLayout.LayoutParams moreParams=new LinearLayout.LayoutParams(dp(48),dp(48));moreParams.leftMargin=dp(8);toolbar.addView(more,moreParams);
+  daysBar=new FrameLayout(this);daysBar.setTag("week-days-viewport");header.addView(daysBar,new LinearLayout.LayoutParams(-1,dp(55)));
+  TimetableScrollView scroll=new TimetableScrollView(this);timetableScroll=scroll;scroll.setFillViewport(false);scroll.setVerticalScrollBarEnabled(false);LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);scroll.addView(content);
    pager=scroll.new WeekPager(this);pager.setOffscreenPageLimit(1);pager.setAdapter(new PagerAdapter(){public int getCount(){return 30;}public boolean isViewFromObject(View v,Object o){return v==o;}public Object instantiateItem(ViewGroup container,int position){WeekGrid grid=new WeekGrid();grid.shownWeek=position+1;grid.setTag("week-grid-"+grid.shownWeek);grid.days=weekDays(grid.shownWeek);daysBar.addView(grid.days,new FrameLayout.LayoutParams(-1,dp(55)));daysBar.post(daysBar::requestLayout);grid.addOnLayoutChangeListener((v,left,top,right,bottom,oldLeft,oldTop,oldRight,oldBottom)->syncWeekDays());container.addView(grid);syncWeekDays();return grid;}public void destroyItem(ViewGroup container,int position,Object object){daysBar.removeView(((WeekGrid)object).days);container.removeView((View)object);}});pager.setCurrentItem(week-1,false);pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener(){public void onPageScrolled(int position,float offset,int pixels){syncWeekDays();}public void onPageSelected(int position){week=position+1;saveWeek();updateHeader();}public void onPageScrollStateChanged(int state){pagerState=state;scheduleRemoteNotice();}});content.addView(pager,new LinearLayout.LayoutParams(-1,dp(START_TIMES.length*66)));
   if(!notes.isEmpty()){TextView note=text(notes,12,MUTED);note.setPadding(dp(16),dp(16),dp(16),dp(24));content.addView(note);}
   final int restoreY=timetableScrollY;scroll.addOnLayoutChangeListener(new View.OnLayoutChangeListener(){public void onLayoutChange(View v,int l,int t,int r,int b,int oldL,int oldT,int oldR,int oldB){scroll.removeOnLayoutChangeListener(this);scroll.scrollTo(0,restoreY);}});
+  root.addView(new ScrollHeader(this,header,scroll,SURFACE,scroll),new LinearLayout.LayoutParams(-1,0,1));
   homePage=new HomePage();
  }
  @Override protected void onStart(){super.onStart();if(remote!=null)remote.opened();}
@@ -220,7 +224,7 @@ public class MainActivity extends Activity {
  @Override protected void onStop(){if(remoteDialog!=null)remoteDialog.dismiss();super.onStop();}
  @Override public boolean dispatchTouchEvent(MotionEvent event){if(event.getActionMasked()==MotionEvent.ACTION_DOWN)touching=true;interactionAt=SystemClock.uptimeMillis();try{return super.dispatchTouchEvent(event);}finally{if(event.getActionMasked()==MotionEvent.ACTION_UP||event.getActionMasked()==MotionEvent.ACTION_CANCEL){touching=false;scheduleRemoteNotice();}}}
  private String weekCaption(){String name=Timetables.names(this).get(Timetables.active(this));return "第 "+week+" 周  当前为第 "+currentWeek()+" 周"+(Timetables.names(this).size()>1?" · "+name:"");}
- private void updateHeader(){Calendar today=date();((TextView)((LinearLayout)weekLabel.getParent()).getChildAt(0)).setText(String.format(Locale.ROOT,"%d/%d/%d",today.get(Calendar.YEAR),today.get(Calendar.MONTH)+1,today.get(Calendar.DAY_OF_MONTH)));returnWeekButton.setVisibility(Math.abs(week-currentWeek())>=2?View.VISIBLE:View.GONE);weekLabel.setText(weekCaption());for(int i=0;i<pager.getChildCount();i++)if(pager.getChildAt(i) instanceof WeekGrid){WeekGrid grid=(WeekGrid)pager.getChildAt(i);updateDays(grid.days,grid.shownWeek);}syncWeekDays();}
+ private void updateHeader(){Calendar today=date();((TextView)((LinearLayout)weekLabel.getParent()).getChildAt(0)).setText(String.format(Locale.ROOT,"%d月%d日",today.get(Calendar.MONTH)+1,today.get(Calendar.DAY_OF_MONTH)));weekLabel.setText(weekCaption());for(int i=0;i<pager.getChildCount();i++)if(pager.getChildAt(i) instanceof WeekGrid){WeekGrid grid=(WeekGrid)pager.getChildAt(i);updateDays(grid.days,grid.shownWeek);}syncWeekDays();}
  private LinearLayout weekDays(int shownWeek){
   LinearLayout days=new LinearLayout(this);days.setTag("week-days-"+shownWeek);days.setPadding(0,dp(3),0,dp(10));
   for(int i=0;i<8;i++){TextView cell=text("",i==0?14:12,i==0?INK:MUTED);cell.setGravity(Gravity.CENTER);if(i==0)cell.setTypeface(null,Typeface.BOLD);else cell.setLineSpacing(dp(5),1);days.addView(cell,i==0?new LinearLayout.LayoutParams(dp(34),dp(42)):new LinearLayout.LayoutParams(0,dp(42),1));}
@@ -307,14 +311,15 @@ public class MainActivity extends Activity {
   if(!title.isEmpty()){TextView label=text(title,12,MUTED);label.setPadding(dp(4),dp(4),0,dp(6));body.addView(label);}
   LinearLayout group=new LinearLayout(this);group.setOrientation(LinearLayout.VERTICAL);group.setTag("settings-group");group.setBackground(bg(CARD,18));group.setClipToOutline(true);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(12);body.addView(group,lp);return group;
  }
+ private void closeSettings(){boolean parcel=settingsFromParcel;settingsFromParcel=false;if(tasksVisible)tasks();else home();if(parcel)startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));}
  private void menu(){
   if(returningPage&&settingsPage!=null){
    settingsPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(true,false,settingsPage);
    root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);
-   pageBack=()->home();updateSystemBack();remoteStatus=root.findViewWithTag("update-status");refreshRemoteStatus();
+   pageBack=this::closeSettings;updateSystemBack();remoteStatus=root.findViewWithTag("update-status");refreshRemoteStatus();
    ((ScrollView)root.getChildAt(1)).scrollTo(0,settingsScrollY);return;
   }
-  LinearLayout body=secondary("课表设置","",()->home());
+  LinearLayout body=secondary("设置","",this::closeSettings);
   LinearLayout tables=settingsGroup(body,"课表");LinearLayout current=option(tables,R.drawable.ic_grid,"当前课表",Timetables.names(this).get(Timetables.active(this)),this::timetablePicker);current.setTag("switch-timetable");current.setTooltipText("长按修改课表名称");current.setOnLongClickListener(v->{renameTimetable(Timetables.active(this));return true;});option(tables,R.drawable.ic_grid,"新增课表","",this::newTimetable).setTag("add-timetable");
   LinearLayout appearance=settingsGroup(body,"外观");option(appearance,R.drawable.ic_dark_mode,"深色模式",Appearance.label(this),this::appearanceSettings).setTag("dark-mode-setting");
   LinearLayout semester=settingsGroup(body,"学期");
@@ -323,6 +328,7 @@ public class MainActivity extends Activity {
   option(courses,R.drawable.ic_notes,"课程管理","",()->edit(()->menu()));
   option(courses,R.drawable.ic_calendar,"单次调课 / 停课","",()->adjustmentManager()).setTag("adjustment-manager");
   option(courses,R.drawable.ic_grid,"桌面小组件","",()->widgetAddPage()).setTag("add-home-widget");
+  LinearLayout modules=settingsGroup(body,"任务与快递");prepareTasks();taskPage.settingsEntry(modules);option(modules,R.drawable.ic_parcel,"快递设置","通知识别、提醒与小组件",()->startActivity(new Intent(this,ParcelActivity.class).setAction(ParcelActivity.OPEN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))).setTag("parcel-settings");
   LinearLayout software=settingsGroup(body,"软件与下载");
   option(software,R.drawable.ic_parcel,"快递中心","取件码与物流",()->startActivity(new Intent(this,ParcelActivity.class))).setTag("parcel-center");
   remoteStatus=null;option(software,R.drawable.ic_notes,"关于软件","",this::about).setTag("about-app");
@@ -363,7 +369,7 @@ public class MainActivity extends Activity {
  private void refreshRemoteStatus(){if(remoteStatus==null||!remoteStatus.isAttachedToWindow())return;String status=remote==null||!remote.loaded?"尚未检查更新":remote.checking?"正在检查更新…":remote.config==null?"暂无可用更新信息":remote.config.newerThan(appVersionCode())?"发现新版本 "+remote.config.versionName:"当前版本 "+appVersion();if(remote!=null&&remote.config!=null){String time=new java.text.SimpleDateFormat("MM-dd HH:mm",Locale.CHINA).format(new Date(remote.validatedAt));status+=" · 缓存于 "+time;if(!remote.fresh(System.currentTimeMillis()))status+="（已过期）";}remoteStatus.setText(status);remoteStatus.setTextColor(remote!=null&&remote.config!=null&&remote.config.newerThan(appVersionCode())?PRIMARY:MUTED);}
  private void remoteChanged(String error,boolean manual){if(isDestroyed()||isFinishing())return;refreshRemoteStatus();if(manual&&remoteResumed&&screen==manualCheckScreen){if(error!=null)toast(error);else if(remote.config==null)toast("暂无可用更新信息");else if(remote.config.newerThan(appVersionCode()))manualUpdatePending=true;else toast("已是最新版本");}scheduleRemoteNotice();}
  private void scheduleRemoteNotice(){remoteHandler.removeCallbacks(remoteNotice);if(remoteResumed)remoteHandler.postDelayed(remoteNotice,1500);}
- private boolean canShowRemote(){return remoteResumed&&hasWindowFocus()&&!isFinishing()&&!isDestroyed()&&!touching&&SystemClock.uptimeMillis()-interactionAt>=1400&&pagerState==ViewPager.SCROLL_STATE_IDLE&&!pageMotion.isRunning()&&!busy&&navigationOverlay==null&&!showingDetail&&(choiceSheet==null||choiceSheet.getVisibility()!=View.VISIBLE)&&(unsavedDialog==null||!unsavedDialog.isShowing())&&(widgetDialog==null||!widgetDialog.isShowing())&&(remoteDialog==null||!remoteDialog.isShowing());}
+ private boolean canShowRemote(){return remoteResumed&&hasWindowFocus()&&!isFinishing()&&!isDestroyed()&&!touching&&SystemClock.uptimeMillis()-interactionAt>=1400&&pagerState==ViewPager.SCROLL_STATE_IDLE&&!pageMotion.isRunning()&&!busy&&navigationOverlay==null&&(sideNavigation==null||!sideNavigation.isOpen())&&!showingDetail&&(choiceSheet==null||choiceSheet.getVisibility()!=View.VISIBLE)&&(unsavedDialog==null||!unsavedDialog.isShowing())&&(widgetDialog==null||!widgetDialog.isShowing())&&(remoteDialog==null||!remoteDialog.isShowing());}
  private void showRemoteNotice(){
   if(remote==null||remote.config==null||remote.checking)return;if(pageMotion.isRunning()){scheduleRemoteNotice();return;}if(!canShowRemote())return;RemoteConfig config=remote.config;
   if(manualUpdatePending){manualUpdatePending=false;if(config.newerThan(appVersionCode()))showUpdate(config);return;}
@@ -732,12 +738,12 @@ public class MainActivity extends Activity {
    home();toast("课程安排已更新，请查看最新课表");
   }catch(RuntimeException e){home();toast("请检查课表及开学日期设置");}
  }
-  @Override public void onBackPressed(){if(navigationOverlay!=null){navigationOverlay.close(true);return;}if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE){choiceSheet.close(true);return;}if(busy){toast("正在同步，请稍候");return;}if(pageBack!=null){backPage();return;}if(tasksVisible){home();return;}super.onBackPressed();}
- @Override protected void onDestroy(){if(taskPage!=null)taskPage.close();remoteResumed=false;if(remote!=null)remote.unlisten(remoteListener);if(remoteDialog!=null)remoteDialog.dismiss();remoteHandler.removeCallbacksAndMessages(null);if(getWindow().getDecorView().getViewTreeObserver().isAlive())getWindow().getDecorView().getViewTreeObserver().removeOnScrollChangedListener(remoteScroll);if(unsavedDialog!=null)unsavedDialog.dismiss();if(widgetDialog!=null)widgetDialog.dismiss();screen++;pageMotion.cancel();while(navigationOverlay!=null)navigationOverlay.close(false);if(Build.VERSION.SDK_INT>=33&&backRegistered)getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBack);if(stage!=null)for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();worker.shutdownNow();homePage=null;if(password!=null)password.getText().clear();super.onDestroy();}
+  @Override public void onBackPressed(){if(sideNavigation!=null&&sideNavigation.close(true))return;if(navigationOverlay!=null){navigationOverlay.close(true);return;}if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE){choiceSheet.close(true);return;}if(busy){toast("正在同步，请稍候");return;}if(pageBack!=null){backPage();return;}if(tasksVisible){home();return;}super.onBackPressed();}
+ @Override protected void onDestroy(){if(sideNavigation!=null)sideNavigation.close(false);if(taskPage!=null)taskPage.close();remoteResumed=false;if(remote!=null)remote.unlisten(remoteListener);if(remoteDialog!=null)remoteDialog.dismiss();remoteHandler.removeCallbacksAndMessages(null);if(getWindow().getDecorView().getViewTreeObserver().isAlive())getWindow().getDecorView().getViewTreeObserver().removeOnScrollChangedListener(remoteScroll);if(unsavedDialog!=null)unsavedDialog.dismiss();if(widgetDialog!=null)widgetDialog.dismiss();screen++;pageMotion.cancel();while(navigationOverlay!=null)navigationOverlay.close(false);if(Build.VERSION.SDK_INT>=33&&backRegistered)getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBack);if(stage!=null)for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();worker.shutdownNow();homePage=null;if(password!=null)password.getText().clear();super.onDestroy();}
  // Retain one Activity-owned home only; data/term/notes/choices changes replace it.
  private class HomePage {
   final LinearLayout view=root;final ViewPager pages=pager;final ScrollView scroll=timetableScroll;final FrameLayout days=daysBar;
-  final TextView label=weekLabel,button=returnWeekButton;final String courses=data,changes=adjustments,start=term,note=notes;
+  final TextView label=weekLabel;final String courses=data,changes=adjustments,start=term,note=notes;
   final Set<String> choices=new HashSet<>(displayChoices);
   boolean matches(){return courses.equals(data)&&changes.equals(adjustments)&&start.equals(term)&&note.equals(notes)&&choices.equals(displayChoices);}
  }
