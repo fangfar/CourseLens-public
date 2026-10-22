@@ -42,13 +42,14 @@ final class TaskPage extends LinearLayout {
 
  TaskPage(Context context,Bundle state){
   super(context);activity=(MainActivity)context;ui=new SecondaryUi(activity);account=new ChaoxingAccount(context);setTag("tasks-page");setOrientation(VERTICAL);
-  LinearLayout header=new LinearLayout(context);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(20),ui.dp(12),ui.dp(20),0);addView(header,new LayoutParams(-1,-2));
-  LinearLayout heading=new LinearLayout(context);heading.setOrientation(VERTICAL);header.addView(heading,new LayoutParams(0,-2,1));TextView title=ui.text("任务",24,SecondaryUi.INK);title.setTypeface(null,Typeface.BOLD);heading.addView(title);
+  LinearLayout header=new LinearLayout(context);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(16),ui.dp(12),ui.dp(16),0);addView(header,new LayoutParams(-1,-2));ui.menuAction(header,activity::openSideMenu);
+  LinearLayout heading=new LinearLayout(context);heading.setOrientation(VERTICAL);heading.setGravity(Gravity.CENTER);header.addView(heading,new LayoutParams(0,-2,1));TextView title=ui.text("任务",24,SecondaryUi.INK);title.setTypeface(null,Typeface.BOLD);heading.addView(title);
   platform=ui.text("未连接平台",12,SecondaryUi.MUTED);platform.setTag("task-connected-platforms");
   add=ui.iconAction(header,R.drawable.ic_add,"添加任务",()->editTask(null));add.setTag("task-add");add.setEnabled(false);
-  configure=ui.iconAction(header,R.drawable.ic_person,"账号密码配置",this::configure);configure.setTag("chaoxing-connect");
-  settings=ui.iconAction(header,R.drawable.ic_task_settings,"任务设置",this::settings);settings.setTag("task-settings");settings.setEnabled(false);
-  refresh=ui.iconAction(header,R.drawable.ic_sync,"刷新作业",this::refresh);refresh.setTag("chaoxing-refresh");refresh.setEnabled(account.configured());
+  LinearLayout tools=new LinearLayout(context);tools.setGravity(Gravity.END);tools.setPadding(ui.dp(16),0,ui.dp(16),0);addView(tools,new LayoutParams(-1,-2));
+  configure=ui.iconAction(tools,R.drawable.ic_person,"账号密码配置",this::configure);configure.setTag("chaoxing-connect");
+  settings=ui.iconAction(tools,R.drawable.ic_task_settings,"任务设置",this::settings);settings.setTag("task-settings");settings.setEnabled(false);
+  refresh=ui.iconAction(tools,R.drawable.ic_sync,"刷新作业",this::refresh);refresh.setTag("chaoxing-refresh");refresh.setEnabled(account.configured());
   LinearLayout summary=new LinearLayout(context);summary.setPadding(ui.dp(20),ui.dp(4),ui.dp(20),ui.dp(8));addView(summary,new LayoutParams(-1,-2));summary.addView(platform,new LayoutParams(-2,-2));TextView separator=ui.text("|",12,SecondaryUi.MUTED);separator.setPadding(ui.dp(8),0,ui.dp(8),0);separator.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);summary.addView(separator);
   status=ui.text("请先配置学习通账号密码，登录验证成功后才会保存。",12,SecondaryUi.MUTED);status.setTag("chaoxing-status");status.setLineSpacing(ui.dp(3),1);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);summary.addView(status,new LayoutParams(0,-2,1));
   progress=new ProgressBar(context,null,android.R.attr.progressBarStyleHorizontal);progress.setIndeterminate(true);progress.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(SecondaryUi.NAVY));progress.setVisibility(GONE);addView(progress,new LayoutParams(-1,ui.dp(3)));
@@ -163,7 +164,7 @@ final class TaskPage extends LinearLayout {
  private void delete(ChaoxingClient.Work work){
   if(busy||closed||snapshot==null)return;saveChange(next->{ChaoxingClient.Work removed=ChaoxingCache.find(next.items,work);if(removed!=null)next.items.remove(removed);else removed=ChaoxingCache.copy(work);if(ChaoxingCache.find(next.deleted,work)==null){removed.deletedAt=System.currentTimeMillis();next.deleted.add(removed);}},"任务已删除，可在任务设置的删除历史中恢复。",work.local());
  }
- private void settings(){
+ void settings(){
   if(busy||closed||!localReady)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"任务设置");
   View courses=activity.option(sheet.body,R.drawable.ic_tasks,"加载的课程",account.configured()?"选择要加载和展示任务的课程":"配置学习通后可选择课程",()->{sheet.close(false);courses();});courses.setTag("task-course-settings");courses.setEnabled(account.configured()&&platformReady);courses.setAlpha(account.configured()&&platformReady?1f:.45f);
   activity.option(sheet.body,R.drawable.ic_notes,"删除历史","已删除 "+(snapshot.deleted.size()+localTasks.deleted.size())+" 份任务，可恢复",()->{sheet.close(false);history();}).setTag("task-deletion-history");

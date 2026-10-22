@@ -12,6 +12,7 @@ import java.util.*;
 
 public class ParcelActivity extends Activity {
  private SecondaryUi ui;
+ private SideNavigation sideNavigation;
  private LinearLayout root,list;
  private TextView feedback;
  private final TextView[] tabs=new TextView[3];
@@ -26,25 +27,27 @@ public class ParcelActivity extends Activity {
  };
  @Override public void onCreate(Bundle state){
   super.onCreate(state);ui=new SecondaryUi(this);ink=getColor(R.color.parcel_ink);muted=getColor(R.color.parcel_muted);card=getColor(R.color.parcel_card);surface=getColor(R.color.parcel_surface);
-  filter=state==null?0:state.getInt("filter",0);root=column();root.setBackgroundColor(surface);root.setPadding(0,ui.dp(8),0,0);root.setTag("parcel-center");setContentView(root);
+  filter=state==null?0:state.getInt("filter",0);root=column();root.setBackgroundColor(surface);root.setPadding(0,ui.dp(8),0,0);root.setTag("parcel-center");sideNavigation=new SideNavigation(this,root,surface,card,ink,this::selectPrimaryPage,this::settings);sideNavigation.select(2);setContentView(sideNavigation);
   root.setOnApplyWindowInsetsListener((view,insets)->{view.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop()+ui.dp(8),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
   LinearLayout header=new LinearLayout(this);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(12),0,ui.dp(12),0);root.addView(header);
-  icon(header,R.drawable.ic_back,"返回",this::finish);TextView title=text("快递中心",24,ink);title.setTypeface(null,Typeface.BOLD);header.addView(title,new LinearLayout.LayoutParams(0,-2,1));icon(header,R.drawable.ic_add,"添加快递",()->edit(new ParcelRecord()));icon(header,R.drawable.ic_task_settings,"快递设置",this::settings);
+  Button menu=ui.menuAction(header,()->sideNavigation.open(2));menu.setBackground(ui.bg(card,24));menu.getCompoundDrawables()[0].setTint(ink);TextView title=text("快递中心",24,ink);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);header.addView(title,new LinearLayout.LayoutParams(0,-2,1));icon(header,R.drawable.ic_add,"添加快递",()->edit(new ParcelRecord()));
   LinearLayout tools=new LinearLayout(this);if(getResources().getConfiguration().fontScale>=1.3f||getResources().getConfiguration().screenWidthDp<360)tools.setOrientation(LinearLayout.VERTICAL);tools.setPadding(ui.dp(20),0,ui.dp(20),0);root.addView(tools);button(tools,"官方身份码",this::identity);
   button(tools,"识别文本 / 截图",this::importSheet);
   feedback=text("仅保存在本机",13,muted);feedback.setPadding(ui.dp(20),ui.dp(4),ui.dp(20),ui.dp(8));feedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);root.addView(feedback);
   LinearLayout selector=new LinearLayout(this);selector.setPadding(ui.dp(16),0,ui.dp(16),ui.dp(8));root.addView(selector);
   String[] names={"待取件","运输中","已完成"};for(int i=0;i<3;i++){final int selected=i;TextView tab=text(names[i],15,ink);tab.setTag("parcel-filter-"+i);tab.setGravity(Gravity.CENTER);tab.setMinHeight(ui.dp(48));tab.setPadding(ui.dp(4),ui.dp(12),ui.dp(4),ui.dp(12));tab.setFocusable(true);tab.setOnClickListener(v->{filter=selected;load();});selector.addView(tab,new LinearLayout.LayoutParams(0,-2,1));tabs[i]=tab;}
   ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));list=column();list.setTag("parcel-list");list.setPadding(ui.dp(20),0,ui.dp(20),ui.dp(24));scroll.addView(list);
-  root.addView(new AppNavigation(this,surface,ink,2,selected->{if(selected!=2)startActivity(new Intent(this,MainActivity.class).setAction(MainActivity.OPEN_TAB).putExtra("primaryTab",selected).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP));}),new LinearLayout.LayoutParams(-1,-2));
+  root.addView(new AppNavigation(this,surface,ink,2,this::selectPrimaryPage),new LinearLayout.LayoutParams(-1,-2));
   ParcelRepository.IO.execute(()->{if(!isDestroyed())ParcelDatabase.get(this).getInvalidationTracker().addObserver(observer);});
   boolean dark=(getResources().getConfiguration().uiMode&android.content.res.Configuration.UI_MODE_NIGHT_MASK)==android.content.res.Configuration.UI_MODE_NIGHT_YES;getWindow().getDecorView().setSystemUiVisibility(dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
   if(state!=null&&state.containsKey("draftCode")){ParcelRecord restored=new ParcelRecord();restored.id=state.getLong("draftId");restored.code=state.getString("draftCode","");restored.station=state.getString("draftStation","");restored.trackingNumber=state.getString("draftTracking","");restored.carrier=state.getString("draftCarrier","");restored.state=state.getInt("draftState");restoreDraft(restored);}
   if(state==null)receive(getIntent());
  }
  private void restoreDraft(ParcelRecord restored){ParcelRepository.IO.execute(()->{ParcelRecord existing=restored.id==0?restored:ParcelDatabase.get(this).parcels().get(restored.id);runOnUiThread(()->{if(isDestroyed()||existing==null)return;existing.code=restored.code;existing.station=restored.station;existing.trackingNumber=restored.trackingNumber;existing.carrier=restored.carrier;existing.state=restored.state;edit(existing);});});}
+ private void selectPrimaryPage(int selected){if(selected!=2)startActivity(new Intent(this,MainActivity.class).setAction(MainActivity.OPEN_TAB).putExtra("primaryTab",selected).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP));}
+ @Override public void onBackPressed(){if(sideNavigation!=null&&sideNavigation.close(true))return;super.onBackPressed();}
  @Override protected void onResume(){super.onResume();load();}
- @Override protected void onDestroy(){ParcelDatabase.get(this).getInvalidationTracker().removeObserver(observer);if(currentSheet!=null)currentSheet.dismiss();super.onDestroy();}
+ @Override protected void onDestroy(){if(sideNavigation!=null)sideNavigation.close(false);ParcelDatabase.get(this).getInvalidationTracker().removeObserver(observer);if(currentSheet!=null)currentSheet.dismiss();super.onDestroy();}
  @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putInt("filter",filter);if(draft!=null&&currentSheet!=null&&currentSheet.isShowing()){out.putLong("draftId",draft.id);out.putString("draftCode",codeField.getText().toString());out.putString("draftStation",stationField.getText().toString());out.putString("draftTracking",trackingField.getText().toString());out.putString("draftCarrier",carrierField.getText().toString());out.putInt("draftState",stateField.getSelectedItemPosition());}}
  private LinearLayout column(){LinearLayout view=new LinearLayout(this);view.setOrientation(LinearLayout.VERTICAL);return view;}
  private TextView text(String value,int size,int color){return ui.text(value,size,color);}

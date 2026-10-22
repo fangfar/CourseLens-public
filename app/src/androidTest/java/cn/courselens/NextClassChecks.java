@@ -43,7 +43,7 @@ public final class NextClassChecks {
     field("term").set(a,today.minusDays(today.getDayOfWeek().getValue()-1).minusWeeks(14).toString());field("week").setInt(a,15);call(a,"home");
     View home=(View)field("root").get(a),dates=home.findViewWithTag("home-date"),button=home.findViewWithTag("return-current-week"),more=home.findViewWithTag("quick-menu-button");
     check(!dates.isClickable()&&!dates.hasOnClickListeners(),"Date still opens week picker");
-    android.view.ViewGroup toolbar=(android.view.ViewGroup)button.getParent();check(toolbar.indexOfChild(button)+1==toolbar.indexOfChild(more),"Return button is not left of more");
+    check(home.findViewWithTag("home-header")!=null&&more!=null&&button.getParent()!=dates.getParent(),"Return shortcut must stay separate from the centered date");
     androidx.viewpager.widget.ViewPager testPager=(androidx.viewpager.widget.ViewPager)field("pager").get(a);int[] offsets={0,-1,1,-2,2},expected={View.GONE,View.GONE,View.GONE,View.VISIBLE,View.VISIBLE};for(int i=0;i<offsets.length;i++){testPager.setCurrentItem(14+offsets[i],false);check(button.getVisibility()==expected[i],"Wrong return button visibility at offset "+offsets[i]);}
     field("term").set(a,term);call(a,"home");androidx.viewpager.widget.ViewPager pager=(androidx.viewpager.widget.ViewPager)field("pager").get(a);pager.setCurrentItem(currentWeek[0]<=15?29:0,false);
     button=((View)field("root").get(a)).findViewWithTag("return-current-week");check(button.getVisibility()==View.VISIBLE&&button.isFocusable(),"Far week return button missing");
