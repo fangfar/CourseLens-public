@@ -29,4 +29,3 @@ final class ScrollHeader extends FrameLayout {
   post(()->{if(!focused.hasFocus()||!focused.isShown())return;for(ScrollView scroll:scrolls){ViewParent parent=focused.getParent();while(parent instanceof View&&parent!=scroll)parent=parent.getParent();if(parent!=scroll)continue;int[] field=new int[2],bar=new int[2];focused.getLocationInWindow(field);header.getLocationInWindow(bar);int delta=field[1]-bar[1]-header.getHeight()-gap;if(delta<0)scroll.scrollBy(0,delta);}});
  }
 }
-

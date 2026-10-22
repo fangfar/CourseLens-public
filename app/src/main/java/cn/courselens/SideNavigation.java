@@ -72,4 +72,3 @@ final class SideNavigation extends FrameLayout {
  @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom){super.onLayout(changed,left,top,right,bottom);render(progress);}
  @Override protected void onDetachedFromWindow(){close(false);super.onDetachedFromWindow();}
 }
-
