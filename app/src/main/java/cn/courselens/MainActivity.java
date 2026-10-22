@@ -32,9 +32,9 @@ public class MainActivity extends Activity {
  private Map<String,CourseAdjustment> cachedMoves=Collections.emptyMap();
  private Map<Course,String> cachedCardText=new HashMap<>();
  private HomePage homePage;
- private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible,switchingBottomTab;
+ private TaskPage taskPage;private Bundle taskState;private ParcelPage parcelPage;private Bundle parcelState;private boolean tasksVisible,parcelsVisible,switchingPrimaryTab,pageBackwards;
  private FrameLayout windowContent;private AppNavigation bottomNavigation;private SideNavigation sideNavigation;
- private LinearLayout settingsPage;private int settingsScrollY;private boolean settingsFromParcel;
+ private LinearLayout settingsPage;private int settingsScrollY;private boolean settingsFromParcel,settingsFromParcelActivity;
  private ScrollView timetableScroll;private int timetableScrollY;
  private final PageMotion pageMotion=new PageMotion();private android.window.OnBackInvokedCallback systemBack;private boolean backRegistered;
  private ViewPager pager;private TextView weekLabel;private FrameLayout daysBar; private LinearLayout root;private FrameLayout stage;private boolean returningPage;private int week=6;private String data="",notes="",term="2026-08-31";
@@ -44,12 +44,12 @@ public class MainActivity extends Activity {
  private void applyPalette(){secondaryUi=new SecondaryUi(this);INK=secondaryUi.INK;MUTED=secondaryUi.MUTED;BLUE=secondaryUi.BLUE;PRIMARY=secondaryUi.PRIMARY;SURFACE=secondaryUi.SURFACE;AQUA=secondaryUi.AQUA;SOFT=secondaryUi.SOFT;NAVY=secondaryUi.NAVY;CARD=secondaryUi.CARD;DIVIDER=secondaryUi.DIVIDER;DANGER=secondaryUi.DANGER;DISABLED=secondaryUi.DISABLED;ON_PRIMARY=secondaryUi.ON_PRIMARY;HANDLE=secondaryUi.HANDLE;COURSE_BORDER=secondaryUi.COURSE_BORDER;EMPTY_TITLE=secondaryUi.EMPTY_TITLE;EMPTY_HINT=secondaryUi.EMPTY_HINT;NAV_MUTED=secondaryUi.NAV_MUTED;WARNING=secondaryUi.WARNING;dark=secondaryUi.dark;}
  @Override protected void attachBaseContext(Context base){super.attachBaseContext(Appearance.wrap(base));}
  @Override public void onCreate(Bundle state){super.onCreate(state);applyPalette();schoolAccount=new SchoolAccount(this);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);Appearance.systemBars(this);setTimes(ClassTimes.parse(getPreferences(0).getString("classTimes","")));schoolId=getPreferences(0).getString("school","squ");loginSchool=schoolId;school=schoolClient(schoolId);data=getPreferences(0).getString("courses","");notes=getPreferences(0).getString("notes","");if((getApplicationInfo().flags&android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0)school.onDiagnostic=summary->{try(java.io.FileOutputStream out=openFileOutput("sync-diagnostic.txt",0)){out.write(summary.getBytes(java.nio.charset.StandardCharsets.UTF_8));}catch(Exception ignored){}};else deleteFile("sync-diagnostic.txt");week=getPreferences(0).getInt("week",6);term=getPreferences(0).getString("term",term);displayChoices=new HashSet<>(getPreferences(0).getStringSet("displayChoices",Collections.emptySet()));adjustments=getPreferences(0).getString("courseAdjustments","");home();openWidget(getIntent());widgetShortcut();
-  if(state!=null){taskState=state.getBundle("taskPage");if(state.getBoolean("tasksVisible")&&!CourseWidget.OPEN.equals(getIntent().getAction())&&!ADD_WIDGET.equals(getIntent().getAction()))tasks();}
-  if(state!=null&&state.getBoolean("appSettingsVisible")){settingsFromParcel=state.getBoolean("settingsFromParcel");menu();}openPrimaryTab(getIntent());
+  if(state!=null){taskState=state.getBundle("taskPage");parcelState=state.getBundle("parcelPage");boolean skip=CourseWidget.OPEN.equals(getIntent().getAction())||ADD_WIDGET.equals(getIntent().getAction());if(state.getBoolean("parcelsVisible")&&!skip)parcels();else if(state.getBoolean("tasksVisible")&&!skip)tasks();}
+  if(state!=null&&state.getBoolean("appSettingsVisible")){settingsFromParcel=state.getBoolean("settingsFromParcel");settingsFromParcelActivity=state.getBoolean("settingsFromParcelActivity");menu();}openPrimaryTab(getIntent());
   View decor=getWindow().getDecorView();decor.getViewTreeObserver().addOnScrollChangedListener(remoteScroll);
-  decor.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener(){boolean drawn;public void onDraw(){if(drawn)return;drawn=true;decor.post(()->{if(decor.getViewTreeObserver().isAlive())decor.getViewTreeObserver().removeOnDrawListener(this);remoteHandler.postDelayed(()->{if(!isDestroyed()&&!isFinishing()){remote=RemoteConfigClient.get(MainActivity.this);remote.listen(remoteListener);if(state==null||!remote.loaded)remote.opened();refreshRemoteStatus();}},1500);Looper.myQueue().addIdleHandler(()->{prepareTasks();return false;});});}});
+  decor.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener(){boolean drawn;public void onDraw(){if(drawn)return;drawn=true;decor.post(()->{if(decor.getViewTreeObserver().isAlive())decor.getViewTreeObserver().removeOnDrawListener(this);remoteHandler.postDelayed(()->{if(!isDestroyed()&&!isFinishing()){remote=RemoteConfigClient.get(MainActivity.this);remote.listen(remoteListener);if(state==null||!remote.loaded)remote.opened();refreshRemoteStatus();}},1500);Looper.myQueue().addIdleHandler(()->{prepareTasks();prepareParcels();return false;});});}});
  }
- @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("tasksVisible",tasksVisible);state.putBoolean("appSettingsVisible",root==settingsPage&&settingsPage!=null);state.putBoolean("settingsFromParcel",settingsFromParcel);Bundle page=new Bundle();if(taskPage!=null)taskPage.saveState(page);else if(taskState!=null)page.putAll(taskState);state.putBundle("taskPage",page);}
+ @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("tasksVisible",tasksVisible);state.putBoolean("parcelsVisible",parcelsVisible);state.putBoolean("appSettingsVisible",root==settingsPage&&settingsPage!=null);state.putBoolean("settingsFromParcel",settingsFromParcel);state.putBoolean("settingsFromParcelActivity",settingsFromParcelActivity);Bundle page=new Bundle();if(taskPage!=null)taskPage.saveState(page);else if(taskState!=null)page.putAll(taskState);state.putBundle("taskPage",page);Bundle parcel=new Bundle();if(parcelPage!=null)parcelPage.saveState(parcel);else if(parcelState!=null)parcel.putAll(parcelState);state.putBundle("parcelPage",parcel);}
  @Override public SharedPreferences getPreferences(int mode){return Timetables.preferences(this);}
  private void setTimes(ClassTimes value){classTimes=value;START_TIMES=value.starts;END_TIMES=value.ends;}
  private SchoolClient schoolClient(String id){return id.equals("xzit")?new XzitClient():new SchoolClient();}
@@ -58,9 +58,8 @@ public class MainActivity extends Activity {
  private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
  private GradientDrawable bg(int color,int radius){GradientDrawable g=new GradientDrawable();g.setColor(color);g.setCornerRadius(dp(radius));return g;}
  private TextView text(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setIncludeFontPadding(false);return t;}
- private void base(boolean secondary){base(secondary,!secondary&&pageBack==null);}
- private void base(boolean secondary,boolean fadeThrough){base(secondary,fadeThrough,null);}
- private void base(boolean secondary,boolean fadeThrough,LinearLayout retained){
+ private void base(boolean secondary){base(secondary,null);}
+ private void base(boolean secondary,LinearLayout retained){
   manualUpdatePending=false;pagerState=ViewPager.SCROLL_STATE_IDLE;if(remoteDialog!=null)remoteDialog.dismiss();scheduleRemoteNotice();
   pageMotion.cancel();if(sideNavigation!=null)sideNavigation.close(false);
   if(unsavedDialog!=null){unsavedDialog.dismiss();unsavedDialog=null;}
@@ -68,27 +67,28 @@ public class MainActivity extends Activity {
   if(root==settingsPage&&settingsPage!=null)settingsScrollY=((ScrollView)settingsPage.getChildAt(1)).getScrollY();
   if(timetableScroll!=null){timetableScrollY=timetableScroll.getScrollY();timetableScroll=null;}
   if(choiceSheet!=null){choiceSheet.close(false);choiceSheet=null;}
-  LinearLayout previous=root;boolean backwards=returningPage||!secondary;
+  LinearLayout previous=root;boolean backwards=secondary?returningPage:pageBackwards;
   pageBack=null;updateSystemBack();showingDetail=false;screen++;pager=null;
-  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));sideNavigation=new SideNavigation(this,windowContent,SURFACE,CARD,INK,this::selectPrimaryPage,()->{settingsFromParcel=false;menu();});setContentView(sideNavigation);}
+  if(previous==parcelPage&&retained!=parcelPage)parcelPage.pause();
+  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));sideNavigation=new SideNavigation(this,windowContent,SURFACE,CARD,INK,this::selectPrimaryPage,()->{settingsFromParcel=parcelsVisible;settingsFromParcelActivity=false;menu();});setContentView(sideNavigation);}
   bottomNavigation.setVisibility(secondary?View.GONE:View.VISIBLE);updateBottomNavigation();
   for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();
   stage.removeAllViews();
   root=retained!=null?retained:new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setClickable(true);
   root.setBackgroundColor(SURFACE);
-  boolean animate=!switchingBottomTab&&previous!=null&&previous.getWidth()>0&&android.animation.ValueAnimator.areAnimatorsEnabled();
+  boolean animate=!switchingPrimaryTab&&previous!=null&&previous!=root&&previous.getWidth()>0&&android.animation.ValueAnimator.areAnimatorsEnabled();
   if(animate){
    stage.addView(previous,new FrameLayout.LayoutParams(-1,-1));
   }
   LinearLayout incoming=root;stage.addView(incoming,new FrameLayout.LayoutParams(-1,-1));
+  if(incoming==parcelPage)parcelPage.resume();
   if(!animate)return;
-  // shortcut: dynamic pages replace their source card; use Shared Axis until navigation retains both endpoints.
-  pageMotion.start(stage,previous,incoming,backwards,fadeThrough,dp(32));
+  pageMotion.start(stage,previous,incoming,backwards,dp(12));
  }
  private void backPage(){Runnable back=pageBack;if(back==null)return;returningPage=true;try{back.run();}finally{returningPage=false;}}
  private void updateSystemBack(){
   if(Build.VERSION.SDK_INT<33)return;
-  boolean needed=tasksVisible||navigationOverlay!=null||pageBack!=null||(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)||busy;
+  boolean needed=tasksVisible||parcelsVisible||navigationOverlay!=null||pageBack!=null||(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)||busy;
   if(needed==backRegistered)return;
   if(systemBack==null)systemBack=this::onBackPressed;
   if(needed)getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,systemBack);
@@ -97,17 +97,27 @@ public class MainActivity extends Activity {
  }
  private void ripple(View view){secondaryUi.ripple(view);}
 
- private void selectPrimaryPage(int selected){if(selected==0){if(tasksVisible)home();}else if(selected==1){if(!tasksVisible)tasks();}else startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));}
- void openSideMenu(){if(busy)return;pageMotion.cancel();sideNavigation.open(tasksVisible?1:0);}
- private void selectBottomPage(int selected){
-  if(selected==2){startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_NO_ANIMATION));overridePendingTransition(0,0);return;}
-  switchingBottomTab=true;try{selectPrimaryPage(selected);}finally{switchingBottomTab=false;}
+ private void selectPrimaryPage(int selected){
+  switchingPrimaryTab=true;
+  try{
+   if(selected==0){if(tasksVisible||parcelsVisible)home();}
+   else if(selected==1){if(!tasksVisible)tasks();}
+   else if(!parcelsVisible)parcels();
+  }finally{switchingPrimaryTab=false;}
  }
- private AppNavigation createBottomNavigation(){return new AppNavigation(this,SURFACE,INK,NAV_MUTED,tasksVisible?1:0,this::selectBottomPage);}
+ private int primaryTab(){return parcelsVisible?2:tasksVisible?1:0;}
+ void openSideMenu(){if(busy)return;pageMotion.cancel();sideNavigation.open(primaryTab());}
+ private void selectBottomPage(int selected){selectPrimaryPage(selected);}
+ private AppNavigation createBottomNavigation(){return new AppNavigation(this,SURFACE,INK,NAV_MUTED,primaryTab(),this::selectBottomPage);}
  private void updateBottomNavigation(){
-  if(bottomNavigation!=null)bottomNavigation.select(tasksVisible?1:0);if(sideNavigation!=null)sideNavigation.select(tasksVisible?1:0);
+  if(bottomNavigation!=null)bottomNavigation.select(primaryTab());if(sideNavigation!=null)sideNavigation.select(primaryTab());
  }
- private void openPrimaryTab(Intent intent){if(OPEN_SETTINGS.equals(intent.getAction())){intent.setAction(Intent.ACTION_MAIN);settingsFromParcel=true;menu();return;}if(!OPEN_TAB.equals(intent.getAction()))return;settingsFromParcel=false;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);switchingBottomTab=(intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION)!=0;try{if(selected==0)home();else if(selected==1)tasks();}finally{switchingBottomTab=false;}}
+ private void openPrimaryTab(Intent intent){
+  if(OPEN_SETTINGS.equals(intent.getAction())){intent.setAction(Intent.ACTION_MAIN);settingsFromParcel=false;settingsFromParcelActivity=true;menu();return;}
+  if(!OPEN_TAB.equals(intent.getAction()))return;settingsFromParcel=false;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);
+  boolean active=selected==0?(homePage!=null&&root==homePage.view&&!tasksVisible&&!parcelsVisible):selected==1?(tasksVisible&&root==taskPage):(parcelsVisible&&root==parcelPage);
+  if(active){updateBottomNavigation();return;}
+  selectPrimaryPage(selected);}
  // Prepare cached task content after the first home frame; due refreshes run on the task worker.
  private void prepareTasks(){
   if(isDestroyed()||isFinishing()||taskPage!=null)return;
@@ -115,7 +125,18 @@ public class MainActivity extends Activity {
   if(width>0&&height>0){taskPage.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));taskPage.layout(0,0,width,height);}
  }
  boolean taskRefreshActive(){return remoteResumed&&navigationOverlay==null&&(sideNavigation==null||!sideNavigation.isOpen());}
- private void tasks(){getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);tasksVisible=true;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,true,taskPage);root.setBackgroundColor(SURFACE);}
+ private void tasks(){getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);tasksVisible=true;parcelsVisible=false;pageBackwards=false;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,taskPage);root.setBackgroundColor(SURFACE);}
+ private void parcels(){
+  getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);tasksVisible=false;parcelsVisible=true;
+  if(parcelPage==null)parcelPage=new ParcelPage(this,parcelState,this::openSideMenu);
+  parcelPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,parcelPage);root.setBackgroundColor(SURFACE);
+ }
+ private void prepareParcels(){
+  if(isDestroyed()||isFinishing()||parcelPage!=null)return;
+  parcelPage=new ParcelPage(this,parcelState,this::openSideMenu);int width=stage.getWidth(),height=stage.getHeight();
+  if(width>0&&height>0){parcelPage.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));parcelPage.layout(0,0,width,height);}
+ }
+ private void parcelSettings(){switchingPrimaryTab=true;try{parcels();}finally{switchingPrimaryTab=false;}if(parcelPage!=null)parcelPage.settings();}
 
  private Calendar date(){Calendar c=Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));c.set(Calendar.HOUR_OF_DAY,12);c.set(Calendar.MINUTE,0);c.set(Calendar.SECOND,0);c.set(Calendar.MILLISECOND,0);return c;}
  private Calendar monday(){Calendar c=date();String[] p=term.split("-");c.set(Integer.parseInt(p[0]),Integer.parseInt(p[1])-1,Integer.parseInt(p[2]));return c;}
@@ -128,7 +149,7 @@ public class MainActivity extends Activity {
  }
 
  private void changeWeek(int next){if(next<1||next>30)return;if(navigationOverlay!=null)navigationOverlay.close(true);if(pager!=null&&pager.isAttachedToWindow()){pager.setCurrentItem(next-1,true);}else{week=next;saveWeek();home();}}
- private LinearLayout secondary(String title,String description,Runnable back){base(true,root!=null&&title.equals(root.getTag()));root.setTag(title);pageBack=back;updateSystemBack();root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(12),dp(4),dp(12),dp(4));TextView close=icon(R.drawable.ic_back,"返回",()->{if(busy){toast("正在同步，请稍候");return;}backPage();});bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));TextView heading=text(title,18,INK);heading.setGravity(Gravity.CENTER);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));View spacer=new View(this);spacer.setTag("header-spacer");spacer.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);bar.addView(spacer,new LinearLayout.LayoutParams(dp(48),dp(48)));root.addView(bar);ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(16),dp(8),dp(16),dp(20));scroll.addView(body);if(!description.isEmpty()){TextView intro=text(description,14,MUTED);intro.setLineSpacing(dp(4),1);intro.setPadding(dp(4),0,dp(4),dp(20));body.addView(intro);}return body;}
+ private LinearLayout secondary(String title,String description,Runnable back){base(true);root.setTag(title);pageBack=back;updateSystemBack();root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(12),dp(4),dp(12),dp(4));TextView close=icon(R.drawable.ic_back,"返回",()->{if(busy){toast("正在同步，请稍候");return;}backPage();});bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));TextView heading=text(title,18,INK);heading.setGravity(Gravity.CENTER);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));View spacer=new View(this);spacer.setTag("header-spacer");spacer.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);bar.addView(spacer,new LinearLayout.LayoutParams(dp(48),dp(48)));root.addView(bar);ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(16),dp(8),dp(16),dp(20));scroll.addView(body);if(!description.isEmpty()){TextView intro=text(description,14,MUTED);intro.setLineSpacing(dp(4),1);intro.setPadding(dp(4),0,dp(4),dp(20));body.addView(intro);}return body;}
  private LinearLayout bottomSheet(String title,String description,Runnable back){
   if(returningPage&&navigationOverlay==null)back.run();
   NavigationOverlay overlay=new NavigationOverlay(false,title);LinearLayout body=overlay.body;
@@ -199,11 +220,11 @@ public class MainActivity extends Activity {
   root.findViewWithTag("sheet-action-button").setVisibility(View.VISIBLE);root.findViewWithTag("sheet-action-button").setOnClickListener(v->{NavigationOverlay menu=sheetMenu("教学周操作");for(int w=1;w<=30;w++){final int chosen=w;menuItem(menu,"第 "+w+" 周"+(w==week?" ✓":""),"week-"+w,()->changeWeek(chosen));}});
  }
  private void home(){
-  settingsPage=null;
+  settingsPage=null;pageBackwards=true;
   getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);
-  boolean fromTasks=tasksVisible;tasksVisible=false;
-  if(homePage!=null&&(pageBack!=null||fromTasks)&&navigationOverlay==null&&homePage.matches()){
-   HomePage page=homePage;page.view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,false,page.view);
+  boolean fromTasks=tasksVisible,fromParcels=parcelsVisible;tasksVisible=false;parcelsVisible=false;
+  if(homePage!=null&&(pageBack!=null||fromTasks||fromParcels)&&navigationOverlay==null&&homePage.matches()){
+   HomePage page=homePage;page.view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,page.view);
    pager=page.pages;timetableScroll=page.scroll;daysBar=page.days;weekLabel=page.label;
    pager.setCurrentItem(week-1,false);updateHeader();timetableScroll.scrollTo(0,timetableScrollY);return;
   }
@@ -219,9 +240,11 @@ public class MainActivity extends Activity {
   homePage=new HomePage();
  }
  @Override protected void onStart(){super.onStart();if(remote!=null)remote.opened();}
- @Override protected void onResume(){super.onResume();remoteResumed=true;if(taskPage!=null)taskPage.scheduleRefresh();scheduleRemoteNotice();if(pager!=null&&pager.isAttachedToWindow())updateHeader();Context context=getApplicationContext();worker.execute(()->CourseWidget.updateAll(context));getWindow().getDecorView().postDelayed(()->checkWidgetPin(),250);}
- @Override protected void onPause(){remoteResumed=false;if(taskPage!=null)taskPage.pauseRefresh();touching=false;remoteHandler.removeCallbacks(remoteNotice);super.onPause();}
+ @Override protected void onResume(){super.onResume();remoteResumed=true;if(taskPage!=null)taskPage.scheduleRefresh();if(parcelPage!=null&&root==parcelPage)parcelPage.resume();scheduleRemoteNotice();if(pager!=null&&pager.isAttachedToWindow())updateHeader();Context context=getApplicationContext();worker.execute(()->CourseWidget.updateAll(context));getWindow().getDecorView().postDelayed(()->checkWidgetPin(),250);}
+ @Override protected void onPause(){remoteResumed=false;if(taskPage!=null)taskPage.pauseRefresh();if(parcelPage!=null)parcelPage.pause();touching=false;remoteHandler.removeCallbacks(remoteNotice);super.onPause();}
  @Override protected void onStop(){if(remoteDialog!=null)remoteDialog.dismiss();super.onStop();}
+ @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(parcelPage!=null)parcelPage.onActivityResult(request,result,data);}
+ @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] grants){super.onRequestPermissionsResult(request,permissions,grants);if(parcelPage!=null)parcelPage.onRequestPermissionsResult(request,permissions,grants);}
  @Override public boolean dispatchTouchEvent(MotionEvent event){if(event.getActionMasked()==MotionEvent.ACTION_DOWN)touching=true;interactionAt=SystemClock.uptimeMillis();try{return super.dispatchTouchEvent(event);}finally{if(event.getActionMasked()==MotionEvent.ACTION_UP||event.getActionMasked()==MotionEvent.ACTION_CANCEL){touching=false;scheduleRemoteNotice();}}}
  private String weekCaption(){String name=Timetables.names(this).get(Timetables.active(this));return "第 "+week+" 周  当前为第 "+currentWeek()+" 周"+(Timetables.names(this).size()>1?" · "+name:"");}
  private void updateHeader(){Calendar today=date();((TextView)((LinearLayout)weekLabel.getParent()).getChildAt(0)).setText(String.format(Locale.ROOT,"%d月%d日",today.get(Calendar.MONTH)+1,today.get(Calendar.DAY_OF_MONTH)));weekLabel.setText(weekCaption());for(int i=0;i<pager.getChildCount();i++)if(pager.getChildAt(i) instanceof WeekGrid){WeekGrid grid=(WeekGrid)pager.getChildAt(i);updateDays(grid.days,grid.shownWeek);}syncWeekDays();}
@@ -311,10 +334,10 @@ public class MainActivity extends Activity {
   if(!title.isEmpty()){TextView label=text(title,12,MUTED);label.setPadding(dp(4),dp(4),0,dp(6));body.addView(label);}
   LinearLayout group=new LinearLayout(this);group.setOrientation(LinearLayout.VERTICAL);group.setTag("settings-group");group.setBackground(bg(CARD,18));group.setClipToOutline(true);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(12);body.addView(group,lp);return group;
  }
- private void closeSettings(){boolean parcel=settingsFromParcel;settingsFromParcel=false;if(tasksVisible)tasks();else home();if(parcel)startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));}
+ private void closeSettings(){boolean parcel=settingsFromParcel,host=settingsFromParcelActivity;settingsFromParcel=false;settingsFromParcelActivity=false;if(parcel){pageBackwards=true;parcels();}else if(tasksVisible)tasks();else home();if(host)startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));}
  private void menu(){
   if(returningPage&&settingsPage!=null){
-   settingsPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(true,false,settingsPage);
+   settingsPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(true,settingsPage);
    root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);
    pageBack=this::closeSettings;updateSystemBack();remoteStatus=root.findViewWithTag("update-status");refreshRemoteStatus();
    ((ScrollView)root.getChildAt(1)).scrollTo(0,settingsScrollY);return;
@@ -332,7 +355,7 @@ public class MainActivity extends Activity {
   option(courses,R.drawable.ic_book,"课程管理","",()->edit(()->menu()));
   option(courses,R.drawable.ic_calendar_edit,"课程调整","",()->adjustmentManager()).setTag("adjustment-manager");
   option(courses,R.drawable.ic_widget_outline,"桌面小组件","",()->widgetAddPage()).setTag("add-home-widget");
-  LinearLayout modules=settingsGroup(body,"");prepareTasks();taskPage.settingsEntry(modules);option(modules,R.drawable.ic_parcel,"快递管理","",()->startActivity(new Intent(this,ParcelActivity.class).setAction(ParcelActivity.OPEN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))).setTag("parcel-settings");
+  LinearLayout modules=settingsGroup(body,"");prepareTasks();taskPage.settingsEntry(modules);option(modules,R.drawable.ic_parcel,"快递管理","",this::parcelSettings).setTag("parcel-settings");
   LinearLayout software=settingsGroup(body,"");
   remoteStatus=null;option(software,R.drawable.ic_info,"关于软件","",this::about).setTag("about-app");
   LinearLayout caution=settingsGroup(body,"");TextView clear=text("退出并清空当前课表",15,DANGER);clear.setTag("clear-timetable");clear.setGravity(Gravity.CENTER_VERTICAL);clear.setMinHeight(dp(56));clear.setPadding(dp(16),dp(10),dp(16),dp(10));clear.setFocusable(true);clear.setOnClickListener(v->confirmClear());ripple(clear);caution.addView(clear,new LinearLayout.LayoutParams(-1,-2));
@@ -742,8 +765,8 @@ public class MainActivity extends Activity {
    home();toast("课程安排已更新，请查看最新课表");
   }catch(RuntimeException e){home();toast("请检查课表及开学日期设置");}
  }
-  @Override public void onBackPressed(){if(sideNavigation!=null&&sideNavigation.close(true))return;if(navigationOverlay!=null){navigationOverlay.close(true);return;}if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE){choiceSheet.close(true);return;}if(busy){toast("正在同步，请稍候");return;}if(pageBack!=null){backPage();return;}if(tasksVisible){home();return;}super.onBackPressed();}
- @Override protected void onDestroy(){if(sideNavigation!=null)sideNavigation.close(false);if(taskPage!=null)taskPage.close();remoteResumed=false;if(remote!=null)remote.unlisten(remoteListener);if(remoteDialog!=null)remoteDialog.dismiss();remoteHandler.removeCallbacksAndMessages(null);if(getWindow().getDecorView().getViewTreeObserver().isAlive())getWindow().getDecorView().getViewTreeObserver().removeOnScrollChangedListener(remoteScroll);if(unsavedDialog!=null)unsavedDialog.dismiss();if(widgetDialog!=null)widgetDialog.dismiss();screen++;pageMotion.cancel();while(navigationOverlay!=null)navigationOverlay.close(false);if(Build.VERSION.SDK_INT>=33&&backRegistered)getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBack);if(stage!=null)for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();worker.shutdownNow();homePage=null;if(password!=null)password.getText().clear();super.onDestroy();}
+  @Override public void onBackPressed(){if(sideNavigation!=null&&sideNavigation.close(true))return;if(pageMotion.isRunning())pageMotion.cancel();if(navigationOverlay!=null){navigationOverlay.close(true);return;}if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE){choiceSheet.close(true);return;}if(busy){toast("正在同步，请稍候");return;}if(pageBack!=null){backPage();return;}if(tasksVisible||parcelsVisible){home();return;}super.onBackPressed();}
+ @Override protected void onDestroy(){if(sideNavigation!=null)sideNavigation.close(false);if(taskPage!=null)taskPage.close();if(parcelPage!=null)parcelPage.close();remoteResumed=false;if(remote!=null)remote.unlisten(remoteListener);if(remoteDialog!=null)remoteDialog.dismiss();remoteHandler.removeCallbacksAndMessages(null);if(getWindow().getDecorView().getViewTreeObserver().isAlive())getWindow().getDecorView().getViewTreeObserver().removeOnScrollChangedListener(remoteScroll);if(unsavedDialog!=null)unsavedDialog.dismiss();if(widgetDialog!=null)widgetDialog.dismiss();screen++;pageMotion.cancel();while(navigationOverlay!=null)navigationOverlay.close(false);if(Build.VERSION.SDK_INT>=33&&backRegistered)getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBack);if(stage!=null)for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();worker.shutdownNow();homePage=null;if(password!=null)password.getText().clear();super.onDestroy();}
  // Retain one Activity-owned home only; data/term/notes/choices changes replace it.
  private class HomePage {
   final LinearLayout view=root;final ViewPager pages=pager;final ScrollView scroll=timetableScroll;final FrameLayout days=daysBar;
