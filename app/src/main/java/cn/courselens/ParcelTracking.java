@@ -9,7 +9,7 @@ final class ParcelTracking {
  static final ExecutorService NETWORK=Executors.newFixedThreadPool(2);
  private static final Set<Long> running=ConcurrentHashMap.newKeySet();
  static String query(Context context,long id){
-  String endpoint=ParcelNotificationListener.settings(context).getString("proxy","");if(endpoint.isEmpty())return "请先在快递设置中配置物流代理；当前没有连接真实物流服务";
+  String endpoint=ParcelNotificationListener.settings(context).getString("proxy","");if(endpoint.isEmpty())return "请先在快递管理中配置物流代理；当前没有连接真实物流服务";
   try{return query(context,id,new ProxyTrackingProvider(endpoint));}catch(IllegalArgumentException e){return e.getMessage();}
  }
  static String query(Context context,long id,TrackingProvider provider){

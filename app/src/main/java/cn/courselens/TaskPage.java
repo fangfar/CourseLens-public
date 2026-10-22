@@ -44,7 +44,7 @@ final class TaskPage extends LinearLayout {
  TaskPage(Context context,Bundle state){
   super(context);activity=(MainActivity)context;ui=new SecondaryUi(activity);account=new ChaoxingAccount(context);setTag("tasks-page");setOrientation(VERTICAL);LinearLayout pinned=new LinearLayout(context);pinned.setOrientation(VERTICAL);
   LinearLayout header=new LinearLayout(context);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(16),ui.dp(12),ui.dp(16),0);pinned.addView(header,new LayoutParams(-1,-2));ui.menuAction(header,activity::openSideMenu);
-  LinearLayout heading=new LinearLayout(context);heading.setOrientation(VERTICAL);heading.setGravity(Gravity.CENTER);header.addView(heading,new LayoutParams(0,-2,1));TextView title=ui.text("任务",24,ui.INK);title.setTypeface(null,Typeface.BOLD);heading.addView(title);
+  LinearLayout heading=new LinearLayout(context);heading.setOrientation(VERTICAL);heading.setGravity(Gravity.CENTER);header.addView(heading,new LayoutParams(0,-2,1));TextView title=ui.text("任务",24,ui.INK);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);heading.addView(title);
   platform=ui.text("未连接平台",12,ui.MUTED);platform.setTag("task-connected-platforms");
   ui.iconAction(header,R.drawable.ic_more,"任务操作",this::showActions).setTag("quick-menu-button");
   LinearLayout summary=new LinearLayout(context);summary.setPadding(ui.dp(20),ui.dp(4),ui.dp(20),ui.dp(8));pinned.addView(summary,new LayoutParams(-1,-2));summary.addView(platform,new LayoutParams(-2,-2));TextView separator=ui.text("|",12,ui.MUTED);separator.setPadding(ui.dp(8),0,ui.dp(8),0);separator.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);summary.addView(separator);
@@ -167,11 +167,11 @@ final class TaskPage extends LinearLayout {
   if(busy||closed)return;busy(true);int token=generation;status.setText("正在保存任务设置…");worker.execute(()->{if(!current(token))return;try{ChaoxingCache cache=new ChaoxingCache(getContext(),local?"":account.load().account);ChaoxingClient.Result saved=cache.load(),next=saved==null?ChaoxingCache.copy(local?localTasks:snapshot):saved;change.accept(next);cache.save(next);activity.runOnUiThread(()->{if(current(token)){if(local)localTasks=next;else snapshot=next;busy(false);status.setText(message);render();}});}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);status.setText("保存失败，原有任务和设置已保留，请重新打开后重试。");}});}});
  }
  private void delete(ChaoxingClient.Work work){
-  if(busy||closed||snapshot==null)return;saveChange(next->{ChaoxingClient.Work removed=ChaoxingCache.find(next.items,work);if(removed!=null)next.items.remove(removed);else removed=ChaoxingCache.copy(work);if(ChaoxingCache.find(next.deleted,work)==null){removed.deletedAt=System.currentTimeMillis();next.deleted.add(removed);}},"任务已删除，可在任务设置的删除历史中恢复。",work.local());
+  if(busy||closed||snapshot==null)return;saveChange(next->{ChaoxingClient.Work removed=ChaoxingCache.find(next.items,work);if(removed!=null)next.items.remove(removed);else removed=ChaoxingCache.copy(work);if(ChaoxingCache.find(next.deleted,work)==null){removed.deletedAt=System.currentTimeMillis();next.deleted.add(removed);}},"任务已删除，可在任务管理的删除历史中恢复。",work.local());
  }
- void settingsEntry(LinearLayout parent){settings=activity.option(parent,R.drawable.ic_tasks,"任务设置","课程加载、删除历史与自动刷新",this::settings);settings.setTag("task-settings");controls();}
+ void settingsEntry(LinearLayout parent){settings=activity.option(parent,R.drawable.ic_tasks,"任务管理","",this::settings);settings.setTag("task-settings");controls();}
  void settings(){
-  if(busy||closed||!localReady)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"任务设置");
+  if(busy||closed||!localReady)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"任务管理");
   View courses=activity.option(sheet.body,R.drawable.ic_tasks,"加载的课程",account.configured()?"选择要加载和展示任务的课程":"配置学习通后可选择课程",()->{sheet.close(false);courses();});courses.setTag("task-course-settings");courses.setEnabled(account.configured()&&platformReady);courses.setAlpha(account.configured()&&platformReady?1f:.45f);
   activity.option(sheet.body,R.drawable.ic_notes,"删除历史","已删除 "+(snapshot.deleted.size()+localTasks.deleted.size())+" 份任务，可恢复",()->{sheet.close(false);history();}).setTag("task-deletion-history");
   View interval=activity.option(sheet.body,R.drawable.ic_clock,"自动刷新",!account.configured()?"配置学习通后可设置":snapshot.intervalMinutes==0?"仅每天首次打开时刷新":"每 "+snapshot.intervalMinutes+" 分钟 · 每天首次打开也刷新",()->{sheet.close(false);interval();});interval.setTag("task-refresh-settings");interval.setEnabled(account.configured()&&platformReady);interval.setAlpha(account.configured()&&platformReady?1f:.45f);

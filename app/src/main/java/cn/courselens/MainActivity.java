@@ -207,7 +207,7 @@ public class MainActivity extends Activity {
    pager=page.pages;timetableScroll=page.scroll;daysBar=page.days;weekLabel=page.label;
    pager.setCurrentItem(week-1,false);updateHeader();timetableScroll.scrollTo(0,timetableScrollY);return;
   }
-  base(false);LinearLayout header=new LinearLayout(this);header.setTag("home-header");header.setOrientation(LinearLayout.VERTICAL);LinearLayout toolbar=new LinearLayout(this);toolbar.setGravity(Gravity.CENTER_VERTICAL);toolbar.setPadding(dp(16),dp(10),dp(16),dp(6));header.addView(toolbar);secondaryUi.menuAction(toolbar,this::openSideMenu);
+  base(false);LinearLayout header=new LinearLayout(this);header.setTag("home-header");header.setOrientation(LinearLayout.VERTICAL);LinearLayout toolbar=new LinearLayout(this);toolbar.setGravity(Gravity.CENTER_VERTICAL);toolbar.setPadding(dp(16),dp(8),dp(16),dp(6));header.addView(toolbar);secondaryUi.menuAction(toolbar,this::openSideMenu);
   LinearLayout dates=new LinearLayout(this);dates.setOrientation(LinearLayout.VERTICAL);dates.setGravity(Gravity.CENTER);Calendar today=date();TextView title=text((today.get(Calendar.MONTH)+1)+"月"+today.get(Calendar.DAY_OF_MONTH)+"日",25,INK);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);dates.addView(title);TextView sub=text(weekCaption(),14,MUTED);sub.setGravity(Gravity.CENTER);weekLabel=sub;LinearLayout.LayoutParams subp=new LinearLayout.LayoutParams(-1,-2);subp.topMargin=dp(4);dates.addView(sub,subp);dates.setTag("home-date");toolbar.addView(dates,new LinearLayout.LayoutParams(0,-2,1));
   TextView more=icon(R.drawable.ic_more,"更多操作",()->quickMenu());more.setTag("quick-menu-button");LinearLayout.LayoutParams moreParams=new LinearLayout.LayoutParams(dp(48),dp(48));moreParams.leftMargin=dp(8);toolbar.addView(more,moreParams);
   daysBar=new FrameLayout(this);daysBar.setTag("week-days-viewport");header.addView(daysBar,new LinearLayout.LayoutParams(-1,dp(55)));
@@ -320,26 +320,30 @@ public class MainActivity extends Activity {
    ((ScrollView)root.getChildAt(1)).scrollTo(0,settingsScrollY);return;
   }
   LinearLayout body=secondary("设置","",this::closeSettings);
-  LinearLayout tables=settingsGroup(body,"课表");LinearLayout current=option(tables,R.drawable.ic_grid,"当前课表",Timetables.names(this).get(Timetables.active(this)),this::timetablePicker);current.setTag("switch-timetable");current.setTooltipText("长按修改课表名称");current.setOnLongClickListener(v->{renameTimetable(Timetables.active(this));return true;});option(tables,R.drawable.ic_grid,"新增课表","",this::newTimetable).setTag("add-timetable");
-  LinearLayout appearance=settingsGroup(body,"外观");option(appearance,R.drawable.ic_dark_mode,"深色模式",Appearance.label(this),this::appearanceSettings).setTag("dark-mode-setting");
-  LinearLayout semester=settingsGroup(body,"学期");
-  option(semester,R.drawable.ic_calendar,"开学日期",term,()->termPicker()).setTag("settings-term");option(semester,R.drawable.ic_calendar,"作息时间","每天 "+START_TIMES.length+" 节",this::timesForm).setTag("settings-times");
-  LinearLayout courses=settingsGroup(body,"课程与桌面");
-  option(courses,R.drawable.ic_notes,"课程管理","",()->edit(()->menu()));
-  option(courses,R.drawable.ic_calendar,"单次调课 / 停课","",()->adjustmentManager()).setTag("adjustment-manager");
-  option(courses,R.drawable.ic_grid,"桌面小组件","",()->widgetAddPage()).setTag("add-home-widget");
-  LinearLayout modules=settingsGroup(body,"任务与快递");prepareTasks();taskPage.settingsEntry(modules);option(modules,R.drawable.ic_parcel,"快递设置","通知识别、提醒与小组件",()->startActivity(new Intent(this,ParcelActivity.class).setAction(ParcelActivity.OPEN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))).setTag("parcel-settings");
-  LinearLayout software=settingsGroup(body,"软件与下载");
-  option(software,R.drawable.ic_parcel,"快递中心","取件码与物流",()->startActivity(new Intent(this,ParcelActivity.class))).setTag("parcel-center");
-  remoteStatus=null;option(software,R.drawable.ic_notes,"关于软件","",this::about).setTag("about-app");
-  LinearLayout caution=settingsGroup(body,"本地数据");TextView clear=text("退出并清空当前课表",15,DANGER);clear.setTag("clear-timetable");clear.setGravity(Gravity.CENTER_VERTICAL);clear.setMinHeight(dp(52));clear.setPadding(dp(16),dp(10),dp(16),dp(10));clear.setFocusable(true);clear.setOnClickListener(v->confirmClear());ripple(clear);caution.addView(clear,new LinearLayout.LayoutParams(-1,-2));
+  LinearLayout tables=settingsGroup(body,"");
+  LinearLayout current=option(tables,R.drawable.ic_grid,"课表切换","",this::timetablePicker);
+  current.setTag("switch-timetable");current.setTooltipText("长按修改课表名称");current.setContentDescription("课表切换，当前："+Timetables.names(this).get(Timetables.active(this)));
+  current.setOnLongClickListener(v->{renameTimetable(Timetables.active(this));return true;});
+  option(tables,R.drawable.ic_calendar_add,"新增课表","",this::newTimetable).setTag("add-timetable");
+  LinearLayout appearance=settingsGroup(body,"");option(appearance,R.drawable.ic_palette,"外观","",this::appearanceSettings).setTag("dark-mode-setting");
+  LinearLayout semester=settingsGroup(body,"");
+  option(semester,R.drawable.ic_calendar,"开学日期","",()->termPicker()).setTag("settings-term");option(semester,R.drawable.ic_clock_outline,"作息时间","",this::timesForm).setTag("settings-times");
+  LinearLayout courses=settingsGroup(body,"");
+  option(courses,R.drawable.ic_book,"课程管理","",()->edit(()->menu()));
+  option(courses,R.drawable.ic_calendar_edit,"课程调整","",()->adjustmentManager()).setTag("adjustment-manager");
+  option(courses,R.drawable.ic_widget_outline,"桌面小组件","",()->widgetAddPage()).setTag("add-home-widget");
+  LinearLayout modules=settingsGroup(body,"");prepareTasks();taskPage.settingsEntry(modules);option(modules,R.drawable.ic_parcel,"快递管理","",()->startActivity(new Intent(this,ParcelActivity.class).setAction(ParcelActivity.OPEN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))).setTag("parcel-settings");
+  LinearLayout software=settingsGroup(body,"");
+  remoteStatus=null;option(software,R.drawable.ic_info,"关于软件","",this::about).setTag("about-app");
+  LinearLayout caution=settingsGroup(body,"");TextView clear=text("退出并清空当前课表",15,DANGER);clear.setTag("clear-timetable");clear.setGravity(Gravity.CENTER_VERTICAL);clear.setMinHeight(dp(56));clear.setPadding(dp(16),dp(10),dp(16),dp(10));clear.setFocusable(true);clear.setOnClickListener(v->confirmClear());ripple(clear);caution.addView(clear,new LinearLayout.LayoutParams(-1,-2));
   settingsPage=root;
  }
  private void appearanceSettings(){
-  LinearLayout body=secondary("显示外观","深色模式会同时应用到课表、任务、设置和桌面小组件。",()->menu());
-  LinearLayout group=settingsGroup(body,"外观");int selected=Appearance.mode(this);
+  LinearLayout body=secondary("外观","浅色、深色与跟随系统会同时应用到课表、任务、设置和桌面小组件。",()->menu());
+  LinearLayout group=settingsGroup(body,"");int selected=Appearance.mode(this);
   String[] labels={"跟随系统","浅色","深色"},notes={"随手机系统的深色模式自动切换","始终使用明亮配色","始终使用深色配色"};
-  for(int i=0;i<3;i++){final int value=i;LinearLayout row=option(group,i==2?R.drawable.ic_dark_mode:i==1?R.drawable.ic_calendar:R.drawable.ic_sync,labels[i],notes[i],()->chooseAppearance(value));row.setTag("appearance-"+i);TextView mark=(TextView)row.getChildAt(row.getChildCount()-1);if(i==selected){mark.setText("✓");mark.setTextColor(PRIMARY);}else mark.setText("");}
+  int[] icons={R.drawable.ic_phone,R.drawable.ic_sun,R.drawable.ic_dark_mode};
+  for(int i=0;i<3;i++){final int value=i;LinearLayout row=option(group,icons[i],labels[i],notes[i],()->chooseAppearance(value));row.setTag("appearance-"+i);TextView mark=(TextView)row.getChildAt(row.getChildCount()-1);if(i==selected){mark.setText("✓");mark.setTextColor(PRIMARY);}else mark.setText("");}
   TextView hint=text("当前："+Appearance.label(this),13,MUTED);hint.setPadding(dp(4),dp(8),dp(4),0);body.addView(hint);
  }
  private void chooseAppearance(int mode){
@@ -352,8 +356,8 @@ public class MainActivity extends Activity {
  private void about(){
   LinearLayout body=secondary("关于软件","",this::menu);
   LinearLayout brand=new LinearLayout(this);brand.setOrientation(LinearLayout.VERTICAL);brand.setGravity(Gravity.CENTER);brand.setPadding(0,dp(24),0,dp(32));ImageView logo=new ImageView(this);logo.setImageResource(R.mipmap.ic_launcher);logo.setContentDescription("课表镜 App 图标");logo.setTag("about-app-icon");brand.addView(logo,new LinearLayout.LayoutParams(dp(80),dp(80)));TextView name=text("课表镜 CourseLens",23,NAVY);name.setTypeface(null,Typeface.BOLD);name.setPadding(0,dp(20),0,dp(10));brand.addView(name);brand.addView(text("版本 "+appVersion(),14,MUTED));body.addView(brand,new LinearLayout.LayoutParams(-1,-2));
-  LinearLayout updates=settingsGroup(body,"软件更新");option(updates,R.drawable.ic_sync,"检查更新","当前版本 "+appVersion(),this::updateSettings).setTag("update-settings");
-  LinearLayout links=settingsGroup(body,"下载与项目");option(links,R.drawable.ic_notes,"网盘下载","通过系统浏览器打开下载页面",()->{String url=remote==null||remote.config==null?"":remote.config.diskUrl;openRemoteLink(url);}).setTag("disk-download");option(links,R.drawable.ic_notes,"GitHub 仓库","公开版本与使用说明",()->openRemoteLink(RemoteConfig.REPOSITORY)).setTag("public-repository");
+  LinearLayout updates=settingsGroup(body,"");option(updates,R.drawable.ic_sync,"检查更新","当前版本 "+appVersion(),this::updateSettings).setTag("update-settings");
+  LinearLayout links=settingsGroup(body,"");option(links,R.drawable.ic_notes,"网盘下载","通过系统浏览器打开下载页面",()->{String url=remote==null||remote.config==null?"":remote.config.diskUrl;openRemoteLink(url);}).setTag("disk-download");option(links,R.drawable.ic_notes,"GitHub 仓库","公开版本与使用说明",()->openRemoteLink(RemoteConfig.REPOSITORY)).setTag("public-repository");
   remoteStatus=text("",13,MUTED);remoteStatus.setTag("update-status");remoteStatus.setGravity(Gravity.CENTER);body.addView(remoteStatus);refreshRemoteStatus();
  }
 
@@ -510,7 +514,7 @@ public class MainActivity extends Activity {
   if(!cancel){choiceSheet=new CourseChoiceSheet();((FrameLayout)root.getParent()).addView(choiceSheet,new FrameLayout.LayoutParams(-1,-1));}
  }
  private void adjustmentManager(){
-  LinearLayout body=secondary("单次调课 / 停课","调整仅保存在本机。恢复后按原课表显示；原课程或开学日期变化的记录不生效。",()->menu());List<CourseAdjustment> rows;
+  LinearLayout body=secondary("课程调整","调整仅保存在本机。恢复后按原课表显示；原课程或开学日期变化的记录不生效。",()->menu());List<CourseAdjustment> rows;
   try{rows=CourseAdjustment.parse(adjustments);}catch(Exception e){body.addView(text("调整记录格式异常，原记录保留，请先修复数据。",14,DANGER));return;}
   if(rows.isEmpty()){body.addView(text("暂无单次调整。点击课表中的课程，在详情中选择调课或停课。",14,MUTED));return;}
   List<Course> courses=Course.parse(data);
