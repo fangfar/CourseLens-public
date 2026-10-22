@@ -41,21 +41,22 @@ public final class NextClassChecks {
     Method method=MainActivity.class.getDeclaredMethod("currentWeek");method.setAccessible(true);currentWeek[0]=(Integer)method.invoke(a);
     java.time.LocalDate today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai"));String term=(String)field("term").get(a);
     field("term").set(a,today.minusDays(today.getDayOfWeek().getValue()-1).minusWeeks(14).toString());field("week").setInt(a,15);call(a,"home");
-    View home=(View)field("root").get(a),dates=home.findViewWithTag("home-date"),button=home.findViewWithTag("return-current-week"),more=home.findViewWithTag("quick-menu-button");
+    View home=(View)field("root").get(a),dates=home.findViewWithTag("home-date"),more=home.findViewWithTag("quick-menu-button");
     check(!dates.isClickable()&&!dates.hasOnClickListeners(),"Date still opens week picker");
-    check(home.findViewWithTag("home-header")!=null&&more!=null&&button.getParent()!=dates.getParent(),"Return shortcut must stay separate from the centered date");
-    androidx.viewpager.widget.ViewPager testPager=(androidx.viewpager.widget.ViewPager)field("pager").get(a);int[] offsets={0,-1,1,-2,2},expected={View.GONE,View.GONE,View.GONE,View.VISIBLE,View.VISIBLE};for(int i=0;i<offsets.length;i++){testPager.setCurrentItem(14+offsets[i],false);check(button.getVisibility()==expected[i],"Wrong return button visibility at offset "+offsets[i]);}
-    field("term").set(a,term);call(a,"home");androidx.viewpager.widget.ViewPager pager=(androidx.viewpager.widget.ViewPager)field("pager").get(a);pager.setCurrentItem(currentWeek[0]<=15?29:0,false);
-    button=((View)field("root").get(a)).findViewWithTag("return-current-week");check(button.getVisibility()==View.VISIBLE&&button.isFocusable(),"Far week return button missing");
+    check(more!=null&&home.findViewWithTag("return-current-week")==null,"Home retains a second toolbar action");
+    androidx.viewpager.widget.ViewPager testPager=(androidx.viewpager.widget.ViewPager)field("pager").get(a);
+    for(int offset:new int[]{0,-1,1,-2,2}){testPager.setCurrentItem(14+offset,false);call(a,"quickMenu");View item=((View)field("root").get(a)).findViewWithTag("return-current-week");check(item!=null&&item.isEnabled()==(offset!=0),"Return-to-week menu enabled state is wrong");a.onBackPressed();}
+    field("term").set(a,term);call(a,"home");androidx.viewpager.widget.ViewPager pager=(androidx.viewpager.widget.ViewPager)field("pager").get(a);pager.setCurrentItem(currentWeek[0]<=15?29:0,false);call(a,"quickMenu");
+    check(((View)field("root").get(a)).findViewWithTag("return-current-week").isEnabled(),"Far week return action missing");
    }catch(Throwable e){failure.set(e);}});
    runner.waitForIdleSync();android.os.SystemClock.sleep(400);if(failure.get()!=null)throw new RuntimeException(failure.get());
-   runner.runOnMainSync(()->{try{TextView button=((View)field("root").get(a)).findViewWithTag("return-current-week");float density=a.getResources().getDisplayMetrics().density;check(a.hasWindowFocus()&&button.isShown(),"QA must be unlocked and visible");check(button instanceof android.widget.Button&&button.getText().toString().equals("本周")&&button.getContentDescription().equals("回到本周"),"Current-week shortcut lost its native action or label");check(button.getHeight()>=48*density&&button.getWidth()<100*density,"Current-week shortcut lost its compact appearance or touch target");check(button.getLayout().getEllipsisCount(0)==0&&button.getLayout().getHeight()<=button.getHeight()-button.getCompoundPaddingTop()-button.getCompoundPaddingBottom(),"Current-week label is clipped");}catch(Throwable e){failure.set(e);}});if(failure.get()!=null)throw new RuntimeException(failure.get());
+   runner.runOnMainSync(()->{try{TextView button=((View)field("root").get(a)).findViewWithTag("return-current-week");float density=a.getResources().getDisplayMetrics().density;check(a.hasWindowFocus()&&button.isShown()&&button.getText().toString().equals("回到本周"),"Return action is not visible in the menu");check(button.getHeight()>=48*density&&button.getLayout().getEllipsisCount(0)==0,"Return action is clipped or too small");}catch(Throwable e){failure.set(e);}});if(failure.get()!=null)throw new RuntimeException(failure.get());
    android.graphics.Bitmap shortcut=runner.getUiAutomation().takeScreenshot();check(shortcut!=null,"Shortcut screenshot unavailable");try(java.io.FileOutputStream out=runner.getTargetContext().openFileOutput("qa-return-current-week.png",0)){shortcut.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}finally{shortcut.recycle();}
    runner.runOnMainSync(()->{try{((View)field("root").get(a)).findViewWithTag("return-current-week").performClick();}catch(Throwable e){failure.set(e);}});
    runner.waitForIdleSync();android.os.SystemClock.sleep(500);
    runner.runOnMainSync(()->{try{
     check(field("week").getInt(a)==currentWeek[0]&&((androidx.viewpager.widget.ViewPager)field("pager").get(a)).getCurrentItem()==currentWeek[0]-1,"Return to current week failed");
-    check(field("pageBack").get(a)==null,"Current week did not return home");check(((View)field("root").get(a)).findViewWithTag("return-current-week").getVisibility()==View.GONE,"Return button still visible this week");
+    check(field("pageBack").get(a)==null,"Current week did not return home");check(((View)field("root").get(a)).findViewWithTag("return-current-week")==null,"Return action leaked into the page");
     call(a,"menu");View settings=(View)field("root").get(a);check(settings.findViewWithTag("return-current-week")==null,"Duplicate return entry in settings");check(settings.findViewWithTag("select-teaching-week")==null,"Temporary week-selection entry is still visible");a.onBackPressed();
     check(activityPrefs.getInt("week",-1)==currentWeek[0],"Current week not saved");
    }catch(Throwable e){failure.set(e);}});
@@ -98,7 +99,7 @@ public final class NextClassChecks {
    runner.waitForIdleSync();android.os.SystemClock.sleep(400);
    runner.runOnMainSync(()->{try{check(((android.widget.ScrollView)field("timetableScroll").get(a)).getScrollY()==scrollY[0],"Settings return reset scroll");check(field("week").getInt(a)==1,"Settings return changed viewed week");}catch(Throwable e){failure.set(e);}});
    if(failure.get()!=null)throw new RuntimeException(failure.get());
-   result.putString("result","PASS: home return icon left of more, both-direction 0/1/2-week visibility boundary, return/hide, hidden direct week selection, read-only date, no home next-class hint, preserved saved timetable, secondary navigation, lifecycle, month/date row follows partial horizontal drag, vertically pinned header and scroll return");code=Activity.RESULT_OK;
+   result.putString("result","PASS: return-to-week in more menu, both-direction 0/1/2-week enabled state, return and menu dismissal, hidden direct week selection, read-only date, no home next-class hint, preserved saved timetable, secondary navigation, lifecycle, month/date row follows partial horizontal drag, vertically pinned header and scroll return");code=Activity.RESULT_OK;
   }catch(Throwable e){result.putString("result","FAIL: "+e);}
   finally{if(activity!=null){MainActivity a=activity;runner.runOnMainSync(a::finish);}if(prefs!=null){android.content.SharedPreferences.Editor editor=prefs.edit();if(savedPreferences.containsKey("week"))editor.putInt("week",(Integer)savedPreferences.get("week"));else editor.remove("week");for(String key:new String[]{"courses","notes","term"})if(savedPreferences.containsKey(key))editor.putString(key,(String)savedPreferences.get(key));else editor.remove(key);check(editor.commit()&&prefs.getAll().equals(savedPreferences),"Original preferences not restored");}runner.finish(code,result);}
  }
