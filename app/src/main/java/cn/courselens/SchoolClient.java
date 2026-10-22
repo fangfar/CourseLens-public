@@ -20,6 +20,7 @@ public class SchoolClient {
  private Response casPage;private String captchaUrl=HOST+"/enlink/sso/login/getVerifyCodeImage";private static class AuthNeeded extends IOException {AuthNeeded(){super("还需完成学校统一身份认证。");}}
  private String key="",action=""; private final Map<String,String> hidden=new LinkedHashMap<>();public boolean captchaRequired;public String cachedCourses="",courseNotes="";
  public static final class Response {public final String url,text;Response(String u,String t){url=u;text=t;}}
+ static class AuthRequired extends IOException {AuthRequired(String message){super(message);}}
  public static boolean allowed(String address){try{URL u=new URL(address);return "https".equals(u.getProtocol())&&"vpn.squ.edu.cn".equals(u.getHost())&&(u.getPort()==-1||u.getPort()==443)&&u.getUserInfo()==null;}catch(Exception e){return false;}}
  private byte[] request(String address,String method,byte[] body,String type,int redirects)throws Exception {
   if(redirects>12)throw new IOException("学校登录重定向过多。");if(!allowed(address))throw new IOException("学校要求跳转到非HTTPS认证入口，已停止发送账号密码。请联系学校确认安全登录方式。");
@@ -51,21 +52,21 @@ public class SchoolClient {
   Response response=post(action,form(fields),"application/x-www-form-urlencoded; charset=UTF-8");
   if(response.text.contains("id=\"upLoignForm\"")||response.text.contains("id='upLoignForm'")){
    Matcher error=Pattern.compile("var\\s+errMsg\\s*=\\s*(.*?);").matcher(response.text);String message="登录未成功，请检查学校VPN账号密码。";if(error.find()&&!error.group(1).equals("null")){try{Object value=new JSONTokener(error.group(1)).nextValue();message=value instanceof String?(String)value:message;}catch(Exception ignored){}}
-   key="";throw new IOException(message);
+   key="";throw new AuthRequired(message);
   }
   try{return sync();}catch(AuthNeeded e){return casLogin(username,password,captcha);}
  }
  private String casLogin(String username,String password,String code)throws Exception {
   Document doc=Jsoup.parse(casPage.text,casPage.url);Element login=doc.selectFirst("#casLoginForm");if(login==null)throw new IOException("学校认证表单未找到。");String target=login.absUrl("action");if(target.isEmpty())target=casPage.url;
   captchaUrl=new URL(new URL(casPage.url),"captcha.html").toString();
-  String needs=get(new URL(new URL(casPage.url),"needCaptcha.html?username="+URLEncoder.encode(username,"UTF-8")).toString()).text.trim();captchaRequired=needs.equals("true");if(captchaRequired&&code.isEmpty())throw new IOException("学校统一认证需要验证码，请输入下方图片中的字符，然后再次点击登录。");
+  String needs=get(new URL(new URL(casPage.url),"needCaptcha.html?username="+URLEncoder.encode(username,"UTF-8")).toString()).text.trim();captchaRequired=needs.equals("true");if(captchaRequired&&code.isEmpty())throw new AuthRequired("学校统一认证需要验证码，请输入下方图片中的字符，然后再次点击登录。");
   Map<String,String> fields=new LinkedHashMap<>();for(Element input:login.select("input[type=hidden][name]"))fields.put(input.attr("name"),input.attr("value"));fields.put("username",username);fields.put("password",password);fields.put("captchaResponse",code);
-  Response response=post(target,form(fields),"application/x-www-form-urlencoded; charset=UTF-8");Document after=Jsoup.parse(response.text,response.url);if(after.selectFirst("#casLoginForm")!=null){casPage=response;Element error=after.selectFirst("#msg,.auth_error,.errors,#errorMsg,#formErrorTip,.error-msg");String message=error==null?"学校统一认证未成功，请检查密码或验证码。":error.text();throw new IOException(message.isEmpty()?"学校统一认证未成功，请检查密码或验证码。":message);}
+  Response response=post(target,form(fields),"application/x-www-form-urlencoded; charset=UTF-8");Document after=Jsoup.parse(response.text,response.url);if(after.selectFirst("#casLoginForm")!=null){casPage=response;Element error=after.selectFirst("#msg,.auth_error,.errors,#errorMsg,#formErrorTip,.error-msg");String message=error==null?"学校统一认证未成功，请检查密码或验证码。":error.text();throw new AuthRequired(message.isEmpty()?"学校统一认证未成功，请检查密码或验证码。":message);}
   casPage=null;captchaRequired=false;return sync();
  }
  public String sync()throws Exception {
   Response page=get(TABLE);Document doc=Jsoup.parse(page.text,page.url);onDiagnostic.accept(describe(page));if(doc.selectFirst("#casLoginForm")!=null){casPage=page;throw new AuthNeeded();}String courses;
-  if(doc.selectFirst("#upLoignForm")!=null)throw new IOException("学校登录会话已失效，请重新登录。");
+  if(doc.selectFirst("#upLoignForm")!=null)throw new AuthRequired("学校登录会话已失效，请重新登录。");
   // Use the same print-data endpoint as the school’s native course-table script.
   Matcher id=Pattern.compile("/course-table/(?:info|index)/(\\d+)").matcher(page.url);String dataId=id.find()?id.group(1):"";
   String semester=value(doc,page.text,"semesterId"),biz=value(doc,page.text,"bizTypeId");if(semester.isEmpty()){Matcher current=Pattern.compile("(?s)(?:var|let|const)\\s+currentSemester\\s*=\\s*(\\{.*?\\})\\s*;").matcher(page.text);if(current.find())semester=""+new JSONObject(current.group(1)).getInt("id");}if(dataId.isEmpty())dataId=value(doc,page.text,"dataId");if(dataId.isEmpty())dataId=value(doc,page.text,"studentId");if(dataId.isEmpty()){Matcher student=Pattern.compile("[\"']?studentIds[\"']?\\s*[:=]\\s*\\[\\s*[\"']?(\\d+)").matcher(page.text);if(student.find())dataId=student.group(1);}

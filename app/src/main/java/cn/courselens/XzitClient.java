@@ -16,7 +16,7 @@ public final class XzitClient extends SchoolClient {
  static final String BASE="http://jwglxt.xzit.edu.cn/jwglxt",LOGIN=BASE+"/xtgl/login_slogin.html",TABLE=BASE+"/kbcx/xskbcx_cxXskbcxIndex.html?gnmkdm=N2151&layout=default";
  private final CookieManager cookies=new CookieManager(null,CookiePolicy.ACCEPT_ORIGINAL_SERVER);
  private final Map<String,String> fields=new LinkedHashMap<>();
- private String action="",modulus="",exponent="";
+ private String action="",modulus="",exponent="";private boolean authenticated;
  public XzitClient(){classTimes=ClassTimes.XZIT;}
  static boolean trusted(String address){try{URL u=new URL(address);return u.getHost().equals("jwglxt.xzit.edu.cn")&&u.getUserInfo()==null&&((u.getProtocol().equals("http")&&(u.getPort()==-1||u.getPort()==80))||(u.getProtocol().equals("https")&&(u.getPort()==-1||u.getPort()==443)));}catch(Exception e){return false;}}
  private byte[] request(String address,String method,String body,int redirects)throws Exception {
@@ -35,7 +35,11 @@ public final class XzitClient extends SchoolClient {
  private String get(String url)throws Exception{return new String(request(url,"GET",null,0),StandardCharsets.UTF_8);}
  private String post(String url,Map<String,String> values)throws Exception {List<String> body=new ArrayList<>();for(var e:values.entrySet())body.add(URLEncoder.encode(e.getKey(),"UTF-8")+"="+URLEncoder.encode(e.getValue(),"UTF-8"));return new String(request(url,"POST",String.join("&",body),0),StandardCharsets.UTF_8);}
  @Override public void prepare()throws Exception {
-  cachedCourses="";Document doc=Jsoup.parse(get(LOGIN),LOGIN);readForm(doc);
+  cachedCourses="";
+  if(authenticated)try{cachedCourses=sync();return;}catch(AuthRequired e){authenticated=false;}
+  Document doc=Jsoup.parse(get(LOGIN),LOGIN);Element form=doc.selectFirst("form");
+  if(form==null||form.selectFirst("#yhm")==null){cachedCourses=sync();authenticated=true;return;}
+  readForm(doc);
   JSONObject key=new JSONObject(get(BASE+"/xtgl/login_getPublicKey.html?time="+System.currentTimeMillis()));modulus=key.getString("modulus");exponent=key.getString("exponent");
  }
  private void readForm(Document doc)throws Exception {
@@ -52,11 +56,11 @@ public final class XzitClient extends SchoolClient {
  @Override public String login(String username,String password,String code)throws Exception {
   if(modulus.isEmpty())prepare();Map<String,String> body=new LinkedHashMap<>(fields);body.put("yhm",username);body.put("mm",encryptPassword(password,modulus,exponent));body.put("language","zh_CN");if(!code.isEmpty())body.put("yzm",code);
   Document response=Jsoup.parse(post(action,body),LOGIN);
-  if(response.selectFirst("#yhm")!=null){readForm(response);Element tips=response.selectFirst("#tips");String text=tips==null?"":tips.text();if(text.contains("验证码"))throw new IOException("学校验证码错误或已过期，请重新输入。");if(text.contains("密码"))throw new IOException("用户名或密码错误，请重新输入。");throw new IOException("学校登录未成功，请在学校网页确认账号状态后重试。");}
-  return sync();
+  if(response.selectFirst("#yhm")!=null){readForm(response);Element tips=response.selectFirst("#tips");String text=tips==null?"":tips.text();if(text.contains("验证码"))throw new AuthRequired("学校验证码错误或已过期，请重新输入。");if(text.contains("密码"))throw new AuthRequired("用户名或密码错误，请重新输入。");throw new AuthRequired("学校登录未成功，请在学校网页确认账号状态后重试。");}
+  String next=sync();authenticated=true;return next;
  }
  @Override public String sync()throws Exception {
-  Document doc=Jsoup.parse(get(TABLE),TABLE);if(doc.selectFirst("#yhm")!=null)throw new IOException("学校登录会话已失效，请重新登录。");
+  Document doc=Jsoup.parse(get(TABLE),TABLE);if(doc.selectFirst("#yhm")!=null){authenticated=false;throw new AuthRequired("学校登录会话已失效，请重新登录。");}
   Map<String,String> query=new LinkedHashMap<>();for(String field:new String[]{"xnm","xqm"}){Element selected=doc.selectFirst("#"+field+" option[selected]");if(selected==null||!selected.attr("value").matches("\\d{1,4}"))throw new IOException("学校当前学期未识别，已保留原课表。");query.put(field,selected.attr("value"));}query.put("kzlx","ck");
   String json=post(BASE+"/kbcx/xskbcx_cxXsgrkb.html?gnmkdm=N2151",query);JSONObject root=new JSONObject(json);
   if(root.optString("xnxqsfkz").equals("true"))throw new IOException("学校尚未开放当前学期课表，已保留原课表。");
@@ -66,5 +70,5 @@ public final class XzitClient extends SchoolClient {
   for(String campus:campuses){query.put("xqh_id",campus);ClassTimes next=SchoolParser.xzitTimes(post(BASE+"/kbcx/xskbcx_cxRjc.html",query));if(times!=null&&!times.encode().equals(next.encode()))throw new IOException("不同校区的作息不一致，暂不能合并导入。已保留原课表。");times=next;}
   if(times==null)throw new IOException("学校未返回作息，已保留原课表。");times.validate(Course.parse(courses));classTimes=times;courseNotes=SchoolParser.xzitNotes(json);return courses;
  }
- @Override public void logout(){cookies.getCookieStore().removeAll();fields.clear();action="";modulus="";exponent="";captchaRequired=false;cachedCourses="";}
+ @Override public void logout(){cookies.getCookieStore().removeAll();fields.clear();action="";modulus="";exponent="";authenticated=false;captchaRequired=false;cachedCourses="";}
 }
