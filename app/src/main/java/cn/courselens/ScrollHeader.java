@@ -15,7 +15,7 @@ final class ScrollHeader extends FrameLayout {
   super(context);this.header=header;this.scrolls=scrolls;gap=Math.round(16*getResources().getDisplayMetrics().density);originalTop=new int[scrolls.length];
   setTag("scroll-header");addView(content,new LayoutParams(-1,-1));
   fade=new View(context);fade.setTag("header-fade");fade.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);fade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{surface,surface,surface,surface,surface&0x00ffffff}));addView(fade,new LayoutParams(-1,0));
-  header.setClickable(true);addView(header,new LayoutParams(-1,-2,Gravity.TOP));
+  header.setClickable(true);header.setFocusable(false);header.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);addView(header,new LayoutParams(-1,-2,Gravity.TOP));
   for(int i=0;i<scrolls.length;i++){originalTop[i]=scrolls[i].getPaddingTop();scrolls[i].setClipToPadding(false);}
  }
  @Override protected void onMeasure(int width,int height){
