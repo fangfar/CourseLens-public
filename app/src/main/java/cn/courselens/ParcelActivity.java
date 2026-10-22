@@ -31,8 +31,8 @@ public class ParcelActivity extends Activity {
   super.onCreate(state);ui=new SecondaryUi(this);ink=getColor(R.color.parcel_ink);muted=getColor(R.color.parcel_muted);card=getColor(R.color.parcel_card);surface=getColor(R.color.parcel_surface);
   filter=state==null?0:state.getInt("filter",0);root=column();root.setBackgroundColor(surface);root.setPadding(0,ui.dp(8),0,0);root.setTag("parcel-center");sideNavigation=new SideNavigation(this,root,surface,card,ink,this::selectPrimaryPage,()->startActivity(new Intent(this,MainActivity.class).setAction(MainActivity.OPEN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)));sideNavigation.select(2);setContentView(sideNavigation);
   root.setOnApplyWindowInsetsListener((view,insets)->{view.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop()+ui.dp(8),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
-  LinearLayout pinned=column();LinearLayout header=new LinearLayout(this);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(12),0,ui.dp(12),0);pinned.addView(header);
-  Button menu=ui.menuAction(header,()->sideNavigation.open(2));menu.setBackground(ui.bg(card,24));menu.getCompoundDrawables()[0].setTint(ink);TextView title=text("快递中心",24,ink);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);header.addView(title,new LinearLayout.LayoutParams(0,-2,1));icon(header,R.drawable.ic_more,"快递操作",this::showActions);header.getChildAt(header.getChildCount()-1).setTag("quick-menu-button");
+  LinearLayout pinned=column();LinearLayout header=new LinearLayout(this);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(16),ui.dp(4),ui.dp(16),0);pinned.addView(header);
+  Button menu=ui.menuAction(header,()->sideNavigation.open(2));menu.getCompoundDrawables()[0].setTint(ink);TextView title=text("快递中心",24,ink);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);header.addView(title,new LinearLayout.LayoutParams(0,-2,1));icon(header,R.drawable.ic_more,"快递操作",this::showActions);header.getChildAt(header.getChildCount()-1).setTag("quick-menu-button");
   feedback=text("仅保存在本机",13,muted);feedback.setPadding(ui.dp(20),ui.dp(4),ui.dp(20),ui.dp(8));feedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);pinned.addView(feedback);
   LinearLayout selector=new LinearLayout(this);selector.setPadding(ui.dp(16),0,ui.dp(16),ui.dp(8));pinned.addView(selector);
   String[] names={"待取件","运输中","已完成"};for(int i=0;i<3;i++){final int selected=i;TextView tab=text(names[i],15,ink);tab.setTag("parcel-filter-"+i);tab.setGravity(Gravity.CENTER);tab.setMinHeight(ui.dp(48));tab.setPadding(ui.dp(4),ui.dp(12),ui.dp(4),ui.dp(12));tab.setFocusable(true);tab.setOnClickListener(v->{filter=selected;load();});selector.addView(tab,new LinearLayout.LayoutParams(0,-2,1));tabs[i]=tab;}
@@ -60,7 +60,7 @@ public class ParcelActivity extends Activity {
  @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putInt("filter",filter);if(draft!=null&&currentSheet!=null&&currentSheet.isShowing()){out.putLong("draftId",draft.id);out.putString("draftCode",codeField.getText().toString());out.putString("draftStation",stationField.getText().toString());out.putString("draftTracking",trackingField.getText().toString());out.putString("draftCarrier",carrierField.getText().toString());out.putInt("draftState",stateField.getSelectedItemPosition());}}
  private LinearLayout column(){LinearLayout view=new LinearLayout(this);view.setOrientation(LinearLayout.VERTICAL);return view;}
  private TextView text(String value,int size,int color){return ui.text(value,size,color);}
- private void icon(LinearLayout host,int drawable,String name,Runnable action){Button b=ui.iconAction(host,drawable,name,action);b.setBackground(ui.bg(card,24));b.getCompoundDrawables()[0].setTint(ink);}
+ private void icon(LinearLayout host,int drawable,String name,Runnable action){Button b=ui.iconAction(host,drawable,name,action);b.getCompoundDrawables()[0].setTint(ink);}
  private Button button(LinearLayout host,String name,Runnable action){Button b=ui.action(host,name,action);b.setTextColor(ink);b.setBackground(ui.bg(card,24));LinearLayout.LayoutParams lp=(LinearLayout.LayoutParams)b.getLayoutParams();lp.bottomMargin=ui.dp(4);lp.rightMargin=ui.dp(8);return b;}
  private void message(String value){feedback.setText(value);}
  private void load(){
@@ -113,7 +113,7 @@ public class ParcelActivity extends Activity {
  private void delete(ParcelRecord p){new AlertDialog.Builder(this).setTitle("删除这条快递？").setMessage("删除后不可恢复，重复通知将在 14 天内被忽略。").setNegativeButton("取消",null).setPositiveButton("删除",(dialog,which)->ParcelRepository.IO.execute(()->{try{new ParcelRepository(this).delete(p.id);runOnUiThread(()->{if(isDestroyed())return;currentSheet.dismiss();load();});}catch(RuntimeException e){runOnUiThread(()->message("删除失败，请重试"));}})).show();}
  private void identity(){LinearLayout body=sheet("官方身份码");body.addView(text("仅打开官方 App，不读取或保存动态身份码。深链可能随官方版本变化。",14,muted));String[] names={"淘宝身份码","菜鸟身份码","拼多多身份码"};for(int i=0;i<3;i++){int index=i;button(body,names[i],()->ParcelIdentity.open(this,index));}}
  private void settings(){
-  LinearLayout body=sheet("快递设置");SharedPreferences prefs=ParcelNotificationListener.settings(this);
+  LinearLayout body=sheet("快递管理");SharedPreferences prefs=ParcelNotificationListener.settings(this);
   body.addView(text("只在本机处理选中来源的通知，不读取短信数据库，不上传通知全文。关闭后停止识别。",14,muted));
   Switch recognition=new Switch(this);recognition.setText("后台通知识别");recognition.setTextColor(ink);recognition.setMinHeight(ui.dp(56));recognition.setChecked(prefs.getBoolean("recognition",false));body.addView(recognition);
   recognition.setOnCheckedChangeListener((view,enabled)->{
@@ -156,7 +156,7 @@ public class ParcelActivity extends Activity {
   if(!p.trackingNumber.isEmpty()&&p.state!=ParcelRecord.DONE)button(body,"查询物流",()->{message("正在查询物流…");ParcelTracking.NETWORK.execute(()->{String result=ParcelTracking.query(getApplicationContext(),p.id);runOnUiThread(()->{if(isDestroyed())return;message(result);if(currentSheet!=null)currentSheet.dismiss();load();});});});
  }
  private void reminder(ParcelRecord p){
-  LinearLayout body=sheet("未领取提醒");body.addView(text("提醒可能因省电、后台限制而延迟。请先在快递设置中开启提醒。",14,muted));
+  LinearLayout body=sheet("未领取提醒");body.addView(text("提醒可能因省电、后台限制而延迟。请先在快递管理中开启提醒。",14,muted));
   button(body,"选择日期与时间",()->{java.util.Calendar date=java.util.Calendar.getInstance();new DatePickerDialog(this,(picker,y,m,d)->new TimePickerDialog(this,(clock,h,min)->{date.set(y,m,d,h,min,0);date.set(java.util.Calendar.MILLISECOND,0);if(date.getTimeInMillis()<=System.currentTimeMillis()){message("请选择未来的提醒时间");return;}saveReminder(p.id,date.getTimeInMillis());},date.get(java.util.Calendar.HOUR_OF_DAY),date.get(java.util.Calendar.MINUTE),true).show(),date.get(java.util.Calendar.YEAR),date.get(java.util.Calendar.MONTH),date.get(java.util.Calendar.DAY_OF_MONTH)).show();});
   button(body,"取消本条提醒",()->saveReminder(p.id,0));
  }
