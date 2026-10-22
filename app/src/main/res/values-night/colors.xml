@@ -1,0 +1,35 @@
+<resources>
+    <color name="app_surface">#121416</color>
+    <color name="app_card">#202428</color>
+    <color name="app_ink">#F1F3F5</color>
+    <color name="app_muted">#AFB6BF</color>
+    <color name="app_primary">#2F6FE4</color>
+    <color name="app_accent">#8CB9FF</color>
+    <color name="app_selected">#24344C</color>
+    <color name="app_soft">#2A2F35</color>
+    <color name="app_chip">#262B31</color>
+    <color name="app_divider">#333A42</color>
+    <color name="app_danger">#FF8FA0</color>
+    <color name="app_disabled">#525A64</color>
+    <color name="app_on_primary">#FFFFFF</color>
+    <color name="app_blue">#9CB8FF</color>
+    <color name="app_handle">#3A414A</color>
+    <color name="app_course_border">#3A414A</color>
+    <color name="app_nav_muted">#8B929B</color>
+    <color name="app_warning">#F0A9B5</color>
+    <color name="app_date_header">#1B2A44</color>
+    <color name="app_date_header_text">#C7D8FA</color>
+    <color name="app_date_header_text_muted">#9DB7E8</color>
+    <color name="app_switch_off">#4A5058</color>
+    <color name="app_switch_thumb">#E8EAED</color>
+    <color name="app_field">#1A1E22</color>
+    <color name="app_empty_title">#C3CEDD</color>
+    <color name="app_empty_hint">#8CB9FF</color>
+    <color name="widget_ink">#F1F3F5</color>
+    <color name="widget_header">#A8B0BC</color>
+    <color name="widget_muted">#9AA3AF</color>
+    <color name="widget_tomorrow">#9AA3AF</color>
+    <color name="widget_status_next">#6FDCB2</color>
+    <color name="widget_status_waiting">#8CB9FF</color>
+    <color name="widget_empty_status">#6FDCB2</color>
+</resources>
