@@ -89,14 +89,18 @@ public final class NavigationChecks {
   main(runner,()->{View root=(View)get(activity,"root");check(root.findViewWithTag("task-filter-1").isSelected(),"Switching tabs lost task filter");check(root.getImportantForAccessibility()!=View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS,"Reopened task page hidden from accessibility");activity.onBackPressed();});settled(runner);
   main(runner,()->{check(!(boolean)get(activity,"tasksVisible")&&get(activity,"root")==home[0],"Task back did not return to timetable");call(activity,"menu");check(activity.findViewById(android.R.id.content).findViewWithTag("bottom-navigation").getVisibility()==View.GONE,"Navigation allows leaving secondary forms");activity.onBackPressed();});settled(runner);
   main(runner,()->{check(activity.findViewById(android.R.id.content).findViewWithTag("bottom-navigation").getVisibility()==View.VISIBLE,"Returning from settings did not restore navigation");check(activity.getPreferences(0).getAll().equals(preferences),"Task navigation changed stored timetable");});
+  main(runner,()->activity.findViewById(android.R.id.content).findViewWithTag("nav-parcels").performClick());settled(runner);
+  main(runner,()->{View content=activity.findViewById(android.R.id.content);check(content.findViewWithTag("bottom-navigation")!=null,"Parcel page lost the bottom navigation");check(content.findViewWithTag("nav-parcels").isSelected(),"Parcel tab not selected");check("parcel-center".equals(((View)get(activity,"root")).getTag()),"Parcel tab did not open the embedded parcel page");});
   for(String destination:new String[]{"nav-tasks","nav-timetable"}){
-   Instrumentation.ActivityMonitor monitor=runner.addMonitor(ParcelActivity.class.getName(),null,false);ParcelActivity parcel=null;
-   try{
-    main(runner,()->activity.findViewById(android.R.id.content).findViewWithTag("nav-parcels").performClick());parcel=(ParcelActivity)runner.waitForMonitorWithTimeout(monitor,10000);check(parcel!=null,"Parcel navigation did not open");runner.waitForIdleSync();ParcelActivity opened=parcel;
-    main(runner,()->{View bar=opened.findViewById(android.R.id.content).findViewWithTag("bottom-navigation");check(bar!=null&&bar.findViewWithTag("nav-parcels").isSelected(),"Parcel navigation is missing or unselected");bar.findViewWithTag(destination).performClick();});settled(runner);
-    main(runner,()->{check(!activity.isDestroyed()&&activity.hasWindowFocus(),"Returning from parcel did not reuse the main activity");check(activity.findViewById(android.R.id.content).findViewWithTag(destination).isSelected(),"Parcel returned to the wrong tab");check(opened.isFinishing()||opened.isDestroyed(),"Parcel remains behind the timetable in back history");check(destination.equals("nav-tasks")?"tasks-page".equals(((View)get(activity,"root")).getTag()):get(activity,"root")==home[0],"Parcel return lost the retained page");});
-   }finally{runner.removeMonitor(monitor);if(parcel!=null&&!parcel.isFinishing()){ParcelActivity opened=parcel;main(runner,opened::finish);}}
+   main(runner,()->activity.findViewById(android.R.id.content).findViewWithTag("nav-parcels").performClick());settled(runner);
+   main(runner,()->activity.findViewById(android.R.id.content).findViewWithTag(destination).performClick());settled(runner);
+   main(runner,()->{check(!activity.isFinishing()&&!activity.isDestroyed(),"Parcel tab left the main activity");check(activity.findViewById(android.R.id.content).findViewWithTag(destination).isSelected(),"Parcel tab returned to the wrong tab");check(destination.equals("nav-tasks")?"tasks-page".equals(((View)get(activity,"root")).getTag()):get(activity,"root")==home[0],"Parcel tab lost the retained page");});
   }
+  main(runner,()->activity.findViewById(android.R.id.content).findViewWithTag("nav-parcels").performClick());settled(runner);
+  main(runner,()->activity.findViewById(android.R.id.content).findViewWithTag("side-menu-button").performClick());settled(runner);
+  main(runner,()->{SideNavigation drawer=activity.findViewById(android.R.id.content).findViewWithTag("side-navigation");check(drawer.isOpen(),"Drawer did not open from the parcel tab");drawer.findViewWithTag("drawer-timetable").performClick();check(drawer.isOpen(),"Drawer collapsed before the parcel route finished");check(!((PageMotion)get(activity,"pageMotion")).isRunning(),"Parcel drawer route started a competing page animation");check(get(activity,"root")==home[0],"Parcel drawer route did not show the timetable immediately");});
+  settled(runner);
+  main(runner,()->{SideNavigation drawer=activity.findViewById(android.R.id.content).findViewWithTag("side-navigation");check(!drawer.isOpen(),"Parcel drawer route did not finish closing");check(activity.findViewById(android.R.id.content).findViewWithTag("nav-timetable").isSelected(),"Parcel drawer route selected the wrong tab");});
  }
 
  public static void run(Instrumentation runner){
