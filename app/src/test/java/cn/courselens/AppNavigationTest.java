@@ -57,6 +57,11 @@ public class AppNavigationTest {
   }
  }
  private void layoutContent(View content){int density=Math.round(content.getResources().getDisplayMetrics().density);int width=360*density,height=800*density;content.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));content.layout(0,0,width,height);}
+ private void settle(android.widget.FrameLayout stage){
+  shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));
+  if(stage.getViewTreeObserver().isAlive())stage.getViewTreeObserver().dispatchOnPreDraw();
+  shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(360));
+ }
  @Test public void bottomTabsSwitchImmediatelyWhileSecondaryPagesStillAnimate(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);assertTrue(android.animation.ValueAnimator.areAnimatorsEnabled());
@@ -66,6 +71,49 @@ public class AppNavigationTest {
    assertSame(home,stage.getChildAt(0));assertEquals(position,scroll.getScrollY());
    controller.newIntent(new Intent(activity,MainActivity.class).setAction(MainActivity.OPEN_TAB).putExtra("primaryTab",1).addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION));assertFalse(motion.isRunning());assertEquals(1,stage.getChildCount());layoutContent(content);
    org.robolectric.util.ReflectionHelpers.callInstanceMethod(activity,"menu");assertTrue(motion.isRunning());
+  }
+ }
+ @Test public void currentDrawerDestinationRetractsWithoutRebuildingPage(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);
+   SideNavigation drawer=content.findViewWithTag("side-navigation");android.widget.FrameLayout stage=org.robolectric.util.ReflectionHelpers.getField(activity,"stage");PageMotion motion=org.robolectric.util.ReflectionHelpers.getField(activity,"pageMotion");View home=stage.getChildAt(0);
+   content.findViewWithTag("side-menu-button").performClick();settle(stage);drawer.findViewWithTag("drawer-timetable").performClick();
+   assertTrue(drawer.isOpen());assertFalse(motion.isRunning());assertEquals(1,stage.getChildCount());assertSame(home,stage.getChildAt(0));
+   settle(stage);assertFalse(drawer.isOpen());assertSame(home,stage.getChildAt(0));assertTrue(content.findViewWithTag("nav-timetable").isSelected());
+  }
+ }
+ @Test public void drawerSwitchOverlapsPanelRetractionWithPageFade(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);
+   SideNavigation drawer=content.findViewWithTag("side-navigation");android.widget.FrameLayout stage=org.robolectric.util.ReflectionHelpers.getField(activity,"stage");PageMotion motion=org.robolectric.util.ReflectionHelpers.getField(activity,"pageMotion");View home=stage.getChildAt(0);
+   android.widget.ScrollView scroll=org.robolectric.util.ReflectionHelpers.getField(activity,"timetableScroll");scroll.scrollTo(0,120);int position=scroll.getScrollY();
+   content.findViewWithTag("side-menu-button").performClick();settle(stage);drawer.findViewWithTag("drawer-tasks").performClick();
+   assertTrue("Panel must keep animating after a destination click",drawer.isOpen());assertTrue(motion.isRunning());assertEquals(2,stage.getChildCount());
+   assertTrue(content.findViewWithTag("nav-tasks").isSelected());assertTrue(drawer.findViewWithTag("drawer-tasks").isSelected());
+   settle(stage);assertFalse(drawer.isOpen());assertFalse(motion.isRunning());assertEquals(1,stage.getChildCount());assertEquals("tasks-page",((View)stage.getChildAt(0)).getTag());assertEquals(1f,stage.getChildAt(0).getAlpha(),0f);
+   content.findViewWithTag("side-menu-button").performClick();settle(stage);drawer.findViewWithTag("drawer-timetable").performClick();settle(stage);
+   assertSame(home,stage.getChildAt(0));assertEquals(position,scroll.getScrollY());assertTrue(content.findViewWithTag("nav-timetable").isSelected());
+  }
+ }
+ @Test public void rapidDrawerChoicesSettleOnLastIntent(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);
+   SideNavigation drawer=content.findViewWithTag("side-navigation");android.widget.FrameLayout stage=org.robolectric.util.ReflectionHelpers.getField(activity,"stage");PageMotion motion=org.robolectric.util.ReflectionHelpers.getField(activity,"pageMotion");
+   content.findViewWithTag("side-menu-button").performClick();settle(stage);
+   drawer.findViewWithTag("drawer-tasks").performClick();drawer.findViewWithTag("drawer-timetable").performClick();drawer.findViewWithTag("drawer-tasks").performClick();
+   assertTrue(drawer.isOpen());assertTrue(motion.isRunning());assertTrue(content.findViewWithTag("nav-tasks").isSelected());
+   settle(stage);assertFalse(drawer.isOpen());assertFalse(motion.isRunning());assertEquals(1,stage.getChildCount());assertEquals("tasks-page",((View)stage.getChildAt(0)).getTag());assertTrue(content.findViewWithTag("nav-tasks").isSelected());assertTrue(drawer.findViewWithTag("drawer-tasks").isSelected());
+  }
+ }
+ @Test public void drawerParcelRouteWaitsForRetractionAndDirectDismissalCancelsIt(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);
+   SideNavigation drawer=content.findViewWithTag("side-navigation");android.widget.FrameLayout stage=org.robolectric.util.ReflectionHelpers.getField(activity,"stage");
+   content.findViewWithTag("side-menu-button").performClick();settle(stage);drawer.findViewWithTag("drawer-parcels").performClick();
+   assertNull(shadowOf(activity).getNextStartedActivity());assertTrue(drawer.isOpen());drawer.findViewWithTag("drawer-shade").performClick();settle(stage);
+   assertNull(shadowOf(activity).getNextStartedActivity());assertFalse(drawer.isOpen());
+   content.findViewWithTag("side-menu-button").performClick();settle(stage);drawer.findViewWithTag("drawer-parcels").performClick();assertNull(shadowOf(activity).getNextStartedActivity());
+   settle(stage);Intent open=shadowOf(activity).getNextStartedActivity();assertEquals(ParcelActivity.class.getName(),open.getComponent().getClassName());assertTrue((open.getFlags()&Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)!=0);
   }
  }
  @Test public void taskEntrySurvivesActivityRecreation(){
@@ -79,6 +127,7 @@ public class AppNavigationTest {
    MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);
    for(String module:new String[]{"nav-timetable","nav-tasks"}){
     content.findViewWithTag(module).performClick();content.findViewWithTag("side-menu-button").performClick();content.findViewWithTag("drawer-settings").performClick();
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));
     View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("设置",root.getTag());assertNotNull(root.findViewWithTag("settings-term"));assertNotNull(root.findViewWithTag("task-settings"));assertNotNull(root.findViewWithTag("parcel-settings"));
     TaskPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"taskPage");java.util.concurrent.ExecutorService worker=org.robolectric.util.ReflectionHelpers.getField(page,"worker");worker.submit(()->{}).get(10,java.util.concurrent.TimeUnit.SECONDS);shadowOf(android.os.Looper.getMainLooper()).idle();
     assertTrue(root.findViewWithTag("task-settings").isEnabled());root.findViewWithTag("task-settings").performClick();assertNotNull(content.findViewWithTag("task-deletion-history"));activity.onBackPressed();assertSame(root,org.robolectric.util.ReflectionHelpers.getField(activity,"root"));activity.onBackPressed();assertTrue(content.findViewWithTag(module).isSelected());
@@ -88,6 +137,7 @@ public class AppNavigationTest {
  @Test public void parcelGearRoutesToCommonSettingsAndRetainsItsActivity(){
   try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
    ParcelActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);content.findViewWithTag("side-menu-button").performClick();content.findViewWithTag("drawer-settings").performClick();
+   shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));
    Intent entry=shadowOf(activity).getNextStartedActivity();assertEquals(MainActivity.class.getName(),entry.getComponent().getClassName());assertEquals(MainActivity.OPEN_SETTINGS,entry.getAction());assertTrue((entry.getFlags()&Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)!=0);assertEquals(0,entry.getFlags()&Intent.FLAG_ACTIVITY_CLEAR_TOP);assertFalse(activity.isFinishing());
   }
  }

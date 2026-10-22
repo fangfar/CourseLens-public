@@ -19,19 +19,18 @@ final class PageMotion {
   previous.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
   float direction=backwards?-1f:1f;
   next.setAlpha(0f);next.setTranslationX(fadeThrough?0f:direction*distance);
-  next.setScaleX(fadeThrough?.98f:1f);next.setScaleY(fadeThrough?.98f:1f);
+  next.setScaleX(fadeThrough?.99f:1f);next.setScaleY(fadeThrough?.99f:1f);
   pending=()->{
    next.getViewTreeObserver().removeOnPreDrawListener(pending);pending=null;
    if(!ValueAnimator.areAnimatorsEnabled()){finish();return true;}
-   long duration=fadeThrough?200:("课程详情".equals(next.getTag())||"课程详情".equals(previous.getTag())?300:260);
+   long duration=fadeThrough?240:("课程详情".equals(next.getTag())||"课程详情".equals(previous.getTag())?300:260);
    animator=ValueAnimator.ofFloat(0f,1f);animator.setDuration(duration);animator.setInterpolator(EASING);
    previous.setLayerType(View.LAYER_TYPE_HARDWARE,null);next.setLayerType(View.LAYER_TYPE_HARDWARE,null);
    animator.addUpdateListener(value->{
     float progress=(float)value.getAnimatedValue();
-    // Material FadeThroughProvider completes exit at 35%, then reveals the new page.
-    previous.setAlpha(Math.max(0f,1f-progress/.35f));next.setAlpha(Math.max(0f,(progress-.35f)/.65f));
-    if(fadeThrough){float scale=.98f+.02f*progress;next.setScaleX(scale);next.setScaleY(scale);}
-    else{previous.setTranslationX(-direction*distance*progress);next.setTranslationX(direction*distance*(1f-progress));}
+    // Direct cross-fade keeps one opaque page throughout; a fade-through would expose the blank stage mid-way.
+    if(fadeThrough){previous.setAlpha(1f-progress);next.setAlpha(progress);float scale=.99f+.01f*progress;next.setScaleX(scale);next.setScaleY(scale);}
+    else{previous.setAlpha(Math.max(0f,1f-progress/.35f));next.setAlpha(Math.max(0f,(progress-.35f)/.65f));previous.setTranslationX(-direction*distance*progress);next.setTranslationX(direction*distance*(1f-progress));}
    });
    animator.addListener(new AnimatorListenerAdapter(){@Override public void onAnimationEnd(Animator animation){finish();}});
    animator.start();return true;

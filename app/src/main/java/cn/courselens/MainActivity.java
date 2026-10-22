@@ -32,7 +32,7 @@ public class MainActivity extends Activity {
  private Map<String,CourseAdjustment> cachedMoves=Collections.emptyMap();
  private Map<Course,String> cachedCardText=new HashMap<>();
  private HomePage homePage;
- private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible,switchingBottomTab;
+ private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible,switchingBottomTab,drawerNavigation;
  private FrameLayout windowContent;private AppNavigation bottomNavigation;private SideNavigation sideNavigation;
  private LinearLayout settingsPage;private int settingsScrollY;private boolean settingsFromParcel;
  private ScrollView timetableScroll;private int timetableScrollY;
@@ -62,7 +62,7 @@ public class MainActivity extends Activity {
  private void base(boolean secondary,boolean fadeThrough){base(secondary,fadeThrough,null);}
  private void base(boolean secondary,boolean fadeThrough,LinearLayout retained){
   manualUpdatePending=false;pagerState=ViewPager.SCROLL_STATE_IDLE;if(remoteDialog!=null)remoteDialog.dismiss();scheduleRemoteNotice();
-  pageMotion.cancel();if(sideNavigation!=null)sideNavigation.close(false);
+  pageMotion.cancel();if(sideNavigation!=null&&!drawerNavigation)sideNavigation.close(false);
   if(unsavedDialog!=null){unsavedDialog.dismiss();unsavedDialog=null;}
   while(navigationOverlay!=null)navigationOverlay.close(false);
   if(root==settingsPage&&settingsPage!=null)settingsScrollY=((ScrollView)settingsPage.getChildAt(1)).getScrollY();
@@ -70,7 +70,7 @@ public class MainActivity extends Activity {
   if(choiceSheet!=null){choiceSheet.close(false);choiceSheet=null;}
   LinearLayout previous=root;boolean backwards=returningPage||!secondary;
   pageBack=null;updateSystemBack();showingDetail=false;screen++;pager=null;
-  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));sideNavigation=new SideNavigation(this,windowContent,SURFACE,CARD,INK,this::selectPrimaryPage,()->{settingsFromParcel=false;menu();});setContentView(sideNavigation);}
+  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));sideNavigation=new SideNavigation(this,windowContent,SURFACE,CARD,INK,this::selectDrawerPage,this::openDrawerSettings);setContentView(sideNavigation);}
   bottomNavigation.setVisibility(secondary?View.GONE:View.VISIBLE);updateBottomNavigation();
   for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();
   stage.removeAllViews();
@@ -97,11 +97,24 @@ public class MainActivity extends Activity {
  }
  private void ripple(View view){secondaryUi.ripple(view);}
 
- private void selectPrimaryPage(int selected){if(selected==0){if(tasksVisible)home();}else if(selected==1){if(!tasksVisible)tasks();}else startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));}
+ private void selectPrimaryPage(int selected,boolean fromDrawer){
+  if(selected==2){if(fromDrawer)sideNavigation.afterClose(()->openParcels(true));else openParcels(false);return;}
+  boolean changed=selected==0?tasksVisible:!tasksVisible;if(!changed)return;
+  boolean previous=drawerNavigation;drawerNavigation=fromDrawer;
+  try{if(selected==0)home();else tasks();}finally{drawerNavigation=previous;}
+ }
+ private void selectDrawerPage(int selected){selectPrimaryPage(selected,true);}
+ private void openDrawerSettings(){boolean previous=drawerNavigation;drawerNavigation=true;try{settingsFromParcel=false;menu();}finally{drawerNavigation=previous;}}
+ private void openParcels(boolean animate){
+  if(isFinishing()||isDestroyed())return;
+  Intent intent=new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+  if(!animate){intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);overridePendingTransition(0,0);}
+  startActivity(intent);
+ }
  void openSideMenu(){if(busy)return;pageMotion.cancel();sideNavigation.open(tasksVisible?1:0);}
  private void selectBottomPage(int selected){
-  if(selected==2){startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT|Intent.FLAG_ACTIVITY_NO_ANIMATION));overridePendingTransition(0,0);return;}
-  switchingBottomTab=true;try{selectPrimaryPage(selected);}finally{switchingBottomTab=false;}
+  if(selected==2){selectPrimaryPage(2,false);return;}
+  switchingBottomTab=true;try{selectPrimaryPage(selected,false);}finally{switchingBottomTab=false;}
  }
  private AppNavigation createBottomNavigation(){return new AppNavigation(this,SURFACE,INK,NAV_MUTED,tasksVisible?1:0,this::selectBottomPage);}
  private void updateBottomNavigation(){
@@ -203,7 +216,7 @@ public class MainActivity extends Activity {
   getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);
   boolean fromTasks=tasksVisible;tasksVisible=false;
   if(homePage!=null&&(pageBack!=null||fromTasks)&&navigationOverlay==null&&homePage.matches()){
-   HomePage page=homePage;page.view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,false,page.view);
+   HomePage page=homePage;page.view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,fromTasks,page.view);
    pager=page.pages;timetableScroll=page.scroll;daysBar=page.days;weekLabel=page.label;
    pager.setCurrentItem(week-1,false);updateHeader();timetableScroll.scrollTo(0,timetableScrollY);return;
   }
