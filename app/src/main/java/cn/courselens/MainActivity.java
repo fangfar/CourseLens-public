@@ -25,6 +25,7 @@ public class MainActivity extends Activity {
  private boolean remoteResumed,touching,manualUpdatePending;private int pagerState,manualCheckScreen=-1;private long interactionAt;private final Runnable remoteNotice=this::showRemoteNotice;private final RemoteConfigClient.Listener remoteListener=this::remoteChanged;
  private final ViewTreeObserver.OnScrollChangedListener remoteScroll=()->{interactionAt=SystemClock.uptimeMillis();scheduleRemoteNotice();};
  private static final String ADD_WIDGET="cn.courselens.ADD_WIDGET";
+ static final String OPEN_TAB="cn.courselens.OPEN_TAB";
  private Set<String> displayChoices=new HashSet<>();
  private String adjustments="";
  private String cachedData,cachedAdjustments,cachedTerm;private List<Course> cachedCourses;
@@ -32,7 +33,7 @@ public class MainActivity extends Activity {
  private Map<Course,String> cachedCardText=new HashMap<>();
  private HomePage homePage;
  private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible;
- private FrameLayout windowContent;private LinearLayout bottomNavigation;private ImageButton timetableTab,tasksTab;
+ private FrameLayout windowContent;private AppNavigation bottomNavigation;
  private LinearLayout settingsPage;private int settingsScrollY;
  private ScrollView timetableScroll;private int timetableScrollY;
  private final PageMotion pageMotion=new PageMotion();private android.window.OnBackInvokedCallback systemBack;private boolean backRegistered;
@@ -43,6 +44,7 @@ public class MainActivity extends Activity {
 
  @Override public void onCreate(Bundle state){super.onCreate(state);schoolAccount=new SchoolAccount(this);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);setTimes(ClassTimes.parse(getPreferences(0).getString("classTimes","")));schoolId=getPreferences(0).getString("school","squ");loginSchool=schoolId;school=schoolClient(schoolId);data=getPreferences(0).getString("courses","");notes=getPreferences(0).getString("notes","");if((getApplicationInfo().flags&android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0)school.onDiagnostic=summary->{try(java.io.FileOutputStream out=openFileOutput("sync-diagnostic.txt",0)){out.write(summary.getBytes(java.nio.charset.StandardCharsets.UTF_8));}catch(Exception ignored){}};else deleteFile("sync-diagnostic.txt");week=getPreferences(0).getInt("week",6);term=getPreferences(0).getString("term",term);displayChoices=new HashSet<>(getPreferences(0).getStringSet("displayChoices",Collections.emptySet()));adjustments=getPreferences(0).getString("courseAdjustments","");home();openWidget(getIntent());widgetShortcut();
   if(state!=null){taskState=state.getBundle("taskPage");if(state.getBoolean("tasksVisible")&&!CourseWidget.OPEN.equals(getIntent().getAction())&&!ADD_WIDGET.equals(getIntent().getAction()))tasks();}
+  openPrimaryTab(getIntent());
   View decor=getWindow().getDecorView();decor.getViewTreeObserver().addOnScrollChangedListener(remoteScroll);
   decor.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener(){boolean drawn;public void onDraw(){if(drawn)return;drawn=true;decor.post(()->{if(decor.getViewTreeObserver().isAlive())decor.getViewTreeObserver().removeOnDrawListener(this);remoteHandler.postDelayed(()->{if(!isDestroyed()&&!isFinishing()){remote=RemoteConfigClient.get(MainActivity.this);remote.listen(remoteListener);if(state==null||!remote.loaded)remote.opened();refreshRemoteStatus();}},1500);Looper.myQueue().addIdleHandler(()->{prepareTasks();return false;});});}});
  }
@@ -94,17 +96,11 @@ public class MainActivity extends Activity {
  }
  private void ripple(View view){view.setForeground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x225c78c6),null,bg(Color.WHITE,8)));}
 
- private LinearLayout createBottomNavigation(){
-  LinearLayout bar=new LinearLayout(this);bar.setTag("bottom-navigation");bar.setOrientation(LinearLayout.VERTICAL);bar.setBackgroundColor(SURFACE);
-  LinearLayout items=new LinearLayout(this);items.setPadding(dp(36),dp(4),dp(36),dp(4));bar.addView(items,new LinearLayout.LayoutParams(-1,-2));
-  timetableTab=navigationTab("课表","nav-timetable",()->{if(tasksVisible)home();});tasksTab=navigationTab("任务","nav-tasks",()->{if(!tasksVisible)tasks();});
-  for(ImageButton tab:new ImageButton[]{timetableTab,tasksTab}){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(8),0,dp(8),0);items.addView(tab,lp);}return bar;
- }
- private ImageButton navigationTab(String label,String tag,Runnable action){ImageButton tab=new ImageButton(this);tab.setTag(tag);tab.setContentDescription(label);tab.setTooltipText(label);tab.setMinimumHeight(dp(48));tab.setPadding(dp(8),dp(10),dp(8),dp(10));tab.setScaleType(ImageView.ScaleType.CENTER);tab.setBackground(null);tab.setOnClickListener(v->action.run());return tab;}
+ private AppNavigation createBottomNavigation(){return new AppNavigation(this,SURFACE,INK,tasksVisible?1:0,selected->{if(selected==0){if(tasksVisible)home();}else if(selected==1){if(!tasksVisible)tasks();}else startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));});}
  private void updateBottomNavigation(){
-  if(bottomNavigation==null)return;ImageButton[] tabs={timetableTab,tasksTab};int[] icons={R.drawable.ic_calendar,R.drawable.ic_tasks};
-  for(int i=0;i<tabs.length;i++){ImageButton tab=tabs[i];boolean selected=tasksVisible==(i==1);tab.setSelected(selected);tab.setImageResource(selected?(i==0?R.drawable.ic_calendar_filled:R.drawable.ic_tasks_filled):icons[i]);tab.setImageTintList(android.content.res.ColorStateList.valueOf(selected?0xff171717:0xff999999));}
+  if(bottomNavigation!=null)bottomNavigation.select(tasksVisible?1:0);
  }
+ private void openPrimaryTab(Intent intent){if(!OPEN_TAB.equals(intent.getAction()))return;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);if(selected==0)home();else if(selected==1)tasks();}
  // Prepare cached task content after the first home frame; due refreshes run on the task worker.
  private void prepareTasks(){
   if(isDestroyed()||isFinishing()||taskPage!=null)return;
@@ -325,6 +321,7 @@ public class MainActivity extends Activity {
   option(courses,R.drawable.ic_calendar,"单次调课 / 停课","",()->adjustmentManager()).setTag("adjustment-manager");
   option(courses,R.drawable.ic_grid,"桌面小组件","",()->widgetAddPage()).setTag("add-home-widget");
   LinearLayout software=settingsGroup(body,"软件与下载");
+  option(software,R.drawable.ic_parcel,"快递中心","取件码与物流",()->startActivity(new Intent(this,ParcelActivity.class))).setTag("parcel-center");
   remoteStatus=null;option(software,R.drawable.ic_notes,"关于软件","",this::about).setTag("about-app");
   LinearLayout caution=settingsGroup(body,"本地数据");TextView clear=text("退出并清空当前课表",15,0xffc52c47);clear.setTag("clear-timetable");clear.setGravity(Gravity.CENTER_VERTICAL);clear.setMinHeight(dp(52));clear.setPadding(dp(16),dp(10),dp(16),dp(10));clear.setFocusable(true);clear.setOnClickListener(v->confirmClear());ripple(clear);caution.addView(clear,new LinearLayout.LayoutParams(-1,-2));
   settingsPage=root;
@@ -709,7 +706,7 @@ public class MainActivity extends Activity {
  }
  private void refreshCaptcha(){SchoolClient client=school;int token=screen;worker.execute(()->{try{byte[] b=client.captcha();runOnUiThread(()->{if(screen==token)captchaImage.setImageBitmap(BitmapFactory.decodeByteArray(b,0,b.length));});}catch(Exception e){runOnUiThread(()->{if(screen==token)loginStatus.setText("验证码加载失败，请重试。");});}});}
  private void submitLogin(){String user=account.getText().toString().trim(),pass=password.getText().toString(),code=captcha.getText().toString().trim();if(user.isEmpty()){account.setError("请输入学校账号");return;}if(pass.isEmpty()){password.setError("请输入密码");return;}if(school.captchaRequired&&code.isEmpty()){captcha.setError("请输入图片验证码");return;}busy=true;loginProgress.setVisibility(View.VISIBLE);loginButton.setEnabled(false);loginStatus.setText("正在认证并同步课程…");((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(password.getWindowToken(),0);SchoolClient client=school;String source=loginSchool,timetable=Timetables.active(this);int token=screen;worker.execute(()->{try{String next=client.login(user,pass,code);client.classTimes.validate(Course.parse(next));int count=Course.parse(next).size();if(count==0)throw new IllegalArgumentException("学校未返回课程，已保留原课表。");String suffix="";if(timetable.equals(Timetables.active(this)))try{schoolAccount.save(timetable,source,user,pass);}catch(Exception saveFailure){suffix="，但自动刷新账号未能保存";}final String savedSuffix=suffix;runOnUiThread(()->{busy=false;if(isDestroyed()||screen!=token)return;acceptImport(next,client,source,savedSuffix);});}catch(Exception e){runOnUiThread(()->{busy=false;if(screen!=token){toast(e.getMessage());return;}loginProgress.setVisibility(View.GONE);loginButton.setEnabled(true);if(SchoolClient.passwordRejected(e.getMessage())){password.getText().clear();password.setError("密码错误，请重新输入");}loginStatus.setText(e.getMessage());loginStatus.setTextColor(0xffb45266);if(school.captchaRequired){captchaBox.setVisibility(View.VISIBLE);refreshCaptcha();}});}});}
- @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);openWidget(intent);if(ADD_WIDGET.equals(intent.getAction())&&hasWindowFocus()){intent.setAction(Intent.ACTION_MAIN);getWindow().getDecorView().post(()->pinWidget());}}
+ @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);openPrimaryTab(intent);openWidget(intent);if(ADD_WIDGET.equals(intent.getAction())&&hasWindowFocus()){intent.setAction(Intent.ACTION_MAIN);getWindow().getDecorView().post(()->pinWidget());}}
  private void openWidget(Intent intent){
   if(intent==null||!CourseWidget.OPEN.equals(intent.getAction()))return;
   if(busy){toast("正在同步，请稍候再打开课程");return;}

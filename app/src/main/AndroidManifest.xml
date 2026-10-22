@@ -1,6 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+ <queries><package android:name="com.taobao.taobao"/><package android:name="com.cainiao.wireless"/><package android:name="com.xunmeng.pinduoduo"/></queries>
+ <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
  <uses-permission android:name="android.permission.INTERNET"/><application android:enableOnBackInvokedCallback="true" android:label="课表镜" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false" android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules" android:usesCleartextTraffic="false" android:networkSecurityConfig="@xml/network_security_config" android:supportsRtl="true">
  <activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
+ <activity android:name=".ParcelActivity" android:theme="@style/ParcelTheme" android:label="快递中心" android:exported="true">
+  <intent-filter><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="text/plain"/></intent-filter>
+  <intent-filter><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="image/*"/></intent-filter>
+ </activity>
+ <service android:name=".ParcelNotificationListener" android:label="快递取件码识别" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="true">
+  <intent-filter><action android:name="android.service.notification.NotificationListenerService"/></intent-filter>
+ </service>
  <receiver android:name=".CourseWidget" android:exported="false" android:label="@string/widget_label">
   <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/><action android:name="android.intent.action.DATE_CHANGED"/><action android:name="android.intent.action.TIME_SET"/><action android:name="android.intent.action.TIMEZONE_CHANGED"/></intent-filter>
   <meta-data android:name="android.appwidget.provider" android:resource="@xml/course_widget_info"/>
@@ -14,5 +23,9 @@
   <meta-data android:name="android.appwidget.provider" android:resource="@xml/course_widget_large_info"/>
  </receiver>
  <receiver android:name=".WidgetPinReceiver" android:exported="false"/>
+ <receiver android:name=".ParcelWidget" android:exported="false" android:label="@string/parcel_widget_label">
+  <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+  <meta-data android:name="android.appwidget.provider" android:resource="@xml/parcel_widget_info"/>
+ </receiver>
  </application>
 </manifest>

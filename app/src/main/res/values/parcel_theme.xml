@@ -1,0 +1,11 @@
+<resources>
+ <color name="parcel_surface">#F3F4F5</color><color name="parcel_card">#FFFFFF</color>
+ <color name="parcel_ink">#171717</color><color name="parcel_muted">#626870</color>
+ <style name="ParcelTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+  <item name="android:fontFamily">sans</item><item name="android:colorAccent">#0866D9</item>
+  <item name="android:windowLightStatusBar">true</item>
+  <item name="android:windowActionModeOverlay">true</item><item name="android:windowSoftInputMode">adjustResize</item>
+  <item name="android:windowBackground">@color/parcel_surface</item>
+  <item name="android:statusBarColor">@color/parcel_surface</item><item name="android:navigationBarColor">@color/parcel_surface</item>
+ </style>
+</resources>

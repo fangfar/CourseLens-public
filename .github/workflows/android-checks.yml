@@ -36,7 +36,7 @@ jobs:
       - name: Signing boundaries without official secrets
         run: python3 tests/SigningChecks.py
       - name: Build isolated QA APKs and lint
-        run: sh gradlew --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest lintDebug
+        run: sh gradlew --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug
       - name: Upload QA APKs
         uses: actions/upload-artifact@v4
         with:
@@ -52,5 +52,7 @@ jobs:
           path: |
             app/build/outputs/apk/androidTest/debug/*.apk
             app/build/reports/lint-results-debug.*
+            app/build/reports/tests/testDebugUnitTest/**
+            app/build/test-results/testDebugUnitTest/**
           if-no-files-found: ignore
           retention-days: 7
