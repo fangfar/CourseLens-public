@@ -71,11 +71,11 @@ public class ParcelAndroidTest {
   RuntimeEnvironment.setQualifiers("w320dp-h640dp-night");RuntimeEnvironment.setFontScale(2f);
   try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
    ParcelActivity activity=controller.get();android.view.View root=activity.findViewById(android.R.id.content);int width=Math.round(320*activity.getResources().getDisplayMetrics().density),height=Math.round(640*activity.getResources().getDisplayMetrics().density);root.measure(android.view.View.MeasureSpec.makeMeasureSpec(width,android.view.View.MeasureSpec.EXACTLY),android.view.View.MeasureSpec.makeMeasureSpec(height,android.view.View.MeasureSpec.EXACTLY));root.layout(0,0,width,height);
-   android.view.View add=described(root,"添加快递");assertNotNull(add);assertTrue(add.getRight()<=((android.view.View)add.getParent()).getWidth());add.performClick();
+   android.view.View menu=root.findViewWithTag("quick-menu-button");assertNotNull(menu);assertTrue(menu.getRight()<=((android.view.View)menu.getParent()).getWidth());menu.performClick();
+   AlertDialog actions=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(actions);android.view.View add=actions.getWindow().getDecorView().findViewWithTag("parcel-add");assertNotNull(add);add.performClick();
    AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(dialog);assertTrue(dialog.isShowing());assertNotNull(dialog.getWindow().getDecorView().findViewWithTag("parcel-editor-code"));
    assertNotEquals(android.graphics.Color.WHITE,activity.getColor(R.color.parcel_card));
   }
   ParcelRepository.IO.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();
  }
- private android.view.View described(android.view.View view,String label){if(view.getContentDescription()!=null&&label.contentEquals(view.getContentDescription()))return view;if(view instanceof android.view.ViewGroup){android.view.ViewGroup group=(android.view.ViewGroup)view;for(int i=0;i<group.getChildCount();i++){android.view.View found=described(group.getChildAt(i),label);if(found!=null)return found;}}return null;}
 }

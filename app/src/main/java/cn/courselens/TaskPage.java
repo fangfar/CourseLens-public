@@ -28,7 +28,8 @@ final class TaskPage extends LinearLayout {
  private float pagePosition;
  private int[] restoredScrollY,renderRestoreY;
  private Runnable renderNext;private int renderGeneration;
- private final Button refresh,configure,settings,add;
+ private TextView refresh,configure,add;private View settings;
+ private MainActivity.NavigationOverlay actionMenu;
  private final android.os.Handler timer=new android.os.Handler(android.os.Looper.getMainLooper());
  private final Runnable autoRefresh=this::autoRefresh;
  private boolean localReady,platformReady;private long retryAfter;
@@ -41,23 +42,20 @@ final class TaskPage extends LinearLayout {
  private boolean busy,refreshing;private volatile boolean closed;
 
  TaskPage(Context context,Bundle state){
-  super(context);activity=(MainActivity)context;ui=new SecondaryUi(activity);account=new ChaoxingAccount(context);setTag("tasks-page");setOrientation(VERTICAL);
-  LinearLayout header=new LinearLayout(context);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(20),ui.dp(12),ui.dp(20),0);addView(header,new LayoutParams(-1,-2));
-  LinearLayout heading=new LinearLayout(context);heading.setOrientation(VERTICAL);header.addView(heading,new LayoutParams(0,-2,1));TextView title=ui.text("任务",24,SecondaryUi.INK);title.setTypeface(null,Typeface.BOLD);heading.addView(title);
+  super(context);activity=(MainActivity)context;ui=new SecondaryUi(activity);account=new ChaoxingAccount(context);setTag("tasks-page");setOrientation(VERTICAL);LinearLayout pinned=new LinearLayout(context);pinned.setOrientation(VERTICAL);
+  LinearLayout header=new LinearLayout(context);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(16),ui.dp(12),ui.dp(16),0);pinned.addView(header,new LayoutParams(-1,-2));ui.menuAction(header,activity::openSideMenu);
+  LinearLayout heading=new LinearLayout(context);heading.setOrientation(VERTICAL);heading.setGravity(Gravity.CENTER);header.addView(heading,new LayoutParams(0,-2,1));TextView title=ui.text("任务",24,SecondaryUi.INK);title.setTypeface(null,Typeface.BOLD);heading.addView(title);
   platform=ui.text("未连接平台",12,SecondaryUi.MUTED);platform.setTag("task-connected-platforms");
-  add=ui.iconAction(header,R.drawable.ic_add,"添加任务",()->editTask(null));add.setTag("task-add");add.setEnabled(false);
-  configure=ui.iconAction(header,R.drawable.ic_person,"账号密码配置",this::configure);configure.setTag("chaoxing-connect");
-  settings=ui.iconAction(header,R.drawable.ic_task_settings,"任务设置",this::settings);settings.setTag("task-settings");settings.setEnabled(false);
-  refresh=ui.iconAction(header,R.drawable.ic_sync,"刷新作业",this::refresh);refresh.setTag("chaoxing-refresh");refresh.setEnabled(account.configured());
-  LinearLayout summary=new LinearLayout(context);summary.setPadding(ui.dp(20),ui.dp(4),ui.dp(20),ui.dp(8));addView(summary,new LayoutParams(-1,-2));summary.addView(platform,new LayoutParams(-2,-2));TextView separator=ui.text("|",12,SecondaryUi.MUTED);separator.setPadding(ui.dp(8),0,ui.dp(8),0);separator.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);summary.addView(separator);
+  ui.iconAction(header,R.drawable.ic_more,"任务操作",this::showActions).setTag("quick-menu-button");
+  LinearLayout summary=new LinearLayout(context);summary.setPadding(ui.dp(20),ui.dp(4),ui.dp(20),ui.dp(8));pinned.addView(summary,new LayoutParams(-1,-2));summary.addView(platform,new LayoutParams(-2,-2));TextView separator=ui.text("|",12,SecondaryUi.MUTED);separator.setPadding(ui.dp(8),0,ui.dp(8),0);separator.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);summary.addView(separator);
   status=ui.text("请先配置学习通账号密码，登录验证成功后才会保存。",12,SecondaryUi.MUTED);status.setTag("chaoxing-status");status.setLineSpacing(ui.dp(3),1);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);summary.addView(status,new LayoutParams(0,-2,1));
-  progress=new ProgressBar(context,null,android.R.attr.progressBarStyleHorizontal);progress.setIndeterminate(true);progress.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(SecondaryUi.NAVY));progress.setVisibility(GONE);addView(progress,new LayoutParams(-1,ui.dp(3)));
-  FrameLayout selector=new FrameLayout(context);selector.setPadding(ui.dp(4),ui.dp(4),ui.dp(4),ui.dp(4));selector.setBackground(ui.bg(SecondaryUi.SOFT,999));LayoutParams choicesLayout=new LayoutParams(-1,-2);choicesLayout.setMargins(ui.dp(16),ui.dp(8),ui.dp(16),ui.dp(4));addView(selector,choicesLayout);
+  progress=new ProgressBar(context,null,android.R.attr.progressBarStyleHorizontal);progress.setIndeterminate(true);progress.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(SecondaryUi.NAVY));progress.setVisibility(GONE);pinned.addView(progress,new LayoutParams(-1,ui.dp(3)));
+  FrameLayout selector=new FrameLayout(context);selector.setPadding(ui.dp(4),ui.dp(4),ui.dp(4),ui.dp(4));selector.setBackground(ui.bg(SecondaryUi.SOFT,999));LayoutParams choicesLayout=new LayoutParams(-1,-2);choicesLayout.setMargins(ui.dp(16),ui.dp(8),ui.dp(16),ui.dp(4));pinned.addView(selector,choicesLayout);
   capsule=new View(context);capsule.setTag("task-filter-capsule");capsule.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);capsule.setBackground(ui.bg(android.graphics.Color.WHITE,999));selector.addView(capsule,new FrameLayout.LayoutParams(0,0));
   choices=new LinearLayout(context);selector.addView(choices,new FrameLayout.LayoutParams(-1,-2));
   String[] labels={"待处理","已完成","全部"};for(int i=0;i<labels.length;i++){final int selected=i;TextView tab=ui.text(labels[i],14,SecondaryUi.MUTED);tab.setTag("task-filter-"+i);tab.setGravity(Gravity.CENTER);tab.setMinHeight(ui.dp(48));tab.setPadding(ui.dp(4),ui.dp(10),ui.dp(4),ui.dp(10));tab.setFocusable(true);tab.setOnClickListener(v->selectFilter(selected));filters[i]=tab;choices.addView(tab,new LayoutParams(0,-2,1));}
   for(int i=0;i<scrolls.length;i++){ScrollView scroll=new ScrollView(context);scroll.setTag("task-filter-page-"+i);scroll.setFillViewport(true);scroll.setClipToPadding(false);scrolls[i]=scroll;LinearLayout list=new LinearLayout(context);list.setOrientation(VERTICAL);list.setPadding(ui.dp(16),0,ui.dp(16),ui.dp(16));list.setTag("chaoxing-results");lists[i]=list;scroll.addView(list,new ScrollView.LayoutParams(-1,-2));}
-  pager=new ViewPager(context);pager.setTag("task-filter-pager");pager.setOffscreenPageLimit(2);addView(pager,new LayoutParams(-1,0,1));pager.setAdapter(new PagerAdapter(){
+  pager=new ViewPager(context);pager.setTag("task-filter-pager");pager.setOffscreenPageLimit(2);addView(new ScrollHeader(context,pinned,pager,SecondaryUi.SURFACE,scrolls),new LayoutParams(-1,0,1));pager.setAdapter(new PagerAdapter(){
    @Override public int getCount(){return scrolls.length;}
    @Override public boolean isViewFromObject(View view,Object page){return view==page;}
    @Override public Object instantiateItem(ViewGroup parent,int position){parent.addView(scrolls[position]);return scrolls[position];}
@@ -75,6 +73,14 @@ final class TaskPage extends LinearLayout {
  }
  // Detached measurement has no window token, so ViewPager must populate again when attached.
  @Override protected void onAttachedToWindow(){super.onAttachedToWindow();pager.requestLayout();}
+ private void showActions(){
+  if(actionMenu!=null&&actionMenu.open){actionMenu.close(true);return;}
+  actionMenu=activity.new NavigationOverlay(true,"任务操作");
+  add=activity.menuItem(actionMenu,"添加任务","task-add",()->editTask(null));
+  refresh=activity.menuItem(actionMenu,"刷新作业","chaoxing-refresh",this::refresh);
+  configure=activity.menuItem(actionMenu,"账号密码配置","chaoxing-connect",this::configure);
+  controls();
+ }
  private void selectFilter(int value){pager.setCurrentItem(value>=0&&value<filters.length?value:0,android.animation.ValueAnimator.areAnimatorsEnabled());}
  private void markFilter(int value){filter=value;for(int i=0;i<filters.length;i++){boolean selected=i==filter;filters[i].setSelected(selected);filters[i].setTextColor(selected?SecondaryUi.INK:SecondaryUi.MUTED);filters[i].setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);scrolls[i].setImportantForAccessibility(selected?IMPORTANT_FOR_ACCESSIBILITY_AUTO:IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);}}
  private void moveCapsule(){if(choices.getWidth()==0)return;int width=choices.getWidth()/filters.length;ViewGroup.LayoutParams size=capsule.getLayoutParams();if(size.width!=width||size.height!=choices.getHeight()){size.width=width;size.height=choices.getHeight();capsule.setLayoutParams(size);}capsule.setTranslationX(pagePosition*choices.getWidth()/filters.length);}
@@ -119,7 +125,7 @@ final class TaskPage extends LinearLayout {
  private void connected(boolean value){platform.setText(value?"学习通 · 已连接":account.configured()?"学习通 · 待验证":"未连接平台");platform.setTextColor(value?SecondaryUi.NAVY:SecondaryUi.MUTED);platform.setContentDescription(platform.getText());}
  private void busy(boolean value){busy=value;controls();}
  private void refreshing(boolean value){refreshing=value;controls();}
- private void controls(){configure.setEnabled(!busy);platform.setEnabled(!busy);refresh.setEnabled(!busy&&!refreshing&&account.configured());settings.setEnabled(!busy&&localReady);add.setEnabled(!busy&&localReady);if(busy||refreshing)pauseRefresh();else scheduleRefresh();progress.setVisibility(busy||refreshing?VISIBLE:GONE);}
+ private void controls(){if(configure!=null)configure.setEnabled(!busy);platform.setEnabled(!busy);if(refresh!=null)refresh.setEnabled(!busy&&!refreshing&&account.configured());if(settings!=null)settings.setEnabled(!busy&&localReady);if(add!=null)add.setEnabled(!busy&&localReady);if(busy||refreshing)pauseRefresh();else scheduleRefresh();progress.setVisibility(busy||refreshing?VISIBLE:GONE);}
  private boolean current(int token){return !closed&&token==generation&&!activity.isFinishing()&&!activity.isDestroyed();}
  private void configure(){
   if(busy||closed)return;if(refreshing){generation++;if(client!=null)client.close();refreshing(false);}LinearLayout form=new LinearLayout(getContext());form.setOrientation(VERTICAL);form.setPadding(ui.dp(24),ui.dp(8),ui.dp(24),ui.dp(8));
@@ -163,7 +169,8 @@ final class TaskPage extends LinearLayout {
  private void delete(ChaoxingClient.Work work){
   if(busy||closed||snapshot==null)return;saveChange(next->{ChaoxingClient.Work removed=ChaoxingCache.find(next.items,work);if(removed!=null)next.items.remove(removed);else removed=ChaoxingCache.copy(work);if(ChaoxingCache.find(next.deleted,work)==null){removed.deletedAt=System.currentTimeMillis();next.deleted.add(removed);}},"任务已删除，可在任务设置的删除历史中恢复。",work.local());
  }
- private void settings(){
+ void settingsEntry(LinearLayout parent){settings=activity.option(parent,R.drawable.ic_tasks,"任务设置","课程加载、删除历史与自动刷新",this::settings);settings.setTag("task-settings");controls();}
+ void settings(){
   if(busy||closed||!localReady)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"任务设置");
   View courses=activity.option(sheet.body,R.drawable.ic_tasks,"加载的课程",account.configured()?"选择要加载和展示任务的课程":"配置学习通后可选择课程",()->{sheet.close(false);courses();});courses.setTag("task-course-settings");courses.setEnabled(account.configured()&&platformReady);courses.setAlpha(account.configured()&&platformReady?1f:.45f);
   activity.option(sheet.body,R.drawable.ic_notes,"删除历史","已删除 "+(snapshot.deleted.size()+localTasks.deleted.size())+" 份任务，可恢复",()->{sheet.close(false);history();}).setTag("task-deletion-history");
