@@ -120,7 +120,7 @@ public class MainActivity extends Activity {
  private void updateBottomNavigation(){
   if(bottomNavigation!=null)bottomNavigation.select(tasksVisible?1:0);if(sideNavigation!=null)sideNavigation.select(tasksVisible?1:0);
  }
- private void openPrimaryTab(Intent intent){if(OPEN_SETTINGS.equals(intent.getAction())){intent.setAction(Intent.ACTION_MAIN);settingsFromParcel=true;menu();return;}if(!OPEN_TAB.equals(intent.getAction()))return;settingsFromParcel=false;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);switchingBottomTab=(intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION)!=0;try{if(selected==0)home();else if(selected==1)tasks();}finally{switchingBottomTab=false;}}
+ private void openPrimaryTab(Intent intent){if(OPEN_SETTINGS.equals(intent.getAction())){intent.setAction(Intent.ACTION_MAIN);settingsFromParcel=true;menu();return;}if(!OPEN_TAB.equals(intent.getAction()))return;settingsFromParcel=false;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);boolean active=selected==0?homePage!=null&&root==homePage.view:tasksVisible&&root==taskPage;if(active){updateBottomNavigation();return;}switchingBottomTab=(intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION)!=0;try{if(selected==0)home();else if(selected==1)tasks();}finally{switchingBottomTab=false;}}
  // Prepare cached task content after the first home frame; due refreshes run on the task worker.
  private void prepareTasks(){
   if(isDestroyed()||isFinishing()||taskPage!=null)return;

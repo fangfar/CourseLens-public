@@ -37,6 +37,17 @@ public class AppNavigationTest {
    controller.newIntent(new Intent(activity,MainActivity.class).setAction(MainActivity.OPEN_TAB).putExtra("primaryTab",0));assertTrue(content.findViewWithTag("nav-timetable").isSelected());
   }
  }
+ @Test public void repeatedPrimaryTabIntentKeepsCurrentPage(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);
+   android.widget.FrameLayout stage=org.robolectric.util.ReflectionHelpers.getField(activity,"stage");PageMotion motion=org.robolectric.util.ReflectionHelpers.getField(activity,"pageMotion");
+   View home=stage.getChildAt(0);android.widget.ScrollView scroll=org.robolectric.util.ReflectionHelpers.getField(activity,"timetableScroll");scroll.scrollTo(0,120);
+   controller.newIntent(primaryTab(activity,1));settle(stage);layoutContent(content);assertEquals(1,stage.getChildCount());View taskPage=stage.getChildAt(0);assertEquals("tasks-page",taskPage.getTag());
+   controller.newIntent(primaryTab(activity,1));assertFalse(motion.isRunning());assertEquals(1,stage.getChildCount());assertSame(taskPage,stage.getChildAt(0));assertTrue(content.findViewWithTag("nav-tasks").isSelected());
+   controller.newIntent(primaryTab(activity,0));settle(stage);layoutContent(content);assertEquals(1,stage.getChildCount());assertSame(home,stage.getChildAt(0));assertEquals(120,scroll.getScrollY());
+   controller.newIntent(primaryTab(activity,0));assertFalse(motion.isRunning());assertEquals(1,stage.getChildCount());assertSame(home,stage.getChildAt(0));assertEquals(120,scroll.getScrollY());assertTrue(content.findViewWithTag("nav-timetable").isSelected());
+  }
+ }
  @Test public void parcelRetainsBottomNavigationAndRoutesBothExistingTabs(){
   try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
    ParcelActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);assertTrue(content.findViewWithTag("nav-parcels").isSelected());content.findViewWithTag("side-menu-button").performClick();SideNavigation drawer=content.findViewWithTag("side-navigation");assertTrue(drawer.isOpen());assertTrue(content.findViewWithTag("drawer-parcels").isSelected());activity.onBackPressed();shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));assertFalse(drawer.isOpen());assertFalse(activity.isFinishing());content.findViewWithTag("nav-parcels").performClick();assertNull(shadowOf(activity).getNextStartedActivity());
@@ -56,6 +67,7 @@ public class AppNavigationTest {
    android.app.AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();for(String tag:new String[]{"parcel-add","parcel-import","parcel-identity"})assertNotNull(menu.getWindow().getDecorView().findViewWithTag(tag));assertNull(menu.getWindow().getDecorView().findViewWithTag("parcel-settings"));menu.getWindow().getDecorView().findViewWithTag("parcel-add").performClick();assertNotSame(menu,org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog());
   }
  }
+ private Intent primaryTab(MainActivity activity,int tab){return new Intent(activity,MainActivity.class).setAction(MainActivity.OPEN_TAB).putExtra("primaryTab",tab).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);}
  private void layoutContent(View content){int density=Math.round(content.getResources().getDisplayMetrics().density);int width=360*density,height=800*density;content.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));content.layout(0,0,width,height);}
  private void settle(android.widget.FrameLayout stage){
   shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));
