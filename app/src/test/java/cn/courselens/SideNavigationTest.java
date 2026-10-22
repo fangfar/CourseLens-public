@@ -1,7 +1,6 @@
 package cn.courselens;
 
 import android.app.Activity;
-import android.graphics.Color;
 import android.os.Looper;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -18,7 +17,7 @@ import static org.robolectric.Shadows.shadowOf;
 @Config(sdk={33,34})
 public class SideNavigationTest {
  private SideNavigation drawer(Activity activity,View page,int[] destination,int[] settings){
-  SideNavigation drawer=new SideNavigation(activity,page,SecondaryUi.SURFACE,Color.WHITE,SecondaryUi.INK,index->destination[0]=index,()->settings[0]++);
+  SideNavigation drawer=new SideNavigation(activity,page,activity.getColor(R.color.app_surface),activity.getColor(R.color.app_card),activity.getColor(R.color.app_ink),index->destination[0]=index,()->settings[0]++);
   activity.setContentView(drawer);drawer.measure(View.MeasureSpec.makeMeasureSpec(390,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(844,View.MeasureSpec.EXACTLY));drawer.layout(0,0,390,844);return drawer;
  }
  @Test public void shadeClosesPushPanelAndRestoresPageAccessibility(){

@@ -11,6 +11,11 @@ public class ParcelWidget extends AppWidgetProvider {
  static void updateAll(Context context){
   AppWidgetManager manager=AppWidgetManager.getInstance(context);int[] ids=manager.getAppWidgetIds(new ComponentName(context,ParcelWidget.class));if(ids.length==0)return;
   RemoteViews views=new RemoteViews(context.getPackageName(),R.layout.parcel_widget);
+  boolean dark=Appearance.dark(context);Context themed=Appearance.wrap(context);
+  views.setInt(R.id.parcel_widget_root,"setBackgroundResource",dark?R.drawable.parcel_widget_background_dark:R.drawable.parcel_widget_background);
+  views.setTextColor(R.id.parcel_widget_header,themed.getColor(R.color.parcel_muted));
+  views.setTextColor(R.id.parcel_widget_count,themed.getColor(R.color.parcel_ink));
+  views.setTextColor(R.id.parcel_widget_codes,themed.getColor(R.color.parcel_ink));
   boolean reveal=ParcelNotificationListener.settings(context).getBoolean("widgetCodes",false);
   try{List<ParcelRecord> ready=new ArrayList<>();int pending=0;for(ParcelRecord p:ParcelDatabase.get(context).parcels().all()){if(!p.confirmed)pending++;else if(p.state==ParcelRecord.READY)ready.add(p);}
    views.setTextViewText(R.id.parcel_widget_count,ready.isEmpty()?"暂无待取快递":ready.size()+" 件待领取");

@@ -1,6 +1,13 @@
 <resources>
+    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:colorAccent">@color/app_accent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowBackground">@color/app_surface</item>
+        <item name="android:statusBarColor">@color/app_surface</item>
+        <item name="android:navigationBarColor">@color/app_surface</item>
+    </style>
     <style name="SecondaryPicker" parent="android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:colorAccent">#0866D9</item>
+        <item name="android:colorAccent">@color/app_accent</item>
         <item name="android:datePickerStyle">@style/SoftDatePicker</item>
     </style>
     <style name="SoftDatePicker" parent="android:style/Widget.Material.Light.DatePicker">
@@ -16,9 +23,9 @@
         <item name="android:textColor">@color/date_header_text</item>
     </style>
     <style name="SecondaryDialog" parent="android:style/Theme.Material.Light.Dialog.Alert">
-        <item name="android:colorAccent">#0866D9</item>
-        <item name="android:textColorPrimary">#171717</item>
-        <item name="android:textColorSecondary">#707070</item>
+        <item name="android:colorAccent">@color/app_accent</item>
+        <item name="android:textColorPrimary">@color/app_ink</item>
+        <item name="android:textColorSecondary">@color/app_muted</item>
         <item name="android:windowBackground">@drawable/dialog_surface</item>
     </style>
 </resources>
