@@ -25,14 +25,14 @@ public class MainActivity extends Activity {
  private boolean remoteResumed,touching,manualUpdatePending;private int pagerState,manualCheckScreen=-1;private long interactionAt;private final Runnable remoteNotice=this::showRemoteNotice;private final RemoteConfigClient.Listener remoteListener=this::remoteChanged;
  private final ViewTreeObserver.OnScrollChangedListener remoteScroll=()->{interactionAt=SystemClock.uptimeMillis();scheduleRemoteNotice();};
  private static final String ADD_WIDGET="cn.courselens.ADD_WIDGET";
- static final String OPEN_TAB="cn.courselens.OPEN_TAB",OPEN_SETTINGS="cn.courselens.OPEN_SETTINGS";
+ static final String OPEN_TAB="cn.courselens.OPEN_TAB",OPEN_SETTINGS="cn.courselens.OPEN_SETTINGS",EXTRA_SUPPRESS_PAGE_MOTION="cn.courselens.SUPPRESS_PAGE_MOTION";
  private Set<String> displayChoices=new HashSet<>();
  private String adjustments="";
  private String cachedData,cachedAdjustments,cachedTerm;private List<Course> cachedCourses;
  private Map<String,CourseAdjustment> cachedMoves=Collections.emptyMap();
  private Map<Course,String> cachedCardText=new HashMap<>();
  private HomePage homePage;
- private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible,switchingBottomTab,drawerNavigation;
+ private TaskPage taskPage;private Bundle taskState;private boolean tasksVisible,launchingParcels,suppressPageMotion,pageBackwards;
  private FrameLayout windowContent;private AppNavigation bottomNavigation;private SideNavigation sideNavigation;
  private LinearLayout settingsPage;private int settingsScrollY;private boolean settingsFromParcel;
  private ScrollView timetableScroll;private int timetableScrollY;
@@ -58,32 +58,30 @@ public class MainActivity extends Activity {
  private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
  private GradientDrawable bg(int color,int radius){GradientDrawable g=new GradientDrawable();g.setColor(color);g.setCornerRadius(dp(radius));return g;}
  private TextView text(String s,int size,int color){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);t.setIncludeFontPadding(false);return t;}
- private void base(boolean secondary){base(secondary,!secondary&&pageBack==null);}
- private void base(boolean secondary,boolean fadeThrough){base(secondary,fadeThrough,null);}
- private void base(boolean secondary,boolean fadeThrough,LinearLayout retained){
+ private void base(boolean secondary){base(secondary,null);}
+ private void base(boolean secondary,LinearLayout retained){
   manualUpdatePending=false;pagerState=ViewPager.SCROLL_STATE_IDLE;if(remoteDialog!=null)remoteDialog.dismiss();scheduleRemoteNotice();
-  pageMotion.cancel();if(sideNavigation!=null&&!drawerNavigation)sideNavigation.close(false);
+  pageMotion.cancel();if(sideNavigation!=null)sideNavigation.close(false);
   if(unsavedDialog!=null){unsavedDialog.dismiss();unsavedDialog=null;}
   while(navigationOverlay!=null)navigationOverlay.close(false);
   if(root==settingsPage&&settingsPage!=null)settingsScrollY=((ScrollView)settingsPage.getChildAt(1)).getScrollY();
   if(timetableScroll!=null){timetableScrollY=timetableScroll.getScrollY();timetableScroll=null;}
   if(choiceSheet!=null){choiceSheet.close(false);choiceSheet=null;}
-  LinearLayout previous=root;boolean backwards=returningPage||!secondary;
+  LinearLayout previous=root;boolean backwards=secondary?returningPage:pageBackwards;
   pageBack=null;updateSystemBack();showingDetail=false;screen++;pager=null;
-  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));sideNavigation=new SideNavigation(this,windowContent,SURFACE,CARD,INK,this::selectDrawerPage,this::openDrawerSettings);setContentView(sideNavigation);}
+  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));sideNavigation=new SideNavigation(this,windowContent,SURFACE,CARD,INK,this::selectPrimaryPage,()->{settingsFromParcel=false;menu();});setContentView(sideNavigation);}
   bottomNavigation.setVisibility(secondary?View.GONE:View.VISIBLE);updateBottomNavigation();
   for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();
   stage.removeAllViews();
   root=retained!=null?retained:new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setClickable(true);
   root.setBackgroundColor(SURFACE);
-  boolean animate=!switchingBottomTab&&previous!=null&&previous.getWidth()>0&&android.animation.ValueAnimator.areAnimatorsEnabled();
+  boolean animate=!suppressPageMotion&&previous!=null&&previous!=root&&previous.getWidth()>0&&android.animation.ValueAnimator.areAnimatorsEnabled();
   if(animate){
    stage.addView(previous,new FrameLayout.LayoutParams(-1,-1));
   }
   LinearLayout incoming=root;stage.addView(incoming,new FrameLayout.LayoutParams(-1,-1));
   if(!animate)return;
-  // shortcut: dynamic pages replace their source card; use Shared Axis until navigation retains both endpoints.
-  pageMotion.start(stage,previous,incoming,backwards,fadeThrough,dp(32));
+  pageMotion.start(stage,previous,incoming,backwards,dp(12));
  }
  private void backPage(){Runnable back=pageBack;if(back==null)return;returningPage=true;try{back.run();}finally{returningPage=false;}}
  private void updateSystemBack(){
@@ -97,30 +95,29 @@ public class MainActivity extends Activity {
  }
  private void ripple(View view){secondaryUi.ripple(view);}
 
- private void selectPrimaryPage(int selected,boolean fromDrawer){
-  if(selected==2){if(fromDrawer)sideNavigation.afterClose(()->openParcels(true));else openParcels(false);return;}
-  boolean changed=selected==0?tasksVisible:!tasksVisible;if(!changed)return;
-  boolean previous=drawerNavigation;drawerNavigation=fromDrawer;
-  try{if(selected==0)home();else tasks();}finally{drawerNavigation=previous;}
- }
- private void selectDrawerPage(int selected){selectPrimaryPage(selected,true);}
- private void openDrawerSettings(){boolean previous=drawerNavigation;drawerNavigation=true;try{settingsFromParcel=false;menu();}finally{drawerNavigation=previous;}}
- private void openParcels(boolean animate){
-  if(isFinishing()||isDestroyed())return;
-  Intent intent=new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-  if(!animate){intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);overridePendingTransition(0,0);}
-  startActivity(intent);
+ private void selectPrimaryPage(int selected){if(selected==0){if(tasksVisible)home();}else if(selected==1){if(!tasksVisible)tasks();}else startParcels();}
+ private void startParcels(){
+  if(launchingParcels)return;launchingParcels=true;
+  startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
+  overridePendingTransition(R.anim.page_enter_forward,R.anim.page_exit);
  }
  void openSideMenu(){if(busy)return;pageMotion.cancel();sideNavigation.open(tasksVisible?1:0);}
  private void selectBottomPage(int selected){
-  if(selected==2){selectPrimaryPage(2,false);return;}
-  switchingBottomTab=true;try{selectPrimaryPage(selected,false);}finally{switchingBottomTab=false;}
+  if(pageMotion.isRunning())return;
+  if(selected==2){startParcels();return;}
+  selectPrimaryPage(selected);
  }
  private AppNavigation createBottomNavigation(){return new AppNavigation(this,SURFACE,INK,NAV_MUTED,tasksVisible?1:0,this::selectBottomPage);}
  private void updateBottomNavigation(){
   if(bottomNavigation!=null)bottomNavigation.select(tasksVisible?1:0);if(sideNavigation!=null)sideNavigation.select(tasksVisible?1:0);
  }
- private void openPrimaryTab(Intent intent){if(OPEN_SETTINGS.equals(intent.getAction())){intent.setAction(Intent.ACTION_MAIN);settingsFromParcel=true;menu();return;}if(!OPEN_TAB.equals(intent.getAction()))return;settingsFromParcel=false;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);boolean active=selected==0?homePage!=null&&root==homePage.view:tasksVisible&&root==taskPage;if(active){updateBottomNavigation();return;}switchingBottomTab=(intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION)!=0;try{if(selected==0)home();else if(selected==1)tasks();}finally{switchingBottomTab=false;}}
+ private void openPrimaryTab(Intent intent){
+  boolean suppress=intent.getBooleanExtra(EXTRA_SUPPRESS_PAGE_MOTION,false)||(intent.getFlags()&Intent.FLAG_ACTIVITY_NO_ANIMATION)!=0;
+  if(OPEN_SETTINGS.equals(intent.getAction())){intent.setAction(Intent.ACTION_MAIN);settingsFromParcel=true;suppressPageMotion=suppress;try{menu();}finally{suppressPageMotion=false;}return;}
+  if(!OPEN_TAB.equals(intent.getAction()))return;settingsFromParcel=false;int selected=intent.getIntExtra("primaryTab",0);intent.setAction(Intent.ACTION_MAIN);
+  boolean active=selected==0?(homePage!=null&&root==homePage.view&&!tasksVisible):(selected==1&&tasksVisible&&root==taskPage);
+  if(active){updateBottomNavigation();return;}
+  suppressPageMotion=suppress;try{if(selected==0)home();else if(selected==1)tasks();}finally{suppressPageMotion=false;}}
  // Prepare cached task content after the first home frame; due refreshes run on the task worker.
  private void prepareTasks(){
   if(isDestroyed()||isFinishing()||taskPage!=null)return;
@@ -128,7 +125,7 @@ public class MainActivity extends Activity {
   if(width>0&&height>0){taskPage.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));taskPage.layout(0,0,width,height);}
  }
  boolean taskRefreshActive(){return remoteResumed&&navigationOverlay==null&&(sideNavigation==null||!sideNavigation.isOpen());}
- private void tasks(){getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);tasksVisible=true;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,true,taskPage);root.setBackgroundColor(SURFACE);}
+ private void tasks(){getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);tasksVisible=true;pageBackwards=false;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,taskPage);root.setBackgroundColor(SURFACE);}
 
  private Calendar date(){Calendar c=Calendar.getInstance(TimeZone.getTimeZone("Asia/Shanghai"));c.set(Calendar.HOUR_OF_DAY,12);c.set(Calendar.MINUTE,0);c.set(Calendar.SECOND,0);c.set(Calendar.MILLISECOND,0);return c;}
  private Calendar monday(){Calendar c=date();String[] p=term.split("-");c.set(Integer.parseInt(p[0]),Integer.parseInt(p[1])-1,Integer.parseInt(p[2]));return c;}
@@ -141,7 +138,7 @@ public class MainActivity extends Activity {
  }
 
  private void changeWeek(int next){if(next<1||next>30)return;if(navigationOverlay!=null)navigationOverlay.close(true);if(pager!=null&&pager.isAttachedToWindow()){pager.setCurrentItem(next-1,true);}else{week=next;saveWeek();home();}}
- private LinearLayout secondary(String title,String description,Runnable back){base(true,root!=null&&title.equals(root.getTag()));root.setTag(title);pageBack=back;updateSystemBack();root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(12),dp(4),dp(12),dp(4));TextView close=icon(R.drawable.ic_back,"返回",()->{if(busy){toast("正在同步，请稍候");return;}backPage();});bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));TextView heading=text(title,18,INK);heading.setGravity(Gravity.CENTER);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));View spacer=new View(this);spacer.setTag("header-spacer");spacer.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);bar.addView(spacer,new LinearLayout.LayoutParams(dp(48),dp(48)));root.addView(bar);ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(16),dp(8),dp(16),dp(20));scroll.addView(body);if(!description.isEmpty()){TextView intro=text(description,14,MUTED);intro.setLineSpacing(dp(4),1);intro.setPadding(dp(4),0,dp(4),dp(20));body.addView(intro);}return body;}
+ private LinearLayout secondary(String title,String description,Runnable back){base(true);root.setTag(title);pageBack=back;updateSystemBack();root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(12),dp(4),dp(12),dp(4));TextView close=icon(R.drawable.ic_back,"返回",()->{if(busy){toast("正在同步，请稍候");return;}backPage();});bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));TextView heading=text(title,18,INK);heading.setGravity(Gravity.CENTER);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));View spacer=new View(this);spacer.setTag("header-spacer");spacer.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);bar.addView(spacer,new LinearLayout.LayoutParams(dp(48),dp(48)));root.addView(bar);ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(16),dp(8),dp(16),dp(20));scroll.addView(body);if(!description.isEmpty()){TextView intro=text(description,14,MUTED);intro.setLineSpacing(dp(4),1);intro.setPadding(dp(4),0,dp(4),dp(20));body.addView(intro);}return body;}
  private LinearLayout bottomSheet(String title,String description,Runnable back){
   if(returningPage&&navigationOverlay==null)back.run();
   NavigationOverlay overlay=new NavigationOverlay(false,title);LinearLayout body=overlay.body;
@@ -212,11 +209,11 @@ public class MainActivity extends Activity {
   root.findViewWithTag("sheet-action-button").setVisibility(View.VISIBLE);root.findViewWithTag("sheet-action-button").setOnClickListener(v->{NavigationOverlay menu=sheetMenu("教学周操作");for(int w=1;w<=30;w++){final int chosen=w;menuItem(menu,"第 "+w+" 周"+(w==week?" ✓":""),"week-"+w,()->changeWeek(chosen));}});
  }
  private void home(){
-  settingsPage=null;
+  settingsPage=null;pageBackwards=true;
   getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);
   boolean fromTasks=tasksVisible;tasksVisible=false;
   if(homePage!=null&&(pageBack!=null||fromTasks)&&navigationOverlay==null&&homePage.matches()){
-   HomePage page=homePage;page.view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,fromTasks,page.view);
+   HomePage page=homePage;page.view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,page.view);
    pager=page.pages;timetableScroll=page.scroll;daysBar=page.days;weekLabel=page.label;
    pager.setCurrentItem(week-1,false);updateHeader();timetableScroll.scrollTo(0,timetableScrollY);return;
   }
@@ -232,7 +229,7 @@ public class MainActivity extends Activity {
   homePage=new HomePage();
  }
  @Override protected void onStart(){super.onStart();if(remote!=null)remote.opened();}
- @Override protected void onResume(){super.onResume();remoteResumed=true;if(taskPage!=null)taskPage.scheduleRefresh();scheduleRemoteNotice();if(pager!=null&&pager.isAttachedToWindow())updateHeader();Context context=getApplicationContext();worker.execute(()->CourseWidget.updateAll(context));getWindow().getDecorView().postDelayed(()->checkWidgetPin(),250);}
+ @Override protected void onResume(){super.onResume();launchingParcels=false;remoteResumed=true;if(taskPage!=null)taskPage.scheduleRefresh();scheduleRemoteNotice();if(pager!=null&&pager.isAttachedToWindow())updateHeader();Context context=getApplicationContext();worker.execute(()->CourseWidget.updateAll(context));getWindow().getDecorView().postDelayed(()->checkWidgetPin(),250);}
  @Override protected void onPause(){remoteResumed=false;if(taskPage!=null)taskPage.pauseRefresh();touching=false;remoteHandler.removeCallbacks(remoteNotice);super.onPause();}
  @Override protected void onStop(){if(remoteDialog!=null)remoteDialog.dismiss();super.onStop();}
  @Override public boolean dispatchTouchEvent(MotionEvent event){if(event.getActionMasked()==MotionEvent.ACTION_DOWN)touching=true;interactionAt=SystemClock.uptimeMillis();try{return super.dispatchTouchEvent(event);}finally{if(event.getActionMasked()==MotionEvent.ACTION_UP||event.getActionMasked()==MotionEvent.ACTION_CANCEL){touching=false;scheduleRemoteNotice();}}}
@@ -324,10 +321,10 @@ public class MainActivity extends Activity {
   if(!title.isEmpty()){TextView label=text(title,12,MUTED);label.setPadding(dp(4),dp(4),0,dp(6));body.addView(label);}
   LinearLayout group=new LinearLayout(this);group.setOrientation(LinearLayout.VERTICAL);group.setTag("settings-group");group.setBackground(bg(CARD,18));group.setClipToOutline(true);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(12);body.addView(group,lp);return group;
  }
- private void closeSettings(){boolean parcel=settingsFromParcel;settingsFromParcel=false;if(tasksVisible)tasks();else home();if(parcel)startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));}
+ private void closeSettings(){boolean parcel=settingsFromParcel;settingsFromParcel=false;if(tasksVisible)tasks();else home();if(parcel){startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));overridePendingTransition(R.anim.page_enter_backward,R.anim.page_exit);}}
  private void menu(){
   if(returningPage&&settingsPage!=null){
-   settingsPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(true,false,settingsPage);
+   settingsPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(true,settingsPage);
    root.setBackgroundColor(SURFACE);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);
    pageBack=this::closeSettings;updateSystemBack();remoteStatus=root.findViewWithTag("update-status");refreshRemoteStatus();
    ((ScrollView)root.getChildAt(1)).scrollTo(0,settingsScrollY);return;
@@ -755,7 +752,7 @@ public class MainActivity extends Activity {
    home();toast("课程安排已更新，请查看最新课表");
   }catch(RuntimeException e){home();toast("请检查课表及开学日期设置");}
  }
-  @Override public void onBackPressed(){if(sideNavigation!=null&&sideNavigation.close(true))return;if(navigationOverlay!=null){navigationOverlay.close(true);return;}if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE){choiceSheet.close(true);return;}if(busy){toast("正在同步，请稍候");return;}if(pageBack!=null){backPage();return;}if(tasksVisible){home();return;}super.onBackPressed();}
+  @Override public void onBackPressed(){if(sideNavigation!=null&&sideNavigation.close(true))return;if(pageMotion.isRunning())pageMotion.cancel();if(navigationOverlay!=null){navigationOverlay.close(true);return;}if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE){choiceSheet.close(true);return;}if(busy){toast("正在同步，请稍候");return;}if(pageBack!=null){backPage();return;}if(tasksVisible){home();return;}super.onBackPressed();}
  @Override protected void onDestroy(){if(sideNavigation!=null)sideNavigation.close(false);if(taskPage!=null)taskPage.close();remoteResumed=false;if(remote!=null)remote.unlisten(remoteListener);if(remoteDialog!=null)remoteDialog.dismiss();remoteHandler.removeCallbacksAndMessages(null);if(getWindow().getDecorView().getViewTreeObserver().isAlive())getWindow().getDecorView().getViewTreeObserver().removeOnScrollChangedListener(remoteScroll);if(unsavedDialog!=null)unsavedDialog.dismiss();if(widgetDialog!=null)widgetDialog.dismiss();screen++;pageMotion.cancel();while(navigationOverlay!=null)navigationOverlay.close(false);if(Build.VERSION.SDK_INT>=33&&backRegistered)getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(systemBack);if(stage!=null)for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();worker.shutdownNow();homePage=null;if(password!=null)password.getText().clear();super.onDestroy();}
  // Retain one Activity-owned home only; data/term/notes/choices changes replace it.
  private class HomePage {
