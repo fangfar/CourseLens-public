@@ -52,7 +52,7 @@ public class TaskPageDesignTest {
     ExecutorService worker=getField(page,"worker");worker.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();
     ChaoxingClient.Result data=new ChaoxingClient.Result();ChaoxingClient.Work work=new ChaoxingClient.Work("合成课程","第五章课后练习与实验报告","未完成","");work.deadline=java.time.LocalDateTime.now().plusDays(2).withSecond(0).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));data.items.add(work);data.items.add(new ChaoxingClient.Work("合成课程","待补录截止时间的任务","未完成",""));data.items.add(new ChaoxingClient.Work("合成课程","已经完成的任务","已完成",""));setField(page,"snapshot",data);
     layout(root,activity);callInstanceMethod(page,"render");shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));layout(root,activity);
-    assertNull(root.findViewWithTag("task-filter-0"));assertNull(root.findViewWithTag("task-filter-pager"));LinearLayout[] lists=getField(page,"lists");assertEquals(1,lists.length);assertEquals(3,countRows(lists[0]));assertNotNull(root.findViewWithTag("task-deadline-hero"));assertNotNull(root.findViewWithTag("task-work-title"));snapshot(root,font==1f?"task-cards":"task-dark-large");
+    assertNull(root.findViewWithTag("task-filter-0"));assertNull(root.findViewWithTag("task-filter-pager"));LinearLayout[] lists=getField(page,"lists");assertEquals(1,lists.length);assertEquals(2,countRows(lists[0]));assertEquals(3,data.items.size());assertNotNull(root.findViewWithTag("task-deadline-hero"));assertNotNull(root.findViewWithTag("task-work-title"));snapshot(root,font==1f?"task-cards":"task-dark-large");
    }
   }
  }
