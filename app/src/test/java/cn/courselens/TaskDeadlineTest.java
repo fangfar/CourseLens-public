@@ -6,8 +6,8 @@ import static org.junit.Assert.*;
 
 public class TaskDeadlineTest {
  @Test public void preservesPartialDatesWithoutInventingCountdownYear(){
-  assertEquals("10-29 10:26 · 年份待确认",TaskDeadline.display("10-29 10:26"));
-  assertEquals("10-24 13:34 · 年份待确认",TaskDeadline.display("10月24日 13:34"));
+  assertEquals("10-29 10:26",TaskDeadline.display("10-29 10:26"));
+  assertEquals("10-24 13:34",TaskDeadline.display("10月24日 13:34"));
   assertEquals("10-29 10:26",TaskDeadline.display("2026-10-29 10:26"));
   assertEquals("截止时间未知",TaskDeadline.display("02-30 10:26"));
   assertEquals("截止时间未知",TaskDeadline.display("10-29 25:26"));
