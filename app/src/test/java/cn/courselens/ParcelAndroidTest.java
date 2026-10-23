@@ -38,6 +38,14 @@ public class ParcelAndroidTest {
   ParcelRecord done=record("789012","另一合成驿站","YT00000000001");done.state=ParcelRecord.DONE;repository.save(done);assertFalse(repository.ingest(record("789012","另一合成驿站","YT00000000001")));
   repository.clear();assertTrue(db.parcels().all().isEmpty());assertTrue(repository.ingest(record("123456","合成驿站","")));
  }
+ @Test public void undoPreservesRecordAndReplayProtection(){
+  ParcelRecord p=record("123456","合成撤销驿站","YT00000000009");p.trackingEvents="[]";repository.save(p);long created=p.createdAt;
+  repository.delete(p.id);assertNull(db.parcels().get(p.id));repository.restoreDeleted(p);
+  assertEquals(created,db.parcels().get(p.id).createdAt);assertEquals("[]",db.parcels().get(p.id).trackingEvents);assertFalse(repository.ingest(record(p.code,p.station,p.trackingNumber)));
+  try{repository.restoreDeleted(p);fail("undo must not overwrite an existing record");}catch(IllegalArgumentException expected){}
+  p.state=ParcelRecord.DONE;repository.save(p);repository.undoComplete(p.id,p.updatedAt,ParcelRecord.READY,1234,567);assertEquals(ParcelRecord.READY,db.parcels().get(p.id).state);assertEquals(1234,db.parcels().get(p.id).remindAt);
+  try{repository.undoComplete(p.id,p.updatedAt,ParcelRecord.READY,1234,567);fail("stale undo must not change a record");}catch(IllegalArgumentException expected){}
+ }
  @Test public void queriesPreserveDataAndRejectLateResponses(){
   ParcelRecord p=record("","","SF00000000001");p.state=ParcelRecord.TRANSIT;repository.save(p);AtomicInteger calls=new AtomicInteger();
   TrackingProvider fake=(number,carrier)->{calls.incrementAndGet();return new TrackingProvider.Result(TrackingProvider.Error.NONE,"IN_TRANSIT",Collections.singletonList(new TrackingProvider.Event("合成时间","合成物流")),0);};

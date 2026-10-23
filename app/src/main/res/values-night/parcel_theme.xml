@@ -1,5 +1,6 @@
 <resources>
- <color name="parcel_surface">#121416</color><color name="parcel_card">#202428</color>
+ <color name="parcel_soft">#2B2F35</color>
+ <color name="parcel_surface">#131518</color><color name="parcel_card">#1E2126</color>
  <color name="parcel_ink">#F1F3F5</color><color name="parcel_muted">#AFB6BF</color>
  <style name="ParcelTheme" parent="android:style/Theme.Material.NoActionBar">
   <item name="android:fontFamily">sans</item><item name="android:colorAccent">#8CB9FF</item>

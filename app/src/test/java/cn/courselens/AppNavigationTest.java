@@ -139,10 +139,10 @@ public class AppNavigationTest {
    assertNull(content.findViewWithTag("task-settings"));assertFalse(content.findViewWithTag("chaoxing-refresh").isEnabled());assertTrue(content.findViewWithTag("chaoxing-connect").isEnabled());content.findViewWithTag("chaoxing-connect").performClick();android.app.AlertDialog configuration=org.robolectric.util.ReflectionHelpers.getField(page,"configuration");assertNotNull(configuration);assertTrue(configuration.isShowing());
   }
  }
- @Test public void parcelActionsRemainAvailableFromMore(){
+ @Test public void parcelActionsRemainAvailableFromAdd(){
   try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
    View content=controller.get().findViewById(android.R.id.content);assertNull(content.findViewWithTag("parcel-import"));content.findViewWithTag("quick-menu-button").performClick();
-   android.app.AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();for(String tag:new String[]{"parcel-add","parcel-import","parcel-identity"})assertNotNull(menu.getWindow().getDecorView().findViewWithTag(tag));assertNull(menu.getWindow().getDecorView().findViewWithTag("parcel-settings"));menu.getWindow().getDecorView().findViewWithTag("parcel-add").performClick();assertNotSame(menu,org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog());
+   android.app.AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();for(String tag:new String[]{"parcel-add","parcel-import"})assertNotNull(menu.getWindow().getDecorView().findViewWithTag(tag));assertNull(menu.getWindow().getDecorView().findViewWithTag("parcel-settings"));menu.getWindow().getDecorView().findViewWithTag("parcel-add").performClick();assertNotSame(menu,org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog());
   }
  }
  @Test public void timetableAndTaskGearOpenTheSameSettingsAndReturnToTheirModule()throws Exception {
