@@ -5,6 +5,14 @@ import java.time.LocalDateTime;
 import static org.junit.Assert.*;
 
 public class TaskDeadlineTest {
+ @Test public void preservesPartialDatesWithoutInventingCountdownYear(){
+  assertEquals("10-29 10:26",TaskDeadline.display("10-29 10:26"));
+  assertEquals("10-24 13:34",TaskDeadline.display("10月24日 13:34"));
+  assertEquals("10-29 10:26",TaskDeadline.display("2026-10-29 10:26"));
+  assertEquals("截止时间未知",TaskDeadline.display("02-30 10:26"));
+  assertEquals("截止时间未知",TaskDeadline.display("10-29 25:26"));
+  assertNull(TaskDeadline.parse("10-29 10:26"));
+ }
  @Test public void acceptsPlatformFormatsWithoutGuessingYear(){
   assertEquals(LocalDateTime.of(2026,10,23,9,5),TaskDeadline.parse("2026年10月23日 9:05"));
   assertNotNull(TaskDeadline.parse("2026/10/23 09:05:30"));
