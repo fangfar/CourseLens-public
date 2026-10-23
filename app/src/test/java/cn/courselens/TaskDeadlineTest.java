@@ -17,4 +17,12 @@ public class TaskDeadlineTest {
   assertEquals("现在截止",TaskDeadline.relative(now,now));
   assertEquals("截止时间未知",TaskDeadline.relative(null,now));
  }
+ @Test public void sortingKeepsUnknownDatesLastWithoutChangingSource(){
+  ChaoxingClient.Work unknown=new ChaoxingClient.Work("A","unknown","未完成","");unknown.deadline="10-23 12:00";
+  ChaoxingClient.Work later=new ChaoxingClient.Work("A","later","未完成","");later.deadline="2026-10-25 12:00";
+  ChaoxingClient.Work earlier=new ChaoxingClient.Work("B","earlier","未完成","");earlier.deadline="2026-10-23 12:00";
+  java.util.List<ChaoxingClient.Work> source=java.util.Arrays.asList(unknown,later,earlier),sorted=TaskDeadline.sorted(source);
+  assertSame(earlier,sorted.get(0));assertSame(unknown,sorted.get(2));assertSame(unknown,source.get(0));
+  assertEquals("还剩 1 天 2 小时",TaskDeadline.countdown(LocalDateTime.of(2026,10,24,11,0),LocalDateTime.of(2026,10,23,9,0)));
+ }
 }

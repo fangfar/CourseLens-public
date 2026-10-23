@@ -28,4 +28,10 @@
         <item name="android:textColorSecondary">@color/app_muted</item>
         <item name="android:windowBackground">@drawable/dialog_surface</item>
     </style>
+    <style name="TaskTimePickerTheme" parent="SecondaryDialog">
+        <item name="android:timePickerStyle">@style/TaskSpinnerTimePicker</item>
+    </style>
+    <style name="TaskSpinnerTimePicker" parent="android:style/Widget.Material.TimePicker">
+        <item name="android:timePickerMode">spinner</item>
+    </style>
 </resources>
