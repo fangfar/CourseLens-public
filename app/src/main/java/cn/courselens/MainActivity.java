@@ -169,7 +169,7 @@ public class MainActivity extends Activity {
  private NavigationOverlay sheetMenu(String title){return new NavigationOverlay(true,title);}
  class NavigationOverlay extends FrameLayout {
   final boolean corner;final LinearLayout panel,body;final View shade;final LinearLayout underneath;final Runnable underneathBack;final NavigationOverlay previous;
-  final int accessibility;final boolean underneathDetail;boolean open=true;int generation;ViewTreeObserver observer;ViewTreeObserver.OnPreDrawListener pending;
+  final int accessibility;final boolean underneathDetail;boolean fitContent;boolean open=true;int generation;ViewTreeObserver observer;ViewTreeObserver.OnPreDrawListener pending;
   NavigationOverlay(boolean corner,String title){
    super(MainActivity.this);pageMotion.cancel();this.corner=corner;underneath=root;underneathBack=pageBack;underneathDetail=showingDetail;previous=navigationOverlay;accessibility=underneath.getImportantForAccessibility();
    if(previous!=null&&!corner)previous.setVisibility(INVISIBLE);underneath.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
@@ -189,6 +189,7 @@ public class MainActivity extends Activity {
    FrameLayout.LayoutParams bounds=(FrameLayout.LayoutParams)panel.getLayoutParams();int height=MeasureSpec.getSize(heightSpec);bounds.bottomMargin=0;
    bounds.width=Math.max(1,MeasureSpec.getSize(widthSpec)-(corner?dp(24):0));bounds.height=-2;
    if(corner){bounds.width=Math.min(bounds.width,dp(200));panel.measure(MeasureSpec.makeMeasureSpec(bounds.width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));bounds.height=Math.min(panel.getMeasuredHeight(),Math.max(1,Math.min(dp(440),height-dp(24))));bounds.topMargin=Math.max(dp(12),Math.min(bounds.topMargin,height-bounds.height-dp(12)));}
+   else if(fitContent){panel.measure(MeasureSpec.makeMeasureSpec(bounds.width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));bounds.height=Math.min(panel.getMeasuredHeight(),Math.max(1,height-dp(24)));}
    else bounds.height=Math.max(1,height/2);
    super.onMeasure(widthSpec,heightSpec);
   }

@@ -22,7 +22,7 @@
 
 ## 开发与构建
 
-使用本公开仓库的 `main` 和短期功能分支；重要修改经 PR 和检查后合入。协作权限见 [AGENTS.md](AGENTS.md)。工程沿用单模块 Java / 原生 View 架构，版本和依赖以 `app/build.gradle` 为准。底部内容弹层与表单选择器统一占可用高度的一半，长内容在弹层内滚动。
+使用本公开仓库的 `main` 和短期功能分支；重要修改经 PR 和检查后合入。协作权限见 [AGENTS.md](AGENTS.md)。工程沿用单模块 Java / 原生 View 架构，版本和依赖以 `app/build.gradle` 为准。常规底部内容弹层与表单选择器占可用高度的一半。任务添加/编辑面板按内容展开并预留顶部空间，普通字号下表单与固定取消/保存区完整可见；键盘或大字体导致空间不足时仍允许内部滚动，避免裁切字段。
 
 安装 JDK 17、Python 3、Android SDK 34 与 build-tools 34.0.0。配置 `ANDROID_HOME`，或在被忽略的 `local.properties` 指定 `sdk.dir`。
 
