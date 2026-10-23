@@ -52,6 +52,8 @@ public class ParcelPageDesignTest {
    View confirmation=root.findViewWithTag("parcel-record-102");assertNotNull(findText(confirmation,"确认无误"));assertTrue(confirmation.getTop()<pickup.getTop());assertEquals(1,((TextView)findText(confirmation,"确认无误")).getLineCount());assertEquals(1,((TextView)findText(pickup,"已取件")).getLineCount());
    assertNotNull(findText(root,"身份码"));assertNotNull(findText(root,"已到达合成转运中心"));assertNotNull(findText(root,"去配置"));
    for(int i=0;i<3;i++)assertEquals("identity labels should not wrap",1,((TextView)root.findViewWithTag("parcel-identity-"+i)).getLineCount());
+   android.graphics.drawable.Drawable addBackground=root.findViewWithTag("quick-menu-button").getBackground();
+   assertTrue("add button should keep the shared light-circle icon style",addBackground instanceof android.graphics.drawable.GradientDrawable&&((android.graphics.drawable.GradientDrawable)addBackground).getColor().getDefaultColor()==activity.getColor(R.color.app_card));
    snapshot(root,image);
    root.findViewWithTag("parcel-filter-1").performClick();assertEquals(1,((ViewPager)root.findViewWithTag("parcel-filter-pager")).getCurrentItem());
    View shipping=root.findViewWithTag("parcel-record-103");assertNull(findText(shipping,"查询物流"));shipping.performClick();assertNotNull(findText(shipping,"收起物流记录"));shipping.performClick();assertNotNull(findText(shipping,"展开物流记录"));
