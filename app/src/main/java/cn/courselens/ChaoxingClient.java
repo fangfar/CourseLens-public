@@ -34,7 +34,7 @@ final class ChaoxingClient implements AutoCloseable {
   String key(){return id+":"+clazz;}
  }
  static final class Work {
-  final String course,title,status,url;String deadline="截止时间未知",courseKey="",workKey="",originalTitle="";long deletedAt;boolean edited;
+  final String course,title,status,url;String deadline="截止时间未知",courseKey="",workKey="",originalTitle="";long deletedAt;boolean edited,deadlineEdited;
   Work(String course,String title,String status,String url){this.course=course;this.title=title;this.status=status;this.url=url;}
   boolean local(){return workKey.startsWith("local:");}
   boolean completed(){return status.matches(".*(已完成|已提交|已批阅|待批阅|已批改).*");}
@@ -114,12 +114,14 @@ final class ChaoxingClient implements AutoCloseable {
   String text=Jsoup.parse(html).text();String time="(?:[0-9]{4}[-/.年])?[0-9]{1,2}[-/.月][0-9]{1,2}日?\\s+[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?";
   Matcher direct=Pattern.compile("(?:截止时间|截止日期|截止)\\s*[:：]?\\s*("+time+")").matcher(text);if(direct.find())return direct.group(1);
   Matcher range=Pattern.compile("作答时间\\s*[:：]\\s*"+time+"\\s*(?:至|到|~|—)\\s*("+time+")").matcher(text);
-  return range.find()?range.group(1):"截止时间未知";
+  if(range.find())return range.group(1);
+  return Pattern.compile("开始时间\\s*[:：]\\s*"+time).matcher(text).find()&&!Pattern.compile("截止|结束|作答时间").matcher(text).find()?"未提供截止时间":"截止时间未知";
  }
  Result sync(Consumer<String> progress)throws Exception {
   return sync(progress,Collections.emptySet());
  }
- Result sync(Consumer<String> progress,Set<String> disabled)throws Exception {
+ Result sync(Consumer<String> progress,Set<String> disabled)throws Exception {return sync(progress,disabled,Collections.emptySet());}
+ Result sync(Consumer<String> progress,Set<String> disabled,Set<String> pendingDetails)throws Exception {
   progress.accept("正在读取账号信息…");String base=fetch("账号信息","https://i.chaoxing.com/base"),fid=institution(base);
   if(fid.isEmpty())throw new ReadFailure("账号信息","页面未提供机构编号");
   progress.accept("正在读取课程列表…");String courseUrl="https://mooc2-ans.chaoxing.com/mooc2-ans/visit/courselistdata?"+form("courseType","1","courseFid",fid,"courseTeacherid","0","courseOrderBy","0");
@@ -137,7 +139,7 @@ final class ChaoxingClient implements AutoCloseable {
     boolean complete=!paged(html);if(!complete)result.warnings.add(course.name+"：列表存在分页，仅更新已读取作业，其余保留本机信息。");
     for(Work work:items){
      work.courseKey=course.key();
-     if(!work.completed())try{work.deadline=deadline(fetch("截止时间",work.url));if(work.deadline.equals("截止时间未知"))throw new ReadFailure("截止时间","未识别到日期，保留本机已知时间或显示未知");}catch(InterruptedIOException e){throw e;}catch(Exception e){result.warnings.add(course.name+" · "+work.title+"："+describe(e));}
+     if(!work.completed()||pendingDetails.contains(work.courseKey+":"+work.workKey))try{work.deadline=deadline(fetch("截止时间",work.url));if(work.deadline.equals("截止时间未知"))throw new ReadFailure("截止时间","未识别到日期，保留本机已知时间或显示未知");}catch(InterruptedIOException e){throw e;}catch(Exception e){result.warnings.add(course.name+" · "+work.title+"："+describe(e));}
      result.items.add(work);
     }
     result.readCourses.put(course.key(),complete);result.checked++;

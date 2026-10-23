@@ -11,6 +11,7 @@ final class TaskDeadline {
   try{return LocalDateTime.of(Integer.parseInt(m.group(1)),Integer.parseInt(m.group(2)),Integer.parseInt(m.group(3)),Integer.parseInt(m.group(4)),Integer.parseInt(m.group(5)),m.group(6)==null?0:Integer.parseInt(m.group(6)));}catch(DateTimeException e){return null;}
  }
  static String display(String value){
+  if(value.equals("未提供截止时间"))return value;
   LocalDateTime full=parse(value);if(full!=null)return full.format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"));
   Matcher partial=Pattern.compile("^(\\d{1,2})[-/.月](\\d{1,2})日?\\s+(\\d{1,2}):(\\d{2})(?::(\\d{2}))?$").matcher(value.trim());
   if(partial.matches())try{MonthDay day=MonthDay.of(Integer.parseInt(partial.group(1)),Integer.parseInt(partial.group(2)));LocalTime time=LocalTime.of(Integer.parseInt(partial.group(3)),Integer.parseInt(partial.group(4)),partial.group(5)==null?0:Integer.parseInt(partial.group(5)));return String.format(java.util.Locale.ROOT,"%02d-%02d %02d:%02d",day.getMonthValue(),day.getDayOfMonth(),time.getHour(),time.getMinute());}catch(DateTimeException ignored){}

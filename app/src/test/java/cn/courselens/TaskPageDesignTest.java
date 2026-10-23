@@ -37,8 +37,8 @@ public class TaskPageDesignTest {
    try{
     LinearLayout card=new LinearLayout(controller.get());card.setOrientation(LinearLayout.VERTICAL);ChaoxingClient.Work work=new ChaoxingClient.Work("合成课程","合成任务","未完成","");
     callInstanceMethod(page,"addWork",ClassParameter.from(LinearLayout.class,card),ClassParameter.from(ChaoxingClient.Work.class,work),ClassParameter.from(int.class,0));
-    TextView deadline=card.findViewWithTag("task-work-deadline");assertEquals("截止时间未知，可补录",deadline.getContentDescription());
-    work.deadline="10-29 10:26";LinearLayout partial=new LinearLayout(controller.get());callInstanceMethod(page,"addWork",ClassParameter.from(LinearLayout.class,partial),ClassParameter.from(ChaoxingClient.Work.class,work),ClassParameter.from(int.class,0));assertTrue(((TextView)partial.findViewWithTag("task-work-deadline")).getText().toString().contains("10-29 10:26"));
+    TextView deadline=card.findViewWithTag("task-work-deadline");assertEquals("截止时间未知，可补录",deadline.getContentDescription());assertEquals(View.GONE,((View)deadline.getParent()).getVisibility());
+    work.deadline="10-29 10:26";LinearLayout partial=new LinearLayout(controller.get());callInstanceMethod(page,"addWork",ClassParameter.from(LinearLayout.class,partial),ClassParameter.from(ChaoxingClient.Work.class,work),ClassParameter.from(int.class,0));assertTrue(((TextView)partial.findViewWithTag("task-work-deadline")).getText().toString().contains("10-29 10:26"));assertEquals(View.VISIBLE,((View)partial.findViewWithTag("task-work-deadline").getParent()).getVisibility());
     View content=(View)card.findViewWithTag("task-work-title").getParent();content.performClick();assertTrue(content.getContentDescription().toString().contains("收起"));content.performClick();assertTrue(content.getContentDescription().toString().contains("展开"));
    }finally{page.close();}
   }
