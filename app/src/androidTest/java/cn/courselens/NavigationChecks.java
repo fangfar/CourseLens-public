@@ -104,9 +104,27 @@ public final class NavigationChecks {
   main(runner,()->{SideNavigation drawer=activity.findViewById(android.R.id.content).findViewWithTag("side-navigation");check(!drawer.isOpen(),"Parcel drawer route did not finish closing");check(activity.findViewById(android.R.id.content).findViewWithTag("nav-timetable").isSelected(),"Parcel drawer route selected the wrong tab");});
  }
 
+ private static void parcelSettingsContext(Instrumentation runner,MainActivity activity){
+  View[] origin=new View[1];int[] scrollY=new int[1];AlertDialog[] sheet=new AlertDialog[1];
+  main(runner,()->{call(activity,"tasks");});settled(runner);
+  main(runner,()->{activity.openSideMenu();});settled(runner);
+  capture(runner,activity,"qa-audit-drawer.png");
+  main(runner,()->{View tasks=(View)get(activity,"root");activity.onBackPressed();activity.onBackPressed();check(get(activity,"root")==tasks,"Repeated back escaped the closing drawer");});settled(runner);
+  main(runner,activity::openSideMenu);settled(runner);
+  main(runner,()->activity.findViewById(android.R.id.content).findViewWithTag("drawer-settings").performClick());settled(runner);
+  main(runner,()->{origin[0]=(View)get(activity,"root");((ScrollView)((ViewGroup)origin[0]).getChildAt(1)).fullScroll(View.FOCUS_DOWN);});settled(runner);
+  main(runner,()->{scrollY[0]=((ScrollView)((ViewGroup)origin[0]).getChildAt(1)).getScrollY();});
+  capture(runner,activity,"qa-audit-settings-before.png");
+  main(runner,()->{origin[0].findViewWithTag("parcel-settings").performClick();ParcelPage page=(ParcelPage)get(activity,"parcelPage");Field field=ParcelPage.class.getDeclaredField("currentSheet");field.setAccessible(true);sheet[0]=(AlertDialog)field.get(page);check(sheet[0]!=null&&sheet[0].isShowing(),"Parcel settings did not open");});settled(runner);
+  capture(runner,activity,"qa-audit-parcel-settings.png");
+  main(runner,()->sheet[0].cancel());settled(runner);
+  capture(runner,activity,"qa-audit-settings-after.png");
+  main(runner,()->{check(get(activity,"root")==origin[0],"Closing parcel settings lost the common settings page");check(((ScrollView)((ViewGroup)origin[0]).getChildAt(1)).getScrollY()==scrollY[0],"Closing parcel settings lost scroll position");activity.onBackPressed();});settled(runner);
+  main(runner,()->{check("tasks-page".equals(((View)get(activity,"root")).getTag()),"Settings returned to the wrong primary module");call(activity,"home");});settled(runner);
+ }
  public static void run(Instrumentation runner){
   Bundle result=new Bundle();int code=Activity.RESULT_CANCELED;MainActivity activity=null;
-  try{check(runner.getTargetContext().getPackageName().endsWith(".qa"),"QA only");activity=NativeChecks.startQaActivity(runner);verify(runner,activity);compactLayout(runner,activity);result.putString("fontProfile",((NativeChecks)runner).normalFontOnly?"current font only":"normal and large fonts");result.putString("result","PASS: task swipes, synchronized capsule, tap jumps and retargeting, vertical scrolling, per-filter positions, grouped tasks, non-adjacent course grouping and source order, completed/all filters, unknown metadata, partial empty results, independent task page, saved filter, tab selection, timetable retention, back, compact actions and unclipped layouts at the requested font profile, clear cancellation and unchanged preferences");code=Activity.RESULT_OK;}
+  try{check(runner.getTargetContext().getPackageName().endsWith(".qa"),"QA only");activity=NativeChecks.startQaActivity(runner);parcelSettingsContext(runner,activity);verify(runner,activity);compactLayout(runner,activity);result.putString("fontProfile",((NativeChecks)runner).normalFontOnly?"current font only":"normal and large fonts");result.putString("result","PASS: parcel settings retain parent, scroll and originating module; task swipes, synchronized capsule, tap jumps and retargeting, vertical scrolling, per-filter positions, grouped tasks, non-adjacent course grouping and source order, completed/all filters, unknown metadata, partial empty results, independent task page, saved filter, tab selection, timetable retention, back, compact actions and unclipped layouts at the requested font profile, clear cancellation and unchanged preferences");code=Activity.RESULT_OK;}
   catch(Throwable e){result.putString("error",android.util.Log.getStackTraceString(e));}
   finally{if(activity!=null){MainActivity current=activity;main(runner,current::finish);}runner.finish(code,result);}
  }
