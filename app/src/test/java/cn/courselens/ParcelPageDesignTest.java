@@ -21,6 +21,7 @@ import static org.robolectric.Shadows.shadowOf;
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class ParcelPageDesignTest {
  @Test public void groupedPickupAndEditor()throws Exception{checkPage("w380dp-h800dp-notnight",1f,"pickup");}
+ @Test public void narrowMediumText()throws Exception{checkPage("w320dp-h640dp-notnight",1.25f,"narrow-medium");}
  @Test public void narrowDarkLargeText()throws Exception{checkPage("w320dp-h640dp-night",2f,"dark-large");}
  @Test public void landscapeLayout()throws Exception{checkPage("w800dp-h380dp-land-notnight",1f,"landscape");}
  private void checkPage(String qualifiers,float font,String image)throws Exception{
