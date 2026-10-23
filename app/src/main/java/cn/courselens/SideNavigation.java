@@ -18,7 +18,7 @@ final class SideNavigation extends FrameLayout {
  private final LinearLayout panel;
  private final TextView[] destinations=new TextView[3];
  private final int surface,ink;
- private final android.window.OnBackInvokedCallback back=()->close(true);
+ private Object back;
  private View previousFocus;
  private int contentAccessibility,drawerWidth;
  private float progress;
@@ -48,7 +48,7 @@ final class SideNavigation extends FrameLayout {
  boolean isOpen(){return panel.getVisibility()==VISIBLE;}
  void open(int selected){
   if(open||routing)return;select(selected);open=true;if(!isOpen()){previousFocus=activity.getCurrentFocus();contentAccessibility=content.getImportantForAccessibility();}content.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);panel.setVisibility(VISIBLE);panel.requestApplyInsets();shade.setVisibility(VISIBLE);
-  if(Build.VERSION.SDK_INT>=33&&!backRegistered){activity.getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_OVERLAY,back);backRegistered=true;}
+  if(Build.VERSION.SDK_INT>=33&&!backRegistered){back=Api33.register(activity,()->close(true));backRegistered=true;}
   destinations[selected].requestFocus();animateTo(1f,true);
  }
  boolean close(boolean animate){
@@ -74,7 +74,7 @@ final class SideNavigation extends FrameLayout {
  private void render(float value){progress=value;foreground.setTranslationX(drawerWidth*value);foreground.setClipToOutline(value>0);shade.setAlpha(.18f*value);}
  private void closed(){
   routing=false;panel.setVisibility(GONE);shade.setVisibility(GONE);content.setImportantForAccessibility(contentAccessibility);
-  if(Build.VERSION.SDK_INT>=33&&backRegistered){activity.getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(back);backRegistered=false;}
+  if(Build.VERSION.SDK_INT>=33&&backRegistered){Api33.unregister(activity,back);back=null;backRegistered=false;}
   if(previousFocus!=null&&previousFocus.isAttachedToWindow())previousFocus.requestFocus();previousFocus=null;
  }
  void dismiss(){
@@ -85,4 +85,11 @@ final class SideNavigation extends FrameLayout {
  @Override protected void onMeasure(int width,int height){drawerWidth=Math.max(1,Math.min(MeasureSpec.getSize(width)*4/5,MeasureSpec.getSize(width)-ui.dp(64)));panel.getLayoutParams().width=drawerWidth;super.onMeasure(width,height);}
  @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom){super.onLayout(changed,left,top,right,bottom);render(progress);}
  @Override protected void onDetachedFromWindow(){dismiss();super.onDetachedFromWindow();}
+ // Keep API 33 callback classes out of the drawer's initialization on older Android versions.
+ @androidx.annotation.RequiresApi(33)
+ private static final class Api33 {
+  static Object register(Activity activity,Runnable close){android.window.OnBackInvokedCallback callback=close::run;activity.getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_OVERLAY,callback);return callback;}
+  static void unregister(Activity activity,Object callback){activity.getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback((android.window.OnBackInvokedCallback)callback);}
+ }
+
 }
