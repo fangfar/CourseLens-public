@@ -72,6 +72,14 @@ public class SideNavigationTest {
    assertEquals(-1,selected[0]);assertTrue(drawer.isOpen());
   }
  }
+ @Test public void repeatedBackIsConsumedUntilTheDrawerHasFinishedClosing(){
+  try(ActivityController<Activity> controller=Robolectric.buildActivity(Activity.class).setup()){
+   SideNavigation drawer=drawer(controller.get(),new FrameLayout(controller.get()),new int[]{-1},new int[]{0});
+   drawer.open(0);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(320));
+   assertTrue(drawer.close(true));assertTrue(drawer.isOpen());assertTrue(drawer.close(true));
+   shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(320));assertFalse(drawer.close(true));
+  }
+ }
  @Test public void reversingCloseAndDetachingDoNotLeavePageHidden(){
   try(ActivityController<Activity> controller=Robolectric.buildActivity(Activity.class).setup()){
    Activity activity=controller.get();FrameLayout page=new FrameLayout(activity);page.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);SideNavigation drawer=drawer(activity,page,new int[]{-1},new int[]{0});

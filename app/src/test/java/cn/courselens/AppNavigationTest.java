@@ -175,14 +175,17 @@ public class AppNavigationTest {
    assertEquals("parcel-center",((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getTag());assertTrue(content.findViewWithTag("nav-parcels").isSelected());
   }
  }
- @Test public void parcelManagementInSettingsOpensTheEmbeddedPageAndItsSheet(){
+ @Test public void parcelManagementRetainsCommonSettingsAndReportsFeedback(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);
    content.findViewWithTag("side-menu-button").performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));content.findViewWithTag("drawer-settings").performClick();
    shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));
    View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");root.findViewWithTag("parcel-settings").performClick();
-   assertEquals("parcel-center",((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getTag());assertTrue(content.findViewWithTag("nav-parcels").isSelected());assertNull(shadowOf(activity).getNextStartedActivity());
+   assertSame(root,org.robolectric.util.ReflectionHelpers.getField(activity,"root"));assertTrue(content.findViewWithTag("nav-timetable").isSelected());assertNull(shadowOf(activity).getNextStartedActivity());
    ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"parcelPage");AlertDialog sheet=org.robolectric.util.ReflectionHelpers.getField(page,"currentSheet");assertNotNull(sheet);assertTrue(sheet.isShowing());sheet.dismiss();
+   assertSame(root,org.robolectric.util.ReflectionHelpers.getField(activity,"root"));
+   org.robolectric.util.ReflectionHelpers.callInstanceMethod(page,"message",org.robolectric.util.ReflectionHelpers.ClassParameter.from(String.class,"合成反馈"));assertEquals("合成反馈",org.robolectric.shadows.ShadowToast.getTextOfLatestToast());
+   activity.onBackPressed();assertTrue(content.findViewWithTag("nav-timetable").isSelected());
   }
  }
  @Test public void commonSettingsFromParcelActivityReturnsToHostOnBack(){

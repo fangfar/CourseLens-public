@@ -54,7 +54,7 @@ final class SideNavigation extends FrameLayout {
  boolean close(boolean animate){
   // While a destination route owns the close, back/shade taps must not finish the host page.
   if(routing)return true;
-  if(!open)return false;open=false;animateTo(0f,animate);return true;
+  if(!open)return isOpen();open=false;animateTo(0f,animate);return true;
  }
  // Route in the same frame so the page transition overlaps the drawer rebound; later taps are
  // ignored until the drawer finishes closing, preventing a second launch while it retracts.

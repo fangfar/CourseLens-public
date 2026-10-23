@@ -121,7 +121,7 @@ final class ParcelPage extends LinearLayout {
  private void icon(LinearLayout host,int drawable,String name,Runnable action){Button b=ui.iconAction(host,drawable,name,action);b.setBackgroundTintList(null);b.setBackground(ui.bg(ink,24));b.getCompoundDrawables()[0].setTint(card);}
  private Button button(LinearLayout host,String name,Runnable action){Button b=ui.action(host,name,action);b.setBackgroundTintList(null);b.setTextColor(ink);b.setBackground(ui.bg(card,24));LinearLayout.LayoutParams lp=(LinearLayout.LayoutParams)b.getLayoutParams();lp.bottomMargin=ui.dp(4);lp.rightMargin=ui.dp(8);return b;}
  private void feedbackViewHide(){if(!closed)feedback.setVisibility(GONE);}
- private void message(String value){feedback.removeCallbacks(clearFeedback);feedback.setText(value);feedback.setVisibility(VISIBLE);feedback.postDelayed(clearFeedback,6000);}
+ private void message(String value){if(closed)return;if(!isShown()){Toast.makeText(activity,value,Toast.LENGTH_LONG).show();return;}feedback.removeCallbacks(clearFeedback);feedback.setText(value);feedback.setVisibility(VISIBLE);feedback.postDelayed(clearFeedback,6000);}
  @Override protected void onAttachedToWindow(){super.onAttachedToWindow();pager.requestLayout();}
  private void selectFilter(int value){pager.setCurrentItem(value,android.animation.ValueAnimator.areAnimatorsEnabled());}
  private void markFilter(int value){filter=value;for(int i=0;i<3;i++){boolean selected=i==value;tabs[i].setSelected(selected);tabs[i].setTextColor(selected?ink:muted);tabs[i].setTypeface(null,selected?Typeface.BOLD:Typeface.NORMAL);scrolls[i].setImportantForAccessibility(selected?IMPORTANT_FOR_ACCESSIBILITY_AUTO:IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);}}
