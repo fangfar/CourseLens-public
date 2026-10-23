@@ -54,5 +54,11 @@ final class ParcelRepository {
   });if(added)changed();return added;
  }
  void delete(long id){db.runInTransaction(()->{ParcelRecord p=db.parcels().get(id);if(p==null)return;ParcelDatabase.Seen seen=new ParcelDatabase.Seen();seen.fingerprint=fingerprint(p);seen.expiresAt=System.currentTimeMillis()+REPLAY_WINDOW;db.parcels().remember(seen);db.parcels().delete(id);});if(context!=null)ParcelNotifications.cancel(context,id);changed();}
+ void restoreDeleted(ParcelRecord p){
+  validate(p);db.runInTransaction(()->{if(db.parcels().get(p.id)!=null||db.parcels().duplicate(p.id,p.code,p.station,p.trackingNumber,System.currentTimeMillis()-REPLAY_WINDOW)!=null)throw new IllegalArgumentException("已有相同快递");p.updatedAt=Math.max(System.currentTimeMillis(),p.updatedAt+1);db.parcels().insert(p);});changed();
+ }
+ void undoComplete(long id,long changedAt,int previous,long remindAt,long remindedAt){
+  db.runInTransaction(()->{ParcelRecord p=db.parcels().get(id);if(p==null||p.state!=ParcelRecord.DONE||p.updatedAt!=changedAt)throw new IllegalArgumentException("记录已变更");p.state=previous;p.remindAt=remindAt;p.remindedAt=remindedAt;p.updatedAt=Math.max(System.currentTimeMillis(),changedAt+1);validate(p);db.parcels().update(p);});changed();
+ }
  void clear(){db.clearAllTables();changed();}
 }
