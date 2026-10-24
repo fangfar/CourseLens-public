@@ -152,7 +152,7 @@ final class TaskPage extends LinearLayout {
   java.time.LocalDateTime now=java.time.LocalDateTime.now();ChaoxingClient.Work nearest=null;java.time.LocalDateTime earliest=null;
   for(ChaoxingClient.Work work:allTasks()){if(work.completed()||!work.local()&&!ChaoxingCache.visible(snapshot,work))continue;java.time.LocalDateTime due=TaskDeadline.parse(work.deadline);if(due!=null&&(earliest==null||due.isBefore(earliest))){earliest=due;nearest=work;}}
   if(nearest==null)return;ChaoxingClient.Work work=nearest;
-  LinearLayout hero=new LinearLayout(getContext());hero.setOrientation(VERTICAL);hero.setPadding(ui.dp(18),ui.dp(18),ui.dp(18),ui.dp(18));android.graphics.drawable.GradientDrawable shape=ui.bg(ui.CARD,24);shape.setStroke(ui.dp(1),ui.SOFT);hero.setBackground(shape);hero.setTag("task-deadline-hero");
+  LinearLayout hero=new LinearLayout(getContext());hero.setOrientation(VERTICAL);hero.setPadding(ui.dp(18),ui.dp(18),ui.dp(18),ui.dp(18));hero.setBackground(ui.bg(ui.CARD,24));hero.setTag("task-deadline-hero");
   TextView label=ui.text("最近截止 · "+work.course,12,ui.MUTED);hero.addView(label);
   TextView title=ui.text(work.title,22,ui.INK);title.setTypeface(Typeface.create("serif",Typeface.BOLD));title.setPadding(0,ui.dp(12),0,ui.dp(8));hero.addView(title);
   hero.addView(ui.text(work.deadline+" 截止",13,ui.MUTED));TextView remaining=ui.text(TaskDeadline.countdown(earliest,now),30,ui.INK);remaining.setPadding(0,ui.dp(16),0,ui.dp(12));hero.addView(remaining);
