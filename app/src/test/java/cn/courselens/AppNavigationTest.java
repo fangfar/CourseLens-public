@@ -144,19 +144,20 @@ public class AppNavigationTest {
    android.app.AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();for(String tag:new String[]{"parcel-add","parcel-import"})assertNotNull(menu.getWindow().getDecorView().findViewWithTag(tag));assertNull(menu.getWindow().getDecorView().findViewWithTag("parcel-settings"));menu.getWindow().getDecorView().findViewWithTag("parcel-add").performClick();assertNotSame(menu,org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog());
   }
  }
- @Test public void commonSettingsContainOnlyGlobalOptionsAndReturnToTheirModule()throws Exception {
+ @Test public void commonSettingsContainMigratedTimetableOptionsAndReturnToTheirModule()throws Exception {
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);
    for(String module:new String[]{"nav-timetable","nav-tasks"}){
     content.findViewWithTag(module).performClick();content.findViewWithTag("side-menu-button").performClick();content.findViewWithTag("drawer-settings").performClick();
-    View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("设置",root.getTag());assertNull(root.findViewWithTag("settings-term"));assertNull(root.findViewWithTag("task-settings"));assertNull(root.findViewWithTag("parcel-settings"));assertNull(root.findViewWithTag("switch-timetable"));assertNotNull(root.findViewWithTag("dark-mode-setting"));assertNotNull(root.findViewWithTag("about-app"));
+    View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("设置",root.getTag());for(String tag:new String[]{"settings-term","add-home-widget","school-account","clear-timetable"})assertNotNull(root.findViewWithTag(tag));assertNull(root.findViewWithTag("task-settings"));assertNull(root.findViewWithTag("parcel-settings"));assertNull(root.findViewWithTag("switch-timetable"));assertNotNull(root.findViewWithTag("dark-mode-setting"));assertNotNull(root.findViewWithTag("about-app"));
+    for(String tag:new String[]{"settings-term","add-home-widget"}){root.findViewWithTag(tag).performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));activity.onBackPressed();assertSame(root,org.robolectric.util.ReflectionHelpers.getField(activity,"root"));}
     shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));activity.onBackPressed();assertTrue(content.findViewWithTag(module).isSelected());settle(org.robolectric.util.ReflectionHelpers.getField(activity,"stage"));
    }
   }
  }
  @Test public void timetableSettingsReopenTheirMenuWhenReturningFromChildren(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
-   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);content.findViewWithTag("timetable-settings").performClick();View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("课表设置",root.getTag());assertNotNull(root.findViewWithTag("settings-term"));assertNotNull(root.findViewWithTag("add-timetable"));assertNull(root.findViewWithTag("about-app"));root.findViewWithTag("settings-times").performClick();assertEquals("作息时间",((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getTag());activity.onBackPressed();assertEquals("课表设置",((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getTag());assertNotNull(content.findViewWithTag("settings-times"));activity.onBackPressed();assertTrue(content.findViewWithTag("nav-timetable").isSelected());
+   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);content.findViewWithTag("timetable-settings").performClick();View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("课表设置",root.getTag());for(String tag:new String[]{"settings-term","add-home-widget","school-account","clear-timetable"})assertNull(root.findViewWithTag(tag));assertNotNull(root.findViewWithTag("add-timetable"));assertNull(root.findViewWithTag("about-app"));root.findViewWithTag("settings-times").performClick();assertEquals("作息时间",((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getTag());activity.onBackPressed();assertEquals("课表设置",((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getTag());assertNotNull(content.findViewWithTag("settings-times"));activity.onBackPressed();assertTrue(content.findViewWithTag("nav-timetable").isSelected());
   }
  }
  @Test public void parcelGearInTheEmbeddedPageReturnsToTheParcelModule(){
