@@ -3,6 +3,8 @@ package cn.courselens;
 import android.app.Activity;
 import android.content.*;
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 
 public class ParcelActivity extends Activity {
@@ -13,14 +15,14 @@ public class ParcelActivity extends Activity {
  @Override protected void attachBaseContext(Context base){super.attachBaseContext(Appearance.wrap(base));}
  @Override public void onCreate(Bundle state){
   super.onCreate(state);SecondaryUi ui=new SecondaryUi(this);int ink=getColor(R.color.parcel_ink),muted=getColor(R.color.parcel_muted),card=getColor(R.color.parcel_card),surface=getColor(R.color.parcel_surface);
+  Appearance.edgeToEdge(this);
   LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.setBackgroundColor(surface);
   page=new ParcelPage(this,state,()->sideNavigation.open(2));
   shell.addView(page,new LinearLayout.LayoutParams(-1,0,1));
   shell.addView(new AppNavigation(this,surface,ink,muted,2,this::selectBottomPage),new LinearLayout.LayoutParams(-1,-2));
-  shell.setOnApplyWindowInsetsListener((view,insets)->{view.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
+  shell.setOnApplyWindowInsetsListener((view,insets)->{ViewGroup group=(ViewGroup)view;View content=group.getChildAt(0);if(content!=null)content.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),0);View nav=group.getChildAt(1);if(nav!=null)nav.setPadding(insets.getSystemWindowInsetLeft(),0,insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});
   sideNavigation=new SideNavigation(this,shell,surface,card,ink,this::selectPrimaryPage,this::openMainSettings);
   sideNavigation.select(2);setContentView(sideNavigation);
-  getWindow().setStatusBarColor(surface);getWindow().setNavigationBarColor(surface);Appearance.systemBars(this);
   if(state==null)page.handleIntent(getIntent());
  }
  private void selectPrimaryPage(int selected){if(selected!=2)openMain(selected);}

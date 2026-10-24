@@ -7,6 +7,6 @@
   <item name="android:windowLightStatusBar">false</item>
   <item name="android:windowActionModeOverlay">true</item><item name="android:windowSoftInputMode">adjustResize</item>
   <item name="android:windowBackground">@color/parcel_surface</item>
-  <item name="android:statusBarColor">@color/parcel_surface</item><item name="android:navigationBarColor">@color/parcel_surface</item>
+  <item name="android:statusBarColor">@android:color/transparent</item><item name="android:navigationBarColor">@android:color/transparent</item>
  </style>
 </resources>
