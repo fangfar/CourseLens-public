@@ -32,7 +32,7 @@ final class ParcelPage extends LinearLayout {
  private int filter,ink,muted,card,surface;
  private boolean saving,active,closed;
 
- private AlertDialog currentSheet;
+ private AlertDialog currentSheet;private Integer sheetNavigationColor;
  private ParcelRecord draft;
  private EditText codeField,stationField,trackingField,carrierField;
 
@@ -68,7 +68,7 @@ final class ParcelPage extends LinearLayout {
  void close(){
   closed=true;active=false;timer.removeCallbacksAndMessages(null);feedback.removeCallbacks(clearFeedback);
   ParcelDatabase.get(activity).getInvalidationTracker().removeObserver(observer);
-  if(currentSheet!=null){currentSheet.setOnDismissListener(null);currentSheet.dismiss();currentSheet=null;}
+  if(currentSheet!=null){currentSheet.setOnDismissListener(null);currentSheet.dismiss();currentSheet=null;restoreNavigationColor();}
  }
  void saveState(Bundle out){
   out.putInt("filter",filter);out.putIntArray("filterScrollY",new int[]{scrolls[0].getScrollY(),scrolls[1].getScrollY(),scrolls[2].getScrollY()});
@@ -210,16 +210,17 @@ final class ParcelPage extends LinearLayout {
  }
  private void confirm(long id){ParcelRepository.IO.execute(()->{try{ParcelRecord p=ParcelDatabase.get(activity).parcels().get(id);if(p==null||p.confirmed)return;p.confirmed=true;p.state=ParcelRecord.READY;new ParcelRepository(activity).save(p);activity.runOnUiThread(()->{if(!closed){message("已确认，放入待取件");load();}});}catch(RuntimeException e){activity.runOnUiThread(()->message("确认失败，请核对信息后保存"));}});}
  private void copy(String value){ClipData clip=ClipData.newPlainText("取件码",value);PersistableBundle extras=new PersistableBundle();extras.putBoolean("android.content.extra.IS_SENSITIVE",true);clip.getDescription().setExtras(extras);((ClipboardManager)activity.getSystemService(Activity.CLIPBOARD_SERVICE)).setPrimaryClip(clip);message("取件码已复制");}
+ private void restoreNavigationColor(){if(sheetNavigationColor!=null){activity.getWindow().setNavigationBarColor(sheetNavigationColor);sheetNavigationColor=null;}}
  private LinearLayout sheet(String title){return sheet(title,false);}
  private LinearLayout sheet(String title,boolean dropdown){
-  if(currentSheet!=null)currentSheet.dismiss();LinearLayout shell=column();shell.setPadding(ui.dp(dropdown?8:20),ui.dp(dropdown?8:16),ui.dp(dropdown?8:20),ui.dp(8));shell.setBackground(ui.popupSurface());shell.setClipToOutline(true);shell.setTag(dropdown?"parcel-settings-menu":"parcel-sheet");
+  if(currentSheet!=null){currentSheet.setOnDismissListener(null);currentSheet.dismiss();draft=null;}if(sheetNavigationColor==null)sheetNavigationColor=activity.getWindow().getNavigationBarColor();LinearLayout shell=column();shell.setPadding(ui.dp(dropdown?8:20),ui.dp(dropdown?8:16),ui.dp(dropdown?8:20),ui.dp(8));shell.setBackground(dropdown?ui.popupSurface():ui.sheetSurface());shell.setClipToOutline(true);shell.setTag(dropdown?"parcel-settings-menu":"parcel-sheet");
   if(!dropdown){LinearLayout header=new LinearLayout(activity);header.setGravity(Gravity.CENTER_VERTICAL);TextView label=text(title,20,ink);label.setTypeface(null,Typeface.BOLD);header.addView(label,new LinearLayout.LayoutParams(0,-2,1));button(header,"关闭",()->currentSheet.dismiss());shell.addView(header);}
   android.graphics.Rect visible=new android.graphics.Rect();getWindowVisibleDisplayFrame(visible);int[] at=new int[2];View anchor=findViewWithTag("parcel-settings");anchor.getLocationOnScreen(at);int popupTop=Math.max(0,at[1]+anchor.getHeight()-visible.top);int limit=Math.max(ui.dp(52),visible.height()-popupTop-ui.dp(28));
   ScrollView scroll=dropdown?new ScrollView(activity){@Override protected void onMeasure(int width,int height){super.onMeasure(width,MeasureSpec.makeMeasureSpec(limit,MeasureSpec.AT_MOST));}}:new ScrollView(activity);shell.addView(scroll,new LinearLayout.LayoutParams(-1,dropdown?-2:0,dropdown?0:1));LinearLayout body=column();body.setPadding(0,ui.dp(dropdown?0:12),0,ui.dp(dropdown?0:20));scroll.addView(body);
-  currentSheet=new AlertDialog.Builder(activity).setView(shell).create();currentSheet.setOnDismissListener(d->{draft=null;});currentSheet.show();Window w=currentSheet.getWindow();w.setBackgroundDrawableResource(android.R.color.transparent);w.setDimAmount(0);w.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+  currentSheet=new AlertDialog.Builder(activity).setView(shell).create();AlertDialog sheet=currentSheet;currentSheet.setOnDismissListener(d->{if(currentSheet==sheet){draft=null;Runnable restore=()->{if(currentSheet==sheet)restoreNavigationColor();};if(android.animation.ValueAnimator.areAnimatorsEnabled())timer.postDelayed(restore,activity.getResources().getInteger(dropdown?R.integer.popup_menu_exit:R.integer.popup_sheet_exit));else restore.run();}});Window w=currentSheet.getWindow();w.setBackgroundDrawableResource(android.R.color.transparent);w.setDimAmount(0);w.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);w.getDecorView().setPadding(0,0,0,0);w.setWindowAnimations(android.animation.ValueAnimator.areAnimatorsEnabled()?(dropdown?R.style.DropdownPopupMotion:R.style.BottomPopupMotion):0);w.setNavigationBarColor(dropdown?sheetNavigationColor:ui.CARD);activity.getWindow().setNavigationBarColor(dropdown?sheetNavigationColor:ui.CARD);if(Build.VERSION.SDK_INT>=29)w.setNavigationBarContrastEnforced(false);
   if(dropdown){w.setGravity(Gravity.TOP|Gravity.END);WindowManager.LayoutParams bounds=w.getAttributes();bounds.x=ui.dp(16);bounds.y=popupTop;w.setAttributes(bounds);w.setLayout(Math.min(ui.dp(224),activity.getResources().getDisplayMetrics().widthPixels-ui.dp(24)),-2);}
   else{int available=getHeight()-getPaddingTop()-getPaddingBottom();w.setGravity(Gravity.BOTTOM);w.setLayout(-1,(available>0?available:activity.getResources().getDisplayMetrics().heightPixels)/2);}
-  return body;
+  currentSheet.show();w.getDecorView().setPadding(0,0,0,0);return body;
  }
  private EditText field(LinearLayout body,String label,String value){TextView name=text(label,14,muted);name.setPadding(0,ui.dp(10),0,ui.dp(6));body.addView(name);EditText input=new EditText(activity);input.setText(value);input.setTextSize(16);input.setTextColor(ink);input.setSingleLine(true);input.setMinHeight(ui.dp(52));input.setPadding(ui.dp(12),ui.dp(8),ui.dp(12),ui.dp(8));input.setBackgroundResource(R.drawable.form_field);input.setInputType(InputType.TYPE_CLASS_TEXT);input.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);input.setContentDescription(label);input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(200)});body.addView(input,new LinearLayout.LayoutParams(-1,-2));return input;}
  private void edit(ParcelRecord p){
