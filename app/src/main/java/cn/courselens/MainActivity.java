@@ -70,7 +70,7 @@ public class MainActivity extends Activity {
   LinearLayout previous=root;boolean backwards=secondary?returningPage:pageBackwards;
   pageBack=null;updateSystemBack();showingDetail=false;screen++;pager=null;
   if(previous==parcelPage&&retained!=parcelPage)parcelPage.pause();
-  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);stage.setOnApplyWindowInsetsListener((view,insets)->{int top=insets.getSystemWindowInsetTop();int bottom=insets.getSystemWindowInsetBottom();int left=insets.getSystemWindowInsetLeft();int right=insets.getSystemWindowInsetRight();view.setPadding(left,top,right,bottom);return insets;});LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));sideNavigation=new SideNavigation(this,windowContent,SURFACE,CARD,INK,this::selectPrimaryPage,()->{settingsFromParcel=parcelsVisible;settingsFromParcelActivity=false;menu();});setContentView(sideNavigation);}
+  if(stage==null){stage=new FrameLayout(this){@Override public boolean dispatchTouchEvent(MotionEvent event){return pageMotion.isRunning()||super.dispatchTouchEvent(event);}};stage.setBackgroundColor(SURFACE);stage.setOnApplyWindowInsetsListener((view,insets)->{int top=insets.getSystemWindowInsetTop();int bottom=insets.getSystemWindowInsetBottom();int left=insets.getSystemWindowInsetLeft();int right=insets.getSystemWindowInsetRight();view.setPadding(left,top,right,bottom);return insets;});LinearLayout shell=new LinearLayout(this);shell.setOrientation(LinearLayout.VERTICAL);shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));bottomNavigation=createBottomNavigation();bottomNavigation.setOnApplyWindowInsetsListener((view,insets)->{view.setPadding(0,0,0,insets.getSystemWindowInsetBottom());return insets.consumeSystemWindowInsets();});shell.addView(bottomNavigation,new LinearLayout.LayoutParams(-1,-2));windowContent=new FrameLayout(this);windowContent.addView(shell,new FrameLayout.LayoutParams(-1,-1));sideNavigation=new SideNavigation(this,windowContent,SURFACE,CARD,INK,this::selectPrimaryPage,()->{settingsFromParcel=parcelsVisible;settingsFromParcelActivity=false;menu();});setContentView(sideNavigation);}
   bottomNavigation.setVisibility(secondary?View.GONE:View.VISIBLE);updateBottomNavigation();
   for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();
   stage.removeAllViews();
@@ -127,7 +127,7 @@ public class MainActivity extends Activity {
  boolean taskRefreshActive(){return remoteResumed&&navigationOverlay==null&&(sideNavigation==null||!sideNavigation.isOpen());}
  private void tasks(){tasksVisible=true;parcelsVisible=false;pageBackwards=false;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,taskPage);root.setBackgroundColor(SURFACE);}
  private void parcels(){
-  parcelsVisible=true;
+  tasksVisible=false;parcelsVisible=true;
   if(parcelPage==null)parcelPage=new ParcelPage(this,parcelState,this::openSideMenu);
   parcelPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,parcelPage);root.setBackgroundColor(SURFACE);
  }
