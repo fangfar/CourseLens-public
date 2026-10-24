@@ -95,8 +95,8 @@ public final class NavigationChecks {
  }
  public static void run(Instrumentation runner){
   Bundle result=new Bundle();int code=Activity.RESULT_CANCELED;MainActivity activity=null;
-  try{check(runner.getTargetContext().getPackageName().endsWith(".qa"),"QA only");activity=NativeChecks.startQaActivity(runner);parcelSettingsContext(runner,activity);verify(runner,activity);compactLayout(runner,activity);result.putString("fontProfile",((NativeChecks)runner).normalFontOnly?"current font only":"normal and large fonts");result.putString("result","PASS: global settings exclude modules; parcel settings retain module; task capsules hide completed records; task account settings, timetable retention, drawer back guard, compact actions, unclipped layouts, clear cancellation and unchanged timetable preferences");code=Activity.RESULT_OK;}
-  catch(Throwable e){result.putString("error",android.util.Log.getStackTraceString(e));}
+  try{check(runner.getTargetContext().getPackageName().endsWith(".qa"),"QA only");activity=NativeChecks.startQaActivity(runner);settled(runner);parcelSettingsContext(runner,activity);verify(runner,activity);compactLayout(runner,activity);result.putString("fontProfile",((NativeChecks)runner).normalFontOnly?"current font only":"normal and large fonts");result.putString("result","PASS: global settings exclude modules; parcel settings retain module; task capsules hide completed records; task account settings, timetable retention, drawer back guard, compact actions, unclipped layouts, clear cancellation and unchanged timetable preferences");code=Activity.RESULT_OK;}
+  catch(Throwable e){if(activity!=null)capture(runner,activity,"qa-navigation-failure.png");result.putString("error",android.util.Log.getStackTraceString(e));}
   finally{if(activity!=null){MainActivity current=activity;main(runner,current::finish);}runner.finish(code,result);}
  }
 }
