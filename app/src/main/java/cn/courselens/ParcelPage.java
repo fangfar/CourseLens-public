@@ -30,7 +30,7 @@ final class ParcelPage extends LinearLayout {
  private final Runnable clearFeedback=this::feedbackViewHide;
  private final TextView[] tabs=new TextView[3];
  private int filter,ink,muted,card,surface;
- private boolean saving,active,closed;
+ private boolean saving,active,closed,clearing;
 
  private AlertDialog currentSheet;private Integer sheetNavigationColor;
  private ParcelRecord draft;
@@ -86,8 +86,8 @@ final class ParcelPage extends LinearLayout {
  }
  void settings(){
   LinearLayout body=sheet("快递设置",true);AlertDialog menu=currentSheet;
-  String[] labels={"识别设置","提醒设置","物流查询","桌面小组件","删除全部快递数据"};
-  for(int i=0;i<labels.length;i++){final int section=i;if(i==2||i==4)ui.popupDivider(body);TextView item=ui.popupItem(body,labels[i],()->{menu.dismiss();if(section==4)clear();else settingsSection(section);});item.setTag("parcel-setting-"+i);if(i==4)item.setTextColor(ui.DANGER);}
+  String[] labels={"识别设置","提醒设置","物流查询","桌面小组件"};
+  for(int i=0;i<labels.length;i++){final int section=i;if(i==2)ui.popupDivider(body);TextView item=ui.popupItem(body,labels[i],()->{menu.dismiss();settingsSection(section);});item.setTag("parcel-setting-"+i);}
  }
  private void settingsSection(int section){
   String[] labels={"识别设置","提醒设置","物流查询","桌面小组件"};LinearLayout settings=sheet(labels[section]),body;SharedPreferences prefs=ParcelNotificationListener.settings(activity);
@@ -279,5 +279,5 @@ final class ParcelPage extends LinearLayout {
   Switch background=toggle(body,"后台查询（约每 6 小时）",prefs.getBoolean("backgroundTracking",false));TextView error=text("",14,muted);body.addView(error);
   button(body,"保存",()->{String value=endpoint.getText().toString().trim();try{if(!value.isEmpty())value=ProxyTrackingProvider.validateEndpoint(value);else if(background.isChecked())throw new IllegalArgumentException("后台查询需要先配置代理地址");prefs.edit().putString("proxy",value).putBoolean("backgroundTracking",background.isChecked()).putLong("trackingRetryAt",0).putString("epoch",UUID.randomUUID().toString()).apply();ParcelWorker.schedule(activity);currentSheet.dismiss();message(value.isEmpty()?"物流联网已关闭":"代理设置已保存；尚未验证真实物流服务");}catch(IllegalArgumentException e){error.setText(e.getMessage());}});
  }
- private void clear(){new AlertDialog.Builder(activity).setTitle("删除全部快递数据？").setMessage("将关闭后台识别和查询，删除快递、识别候选、去重记录和快递设置，不影响课表。系统通知访问可在系统设置中撤销。").setNegativeButton("取消",null).setPositiveButton("全部删除",(dialog,which)->{snack.setVisibility(GONE);timer.removeCallbacksAndMessages(null);ParcelNotificationListener.settings(activity).edit().clear().putString("epoch",UUID.randomUUID().toString()).apply();ParcelWorker.schedule(activity);ParcelNotifications.cancelAll(activity);ParcelRepository.IO.execute(()->{try{new ParcelRepository(activity).clear();activity.runOnUiThread(()->{if(closed)return;currentSheet.dismiss();message("快递数据已删除，后台功能已关闭");load();});}catch(RuntimeException e){activity.runOnUiThread(()->message("删除失败，请重试；后台功能已关闭"));}});}).show();}
+ void clearData(){if(saving||closed||clearing){Toast.makeText(activity,"快递正在保存或删除，请稍后重试。",Toast.LENGTH_SHORT).show();return;}AlertDialog confirmation=new AlertDialog.Builder(activity,R.style.SecondaryDialog).setTitle("删除全部快递数据？").setMessage("将关闭后台识别和查询，删除快递、识别候选、去重记录和快递设置，不影响课表和任务，此操作无法撤销。系统通知访问可在系统设置中撤销。").setNegativeButton("取消",null).setPositiveButton("全部删除",(dialog,which)->{if(saving||closed||clearing)return;clearing=true;snack.setVisibility(GONE);timer.removeCallbacksAndMessages(null);ParcelNotificationListener.settings(activity).edit().clear().putString("epoch",UUID.randomUUID().toString()).apply();ParcelWorker.schedule(activity);ParcelNotifications.cancelAll(activity);ParcelRepository.IO.execute(()->{try{new ParcelRepository(activity).clear();activity.runOnUiThread(()->{clearing=false;if(closed)return;Toast.makeText(activity,"快递数据已删除，后台功能已关闭",Toast.LENGTH_LONG).show();load();});}catch(RuntimeException e){activity.runOnUiThread(()->{clearing=false;Toast.makeText(activity,"删除失败，请重试；后台功能已关闭",Toast.LENGTH_LONG).show();});}});}).create();confirmation.show();ui.styleDialog(confirmation,true);}
 }
