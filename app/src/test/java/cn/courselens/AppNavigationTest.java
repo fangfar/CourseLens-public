@@ -154,9 +154,9 @@ public class AppNavigationTest {
    }
   }
  }
- @Test public void timetableSettingsRetainTheirPageWhenReturningFromChildren(){
+ @Test public void timetableSettingsReopenTheirMenuWhenReturningFromChildren(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
-   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);content.findViewWithTag("timetable-settings").performClick();View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("课表设置",root.getTag());assertNotNull(root.findViewWithTag("settings-term"));assertNotNull(root.findViewWithTag("add-timetable"));assertNull(root.findViewWithTag("about-app"));root.findViewWithTag("settings-times").performClick();assertEquals("作息时间",((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getTag());activity.onBackPressed();assertSame(root,org.robolectric.util.ReflectionHelpers.getField(activity,"root"));activity.onBackPressed();assertTrue(content.findViewWithTag("nav-timetable").isSelected());
+   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);content.findViewWithTag("timetable-settings").performClick();View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("课表设置",root.getTag());assertNotNull(root.findViewWithTag("settings-term"));assertNotNull(root.findViewWithTag("add-timetable"));assertNull(root.findViewWithTag("about-app"));root.findViewWithTag("settings-times").performClick();assertEquals("作息时间",((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getTag());activity.onBackPressed();assertEquals("课表设置",((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getTag());assertNotNull(content.findViewWithTag("settings-times"));activity.onBackPressed();assertTrue(content.findViewWithTag("nav-timetable").isSelected());
   }
  }
  @Test public void parcelGearInTheEmbeddedPageReturnsToTheParcelModule(){

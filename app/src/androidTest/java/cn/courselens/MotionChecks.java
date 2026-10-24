@@ -21,7 +21,7 @@ public final class MotionChecks {
   runner.waitForIdleSync();SystemClock.sleep(350);
   LinearLayout settings=(LinearLayout)field("root").get(a);ScrollView scroll=(ScrollView)settings.getChildAt(1);
   main(runner,()->{View spacer=new View(a);((LinearLayout)scroll.getChildAt(0)).addView(spacer,new LinearLayout.LayoutParams(1,a.getResources().getDisplayMetrics().heightPixels));});runner.waitForIdleSync();SystemClock.sleep(350);
-  String[] pages={"termPicker","edit","adjustmentManager","widgetAddPage","about"};
+  String[] pages={"appearanceSettings","about"};
   for(int position=0;position<3;position++)for(int page=0;page<pages.length;page++){
    final int offset=position,index=page;int[] saved={0},firstFrame={-1};
    main(runner,()->{try{

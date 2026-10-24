@@ -20,6 +20,10 @@ final class SecondaryUi {
  int dp(int value){return Math.round(value*activity.getResources().getDisplayMetrics().density);}
  TextView text(String value,int size,int color){TextView view=new TextView(activity);view.setText(value);view.setTextSize(size);view.setTextColor(color);view.setIncludeFontPadding(false);return view;}
  GradientDrawable bg(int color,int radius){GradientDrawable shape=new GradientDrawable();shape.setColor(color);shape.setCornerRadius(dp(radius));return shape;}
+ GradientDrawable popupSurface(){GradientDrawable shape=bg(CARD,24);shape.setStroke(dp(1),DIVIDER);return shape;}
+ TextView popupItem(LinearLayout body,String label,Runnable run){TextView item=text(label,16,INK);item.setGravity(Gravity.CENTER_VERTICAL);item.setPadding(dp(20),dp(12),dp(20),dp(12));item.setMinHeight(dp(52));item.setFocusable(true);item.setOnClickListener(v->run.run());popupChecked(item,false);focusOutline(item);body.addView(item,new LinearLayout.LayoutParams(-1,-2));return item;}
+ void popupChecked(TextView item,boolean selected){android.graphics.drawable.Drawable mark=selected?activity.getDrawable(R.drawable.ic_check).mutate():new ColorDrawable(Color.TRANSPARENT);mark.setTint(INK);mark.setBounds(0,0,dp(22),dp(22));item.setCompoundDrawables(mark,null,null,null);item.setCompoundDrawablePadding(dp(12));item.setSelected(selected);}
+ void popupDivider(LinearLayout body){View line=new View(activity);line.setBackgroundColor(DIVIDER);LinearLayout.LayoutParams bounds=new LinearLayout.LayoutParams(-1,dp(1));bounds.setMargins(dp(12),dp(8),dp(12),dp(8));body.addView(line,bounds);}
  void focusOutline(View view){StateListDrawable states=new StateListDrawable();GradientDrawable outline=bg(Color.TRANSPARENT,8);outline.setStroke(dp(2),PRIMARY);states.addState(new int[]{android.R.attr.state_focused},outline);states.addState(new int[]{},new ColorDrawable(Color.TRANSPARENT));view.setForeground(states);}
 
  Button action(LinearLayout body,String label,Runnable run){Button button=new Button(activity);button.setText(label);button.setTextSize(15);button.setAllCaps(false);button.setTextColor(ON_PRIMARY);button.setBackground(bg(PRIMARY,24));button.setStateListAnimator(null);button.setBackgroundTintList(new android.content.res.ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{DISABLED,PRIMARY}));button.setMinWidth(0);button.setMinimumWidth(0);button.setMinHeight(dp(48));button.setMinimumHeight(dp(48));button.setPadding(dp(20),dp(10),dp(20),dp(10));button.setOnClickListener(v->run.run());LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,-2);lp.gravity=Gravity.CENTER_HORIZONTAL;lp.topMargin=dp(8);lp.bottomMargin=dp(20);body.addView(button,lp);focusOutline(button);return button;}
@@ -39,7 +43,7 @@ final class SecondaryUi {
   };shell.setOrientation(LinearLayout.VERTICAL);shell.addView(row,new LinearLayout.LayoutParams(-1,-2));parent.addView(shell,index,original);
  }
  void styleDialog(AlertDialog dialog,boolean destructive){
-  Window window=dialog.getWindow();window.setLayout(Math.min(activity.getResources().getDisplayMetrics().widthPixels-dp(40),dp(440)),-2);window.setDimAmount(.32f);
+  Window window=dialog.getWindow();window.setLayout(Math.min(activity.getResources().getDisplayMetrics().widthPixels-dp(40),dp(440)),-2);window.setDimAmount(0);window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);window.setBackgroundDrawable(popupSurface());
   TextView message=dialog.findViewById(android.R.id.message);if(message==null||!message.isShown())message=window.getDecorView().findViewWithTag("remote-message");
   if(message!=null){message.setTextSize(15);message.setTextColor(MUTED);message.setLineSpacing(dp(4),1);message.setPadding(message.getPaddingLeft(),message.getPaddingTop(),message.getPaddingRight(),dp(16));}
   int dangerButton=dark?0xffa83f56:DANGER;

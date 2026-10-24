@@ -33,6 +33,8 @@
         <item name="android:textColorPrimary">@color/app_ink</item>
         <item name="android:textColorSecondary">@color/app_muted</item>
         <item name="android:windowBackground">@drawable/dialog_surface</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowElevation">0dp</item>
     </style>
     <style name="TaskTimePickerTheme" parent="SecondaryDialog">
         <item name="android:timePickerStyle">@style/TaskSpinnerTimePicker</item>

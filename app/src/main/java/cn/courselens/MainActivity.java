@@ -34,7 +34,7 @@ public class MainActivity extends Activity {
  private HomePage homePage;
  private TaskPage taskPage;private Bundle taskState;private ParcelPage parcelPage;private Bundle parcelState;private boolean tasksVisible,parcelsVisible,switchingPrimaryTab,pageBackwards;
  private FrameLayout windowContent;private AppNavigation bottomNavigation;private SideNavigation sideNavigation;
- private LinearLayout settingsPage,timetableSettingsPage;private int settingsScrollY,timetableSettingsScrollY;private boolean settingsFromParcel,settingsFromParcelActivity;
+ private LinearLayout settingsPage;private int settingsScrollY;private boolean settingsFromParcel,settingsFromParcelActivity;
  private ScrollView timetableScroll;private int timetableScrollY;
  private final PageMotion pageMotion=new PageMotion();private android.window.OnBackInvokedCallback systemBack;private boolean backRegistered;
  private ViewPager pager;private TextView weekLabel;private FrameLayout daysBar; private LinearLayout root;private FrameLayout stage;private boolean returningPage;private int week=6;private String data="",notes="",term="2026-08-31";
@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
   View decor=getWindow().getDecorView();decor.getViewTreeObserver().addOnScrollChangedListener(remoteScroll);
   decor.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener(){boolean drawn;public void onDraw(){if(drawn)return;drawn=true;decor.post(()->{if(decor.getViewTreeObserver().isAlive())decor.getViewTreeObserver().removeOnDrawListener(this);remoteHandler.postDelayed(()->{if(!isDestroyed()&&!isFinishing()){remote=RemoteConfigClient.get(MainActivity.this);remote.listen(remoteListener);if(state==null||!remote.loaded)remote.opened();refreshRemoteStatus();}},1500);Looper.myQueue().addIdleHandler(()->{prepareTasks();prepareParcels();return false;});});}});
  }
- @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("tasksVisible",tasksVisible);state.putBoolean("parcelsVisible",parcelsVisible);state.putBoolean("appSettingsVisible",root==settingsPage&&settingsPage!=null);state.putBoolean("timetableSettingsVisible",root==timetableSettingsPage&&timetableSettingsPage!=null);state.putBoolean("settingsFromParcel",settingsFromParcel);state.putBoolean("settingsFromParcelActivity",settingsFromParcelActivity);Bundle page=new Bundle();if(taskPage!=null)taskPage.saveState(page);else if(taskState!=null)page.putAll(taskState);state.putBundle("taskPage",page);Bundle parcel=new Bundle();if(parcelPage!=null)parcelPage.saveState(parcel);else if(parcelState!=null)parcel.putAll(parcelState);state.putBundle("parcelPage",parcel);}
+ @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("tasksVisible",tasksVisible);state.putBoolean("parcelsVisible",parcelsVisible);state.putBoolean("appSettingsVisible",root==settingsPage&&settingsPage!=null);state.putBoolean("timetableSettingsVisible",navigationOverlay!=null&&"课表设置".equals(navigationOverlay.panel.getTag()));state.putBoolean("settingsFromParcel",settingsFromParcel);state.putBoolean("settingsFromParcelActivity",settingsFromParcelActivity);Bundle page=new Bundle();if(taskPage!=null)taskPage.saveState(page);else if(taskState!=null)page.putAll(taskState);state.putBundle("taskPage",page);Bundle parcel=new Bundle();if(parcelPage!=null)parcelPage.saveState(parcel);else if(parcelState!=null)parcel.putAll(parcelState);state.putBundle("parcelPage",parcel);}
  @Override public SharedPreferences getPreferences(int mode){return Timetables.preferences(this);}
  private void setTimes(ClassTimes value){classTimes=value;START_TIMES=value.starts;END_TIMES=value.ends;}
  private SchoolClient schoolClient(String id){return id.equals("xzit")?new XzitClient():new SchoolClient();}
@@ -64,7 +64,7 @@ public class MainActivity extends Activity {
   pageMotion.cancel();if(sideNavigation!=null)sideNavigation.close(false);
   if(unsavedDialog!=null){unsavedDialog.dismiss();unsavedDialog=null;}
   while(navigationOverlay!=null)navigationOverlay.close(false);
-  if(root==settingsPage&&settingsPage!=null)settingsScrollY=((ScrollView)settingsPage.getChildAt(1)).getScrollY();if(root==timetableSettingsPage&&timetableSettingsPage!=null)timetableSettingsScrollY=((ScrollView)timetableSettingsPage.getChildAt(1)).getScrollY();
+  if(root==settingsPage&&settingsPage!=null)settingsScrollY=((ScrollView)settingsPage.getChildAt(1)).getScrollY();
   if(timetableScroll!=null){timetableScrollY=timetableScroll.getScrollY();timetableScroll=null;}
   if(choiceSheet!=null){choiceSheet.close(false);choiceSheet=null;}
   LinearLayout previous=root;boolean backwards=secondary?returningPage:pageBackwards;
@@ -142,9 +142,7 @@ public class MainActivity extends Activity {
  private int currentWeek(){return Math.max(1,Math.min(30,(int)((date().getTimeInMillis()-monday().getTimeInMillis())/86400000L/7)+1));}
  private TextView icon(int drawable,String description,Runnable action){TextView view=text("",22,INK);view.setGravity(Gravity.CENTER);view.setContentDescription(description);view.setTooltipText(description);view.setOnClickListener(v->action.run());view.setFocusable(true);secondaryUi.styleIcon(view,drawable);return view;}
  private void updateOverlayAppearance(){
-  int color=SURFACE,barColor=SURFACE;for(NavigationOverlay overlay=navigationOverlay;overlay!=null;overlay=overlay.previous){color=androidx.core.graphics.ColorUtils.compositeColors(overlay.corner?0x22000000:0x55000000,color);if(!overlay.corner)barColor=CARD;}
-  for(NavigationOverlay overlay=navigationOverlay;overlay!=null&&overlay.corner;overlay=overlay.previous)barColor=androidx.core.graphics.ColorUtils.compositeColors(0x22000000,barColor);
-  boolean choosing=choiceSheet!=null&&choiceSheet.open;if(choosing){color=androidx.core.graphics.ColorUtils.compositeColors(0x55000000,color);barColor=CARD;}getWindow().setStatusBarColor(color);getWindow().setNavigationBarColor(barColor);bottomNavigation.setImportantForAccessibility(navigationOverlay!=null||choosing?View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS:View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
+  getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);boolean choosing=choiceSheet!=null&&choiceSheet.open;bottomNavigation.setImportantForAccessibility(navigationOverlay!=null||choosing?View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS:View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
  }
 
  private void changeWeek(int next){if(next<1||next>30)return;if(navigationOverlay!=null)navigationOverlay.close(true);if(pager!=null&&pager.isAttachedToWindow()){pager.setCurrentItem(next-1,true);}else{week=next;saveWeek();home();}}
@@ -164,30 +162,32 @@ public class MainActivity extends Activity {
   menuItem(overlay,"回到本周","return-current-week",()->changeWeek(currentWeek())).setEnabled(week!=currentWeek());
   if(getPreferences(0).getBoolean("schoolImported",notes.startsWith("已从学校同步")))menuItem(overlay,"刷新课表","refresh-timetable",this::refreshTimetable).setEnabled(!busy);
  }
- TextView menuItem(NavigationOverlay overlay,String label,String tag,Runnable run){TextView item=text(label,14,INK);item.setTag(tag);item.setTextColor(new android.content.res.ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{DISABLED,INK}));item.setGravity(Gravity.CENTER_VERTICAL);item.setPadding(dp(12),dp(10),dp(12),dp(10));item.setMinHeight(dp(48));item.setFocusable(true);item.setOnClickListener(v->{overlay.close(false);run.run();});focusOutline(item);overlay.body.addView(item,new LinearLayout.LayoutParams(-1,-2));return item;}
+ TextView menuItem(NavigationOverlay overlay,String label,String tag,Runnable run){TextView item=secondaryUi.popupItem(overlay.body,label,()->{overlay.close(false);run.run();});item.setTag(tag);item.setTextColor(new android.content.res.ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled},new int[]{}},new int[]{DISABLED,INK}));return item;}
+
  private NavigationOverlay sheetMenu(String title){return new NavigationOverlay(true,title);}
  class NavigationOverlay extends FrameLayout {
-  final boolean corner;final LinearLayout panel,body;final View shade;final LinearLayout underneath;final Runnable underneathBack;final NavigationOverlay previous;
+  final boolean corner;final View anchor;final LinearLayout panel,body;final View shade;final LinearLayout underneath;final Runnable underneathBack;final NavigationOverlay previous;
   final int accessibility;final boolean underneathDetail;boolean fitContent;boolean open=true;int generation;ViewTreeObserver observer;ViewTreeObserver.OnPreDrawListener pending;
-  NavigationOverlay(boolean corner,String title){
-   super(MainActivity.this);pageMotion.cancel();this.corner=corner;underneath=root;underneathBack=pageBack;underneathDetail=showingDetail;previous=navigationOverlay;accessibility=underneath.getImportantForAccessibility();
+  NavigationOverlay(boolean corner,String title){this(corner,title,null);}
+  NavigationOverlay(boolean corner,String title,View anchor){
+   super(MainActivity.this);pageMotion.cancel();this.corner=corner;this.anchor=anchor;underneath=root;underneathBack=pageBack;underneathDetail=showingDetail;previous=navigationOverlay;accessibility=underneath.getImportantForAccessibility();
    if(previous!=null&&!corner)previous.setVisibility(INVISIBLE);underneath.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
    setFocusableInTouchMode(true);setClickable(true);setTag(corner?"quick-menu":"navigation-sheet");
-   shade=new View(MainActivity.this);shade.setBackgroundColor(corner?0x22000000:0x55000000);shade.setTag("navigation-shade");shade.setOnClickListener(v->close(true));addView(shade,new FrameLayout.LayoutParams(-1,-1));
-   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setTag(title);GradientDrawable surface=bg(CARD,20);if(!corner)surface.setCornerRadii(new float[]{dp(20),dp(20),dp(20),dp(20),0,0,0,0});panel.setBackground(surface);panel.setClickable(true);panel.setElevation(dp(8));
-   FrameLayout.LayoutParams bounds=new FrameLayout.LayoutParams(-1,-2,corner?Gravity.TOP|Gravity.END:Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);bounds.setMargins(corner?dp(12):0,corner?dp(56):0,corner?dp(12):0,0);if(corner){View trigger=underneath.findViewWithTag("sheet-action-button");if(trigger==null)trigger=underneath.findViewWithTag("quick-menu-button");if(trigger!=null&&trigger.getHeight()>0){int[] at=new int[2],stageAt=new int[2];trigger.getLocationInWindow(at);stage.getLocationInWindow(stageAt);bounds.topMargin=at[1]-stageAt[1]+trigger.getHeight();}}addView(panel,bounds);
+   shade=new View(MainActivity.this);shade.setBackgroundColor(Color.TRANSPARENT);shade.setTag("navigation-shade");shade.setOnClickListener(v->close(true));addView(shade,new FrameLayout.LayoutParams(-1,-1));
+   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setTag(title);panel.setBackground(secondaryUi.popupSurface());panel.setClipToOutline(true);panel.setClickable(true);panel.setElevation(0);
+   FrameLayout.LayoutParams bounds=new FrameLayout.LayoutParams(-1,-2,corner?Gravity.TOP|Gravity.END:Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);bounds.setMargins(corner?dp(12):0,corner?dp(56):0,corner?dp(12):0,0);if(corner){View trigger=anchor!=null?anchor:underneath.findViewWithTag("sheet-action-button");if(trigger==null)trigger=underneath.findViewWithTag("quick-menu-button");if(trigger!=null&&trigger.getHeight()>0){int[] at=new int[2],stageAt=new int[2];trigger.getLocationInWindow(at);stage.getLocationInWindow(stageAt);bounds.topMargin=at[1]-stageAt[1]+trigger.getHeight();}}addView(panel,bounds);
    if(!corner){View handle=new View(MainActivity.this);handle.setBackground(bg(HANDLE,2));handle.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams grip=new LinearLayout.LayoutParams(dp(36),dp(4));grip.gravity=Gravity.CENTER_HORIZONTAL;grip.setMargins(0,dp(10),0,dp(4));panel.addView(handle,grip);}
    if(!corner){LinearLayout bar=new LinearLayout(MainActivity.this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(16),0,dp(8),0);TextView heading=text(title,18,INK);heading.setTag("navigation-title");heading.setTypeface(null,Typeface.BOLD);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));TextView close=icon(R.drawable.ic_more,title+"操作",()->{});close.setTag("sheet-action-button");close.setVisibility(View.GONE);bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));panel.addView(bar);}
-   ScrollView scroll=new ScrollView(MainActivity.this);panel.addView(scroll,new LinearLayout.LayoutParams(-1,corner?-2:0,corner?0:1));body=new LinearLayout(MainActivity.this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(corner?dp(4):dp(16),dp(4),corner?dp(4):dp(16),dp(12));scroll.addView(body);
+   ScrollView scroll=new ScrollView(MainActivity.this);panel.addView(scroll,new LinearLayout.LayoutParams(-1,corner?-2:0,corner?0:1));body=new LinearLayout(MainActivity.this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(corner?dp(8):dp(16),dp(8),corner?dp(8):dp(16),dp(8));scroll.addView(body);
    navigationOverlay=this;updateOverlayAppearance();root=panel;pageBack=null;showingDetail=corner&&underneathDetail;windowContent.addView(this,new FrameLayout.LayoutParams(-1,-1));updateSystemBack();requestFocus();if(Build.VERSION.SDK_INT>=28)setAccessibilityPaneTitle(title);
-   int token=++generation;shade.setAlpha(0f);panel.setAlpha(corner?0f:1f);panel.setScaleX(corner?.86f:1f);panel.setScaleY(corner?.86f:1f);panel.setTranslationY(corner?0:dp(48));
+   int token=++generation;shade.setAlpha(0f);panel.setAlpha(corner?0f:1f);panel.setScaleX(1f);panel.setScaleY(1f);panel.setTranslationY(corner?0:dp(48));
    observer=getViewTreeObserver();pending=new ViewTreeObserver.OnPreDrawListener(){public boolean onPreDraw(){if(observer.isAlive())observer.removeOnPreDrawListener(this);pending=null;if(token!=generation||!open||!isAttachedToWindow())return true;panel.setPivotX(panel.getWidth());panel.setPivotY(0);if(android.animation.ValueAnimator.areAnimatorsEnabled()){panel.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0).setDuration(200).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();shade.animate().alpha(1f).setDuration(200).start();}else{panel.setAlpha(1f);panel.setScaleX(1f);panel.setScaleY(1f);panel.setTranslationY(0);shade.setAlpha(1f);}return true;}};observer.addOnPreDrawListener(pending);
   }
   // Keep readable text; long sheets scroll instead of shrinking their contents.
   @Override protected void onMeasure(int widthSpec,int heightSpec){
    FrameLayout.LayoutParams bounds=(FrameLayout.LayoutParams)panel.getLayoutParams();int height=MeasureSpec.getSize(heightSpec);bounds.bottomMargin=0;
    bounds.width=Math.max(1,MeasureSpec.getSize(widthSpec)-(corner?dp(24):0));bounds.height=-2;
-   if(corner){bounds.width=Math.min(bounds.width,dp(200));panel.measure(MeasureSpec.makeMeasureSpec(bounds.width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));bounds.height=Math.min(panel.getMeasuredHeight(),Math.max(1,Math.min(dp(440),height-dp(24))));bounds.topMargin=Math.max(dp(12),Math.min(bounds.topMargin,height-bounds.height-dp(12)));}
+   if(corner){bounds.width=Math.min(bounds.width,dp(224));panel.measure(MeasureSpec.makeMeasureSpec(bounds.width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));bounds.topMargin=Math.max(dp(12),Math.min(bounds.topMargin,height-dp(64)));bounds.height=Math.min(panel.getMeasuredHeight(),Math.max(1,height-bounds.topMargin-dp(12)));}
    else if(fitContent){panel.measure(MeasureSpec.makeMeasureSpec(bounds.width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));bounds.height=Math.min(panel.getMeasuredHeight(),Math.max(1,height-dp(24)));}
    else bounds.height=Math.max(1,height/2);
    super.onMeasure(widthSpec,heightSpec);
@@ -195,8 +195,8 @@ public class MainActivity extends Activity {
 
   void close(boolean animate){
    scheduleRemoteNotice();
-   if(animate&&!open)return;open=false;int token=++generation;panel.animate().cancel();shade.animate().cancel();underneath.setImportantForAccessibility(accessibility);if(navigationOverlay==this){navigationOverlay=previous;root=underneath;pageBack=underneathBack;showingDetail=underneathDetail;if(previous!=null)previous.setVisibility(VISIBLE);updateSystemBack();View focus=corner?underneath.findViewWithTag("sheet-action-button"):underneath;if(corner&&focus==null)focus=underneath.findViewWithTag("quick-menu-button");if(focus!=null)focus.requestFocus();updateOverlayAppearance();}setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);Runnable finish=()->{if(token==generation)windowContent.removeView(this);};
-   if(animate&&isAttachedToWindow()&&android.animation.ValueAnimator.areAnimatorsEnabled()){panel.animate().alpha(corner?0f:1f).scaleX(corner?.86f:1f).scaleY(corner?.86f:1f).translationY(corner?0:dp(48)).setDuration(180).withEndAction(finish).start();shade.animate().alpha(0f).setDuration(180).start();}else finish.run();
+   if(animate&&!open)return;open=false;int token=++generation;panel.animate().cancel();shade.animate().cancel();underneath.setImportantForAccessibility(accessibility);if(navigationOverlay==this){navigationOverlay=previous;root=underneath;pageBack=underneathBack;showingDetail=underneathDetail;if(previous!=null)previous.setVisibility(VISIBLE);updateSystemBack();View focus=corner?(anchor!=null?anchor:underneath.findViewWithTag("sheet-action-button")):underneath;if(corner&&focus==null)focus=underneath.findViewWithTag("quick-menu-button");if(focus!=null)focus.requestFocus();updateOverlayAppearance();}setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);Runnable finish=()->{if(token==generation)windowContent.removeView(this);};
+   if(animate&&isAttachedToWindow()&&android.animation.ValueAnimator.areAnimatorsEnabled()){panel.animate().alpha(corner?0f:1f).scaleX(1f).scaleY(1f).translationY(corner?0:dp(48)).setDuration(180).withEndAction(finish).start();shade.animate().alpha(0f).setDuration(180).start();}else finish.run();
   }
   // Cold attachment replaces the floating observer with the window observer.
   @Override protected void onAttachedToWindow(){super.onAttachedToWindow();observer=getViewTreeObserver();}
@@ -217,10 +217,10 @@ public class MainActivity extends Activity {
   LinearLayout body=bottomSheet("选择教学周","当前教学周：第 "+currentWeek()+" 周 · 点选即可查看",back);
   for(int start=1;start<=30;start+=5){LinearLayout row=new LinearLayout(this);LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);rowParams.bottomMargin=dp(8);body.addView(row,rowParams);for(int w=start;w<start+5;w++){final int chosen=w;TextView cell=text(""+w,16,NAVY);cell.setTag("week-choice-"+w);cell.setContentDescription("查看第 "+w+" 周"+(w==currentWeek()?"，当前教学周":""));cell.setGravity(Gravity.CENTER);cell.setMinHeight(dp(48));cell.setSelected(w==week);cell.setTypeface(null,w==week?Typeface.BOLD:Typeface.NORMAL);cell.setBackground(bg(w==week?AQUA:SURFACE,16));cell.setFocusable(true);cell.setOnClickListener(v->changeWeek(chosen));focusOutline(cell);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(48),1);if(w>start)lp.leftMargin=dp(8);row.addView(cell,lp);}}
   action(body,"回到本周",()->changeWeek(currentWeek())).setTag("week-current");
-  root.findViewWithTag("sheet-action-button").setVisibility(View.VISIBLE);root.findViewWithTag("sheet-action-button").setOnClickListener(v->{NavigationOverlay menu=sheetMenu("教学周操作");for(int w=1;w<=30;w++){final int chosen=w;menuItem(menu,"第 "+w+" 周"+(w==week?" ✓":""),"week-"+w,()->changeWeek(chosen));}});
+  root.findViewWithTag("sheet-action-button").setVisibility(View.VISIBLE);root.findViewWithTag("sheet-action-button").setOnClickListener(v->{NavigationOverlay menu=sheetMenu("教学周操作");for(int w=1;w<=30;w++){final int chosen=w;secondaryUi.popupChecked(menuItem(menu,"第 "+w+" 周","week-"+w,()->changeWeek(chosen)),w==week);}});
  }
  private void home(){
-  settingsPage=null;timetableSettingsPage=null;pageBackwards=true;
+  settingsPage=null;pageBackwards=true;
   getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(SURFACE);
   boolean fromTasks=tasksVisible,fromParcels=parcelsVisible;tasksVisible=false;parcelsVisible=false;
   if(homePage!=null&&(pageBack!=null||fromTasks||fromParcels)&&navigationOverlay==null&&homePage.matches()){
@@ -230,7 +230,7 @@ public class MainActivity extends Activity {
   }
   base(false);LinearLayout header=new LinearLayout(this);header.setTag("home-header");header.setOrientation(LinearLayout.VERTICAL);LinearLayout toolbar=new LinearLayout(this);toolbar.setGravity(Gravity.CENTER_VERTICAL);toolbar.setPadding(dp(16),dp(8),dp(16),dp(6));header.addView(toolbar);secondaryUi.menuAction(toolbar,this::openSideMenu);toolbar.addView(new View(this),new LinearLayout.LayoutParams(dp(56),1));
   LinearLayout dates=new LinearLayout(this);dates.setOrientation(LinearLayout.VERTICAL);dates.setGravity(Gravity.CENTER);Calendar today=date();TextView title=text((today.get(Calendar.MONTH)+1)+"月"+today.get(Calendar.DAY_OF_MONTH)+"日",25,INK);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);title.setTag("primary-page-title");dates.addView(title);TextView sub=text(weekCaption(),14,MUTED);sub.setGravity(Gravity.CENTER);weekLabel=sub;LinearLayout.LayoutParams subp=new LinearLayout.LayoutParams(-1,-2);subp.topMargin=dp(4);dates.addView(sub,subp);dates.setTag("home-date");toolbar.addView(dates,new LinearLayout.LayoutParams(0,-2,1));
-  TextView more=icon(R.drawable.ic_more,"更多操作",()->quickMenu());more.setTag("quick-menu-button");LinearLayout.LayoutParams moreParams=new LinearLayout.LayoutParams(dp(48),dp(48));moreParams.leftMargin=dp(8);toolbar.addView(more,moreParams);TextView moduleSettings=icon(R.drawable.ic_settings,"课表设置",this::timetableSettings);moduleSettings.setTag("timetable-settings");LinearLayout.LayoutParams settingsSize=new LinearLayout.LayoutParams(dp(48),dp(48));settingsSize.leftMargin=dp(8);toolbar.addView(moduleSettings,settingsSize);secondaryUi.fitHeader(toolbar,dates);
+  TextView more=icon(R.drawable.ic_calendar_add,"课程管理",()->edit());more.setTag("quick-menu-button");LinearLayout.LayoutParams moreParams=new LinearLayout.LayoutParams(dp(48),dp(48));moreParams.leftMargin=dp(8);toolbar.addView(more,moreParams);TextView moduleSettings=icon(R.drawable.ic_more,"课表设置",this::timetableSettings);moduleSettings.setTag("timetable-settings");LinearLayout.LayoutParams settingsSize=new LinearLayout.LayoutParams(dp(48),dp(48));settingsSize.leftMargin=dp(8);toolbar.addView(moduleSettings,settingsSize);secondaryUi.fitHeader(toolbar,dates);
   daysBar=new FrameLayout(this);daysBar.setTag("week-days-viewport");header.addView(daysBar,new LinearLayout.LayoutParams(-1,dp(55)));
   TimetableScrollView scroll=new TimetableScrollView(this);timetableScroll=scroll;scroll.setFillViewport(false);scroll.setVerticalScrollBarEnabled(false);LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);scroll.addView(content);
    pager=scroll.new WeekPager(this);pager.setOffscreenPageLimit(1);pager.setAdapter(new PagerAdapter(){public int getCount(){return 30;}public boolean isViewFromObject(View v,Object o){return v==o;}public Object instantiateItem(ViewGroup container,int position){WeekGrid grid=new WeekGrid();grid.shownWeek=position+1;grid.setTag("week-grid-"+grid.shownWeek);grid.days=weekDays(grid.shownWeek);daysBar.addView(grid.days,new FrameLayout.LayoutParams(-1,dp(55)));daysBar.post(daysBar::requestLayout);grid.addOnLayoutChangeListener((v,left,top,right,bottom,oldLeft,oldTop,oldRight,oldBottom)->syncWeekDays());container.addView(grid);syncWeekDays();return grid;}public void destroyItem(ViewGroup container,int position,Object object){daysBar.removeView(((WeekGrid)object).days);container.removeView((View)object);}});pager.setCurrentItem(week-1,false);pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener(){public void onPageScrolled(int position,float offset,int pixels){syncWeekDays();}public void onPageSelected(int position){week=position+1;saveWeek();updateHeader();}public void onPageScrollStateChanged(int state){pagerState=state;scheduleRemoteNotice();}});content.addView(pager,new LinearLayout.LayoutParams(-1,dp(START_TIMES.length*66)));
@@ -349,22 +349,14 @@ public class MainActivity extends Activity {
   settingsPage=root;
  }
  private void timetableSettings(){
-  if(returningPage&&timetableSettingsPage!=null){timetableSettingsPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(true,timetableSettingsPage);root.setBackgroundColor(SURFACE);pageBack=this::home;updateSystemBack();((ScrollView)root.getChildAt(1)).scrollTo(0,timetableSettingsScrollY);return;}
-  LinearLayout body=secondary("课表设置","",this::home);
-  LinearLayout tables=settingsGroup(body,"");
-  LinearLayout current=option(tables,R.drawable.ic_grid,"课表切换","",this::timetablePicker);
-  current.setTag("switch-timetable");current.setTooltipText("长按修改课表名称");current.setContentDescription("课表切换，当前："+Timetables.names(this).get(Timetables.active(this)));
-  current.setOnLongClickListener(v->{renameTimetable(Timetables.active(this));return true;});
-  option(tables,R.drawable.ic_calendar_add,"新增课表","",this::newTimetable).setTag("add-timetable");
-  LinearLayout semester=settingsGroup(body,"");
-  option(semester,R.drawable.ic_calendar,"开学日期","",()->termPicker()).setTag("settings-term");option(semester,R.drawable.ic_clock_outline,"作息时间","",this::timesForm).setTag("settings-times");
-  LinearLayout courses=settingsGroup(body,"");
-  option(courses,R.drawable.ic_book,"课程管理","",()->edit(this::timetableSettings));
-  option(courses,R.drawable.ic_calendar_edit,"课程调整","",()->adjustmentManager()).setTag("adjustment-manager");
-  option(courses,R.drawable.ic_widget_outline,"桌面小组件","",()->widgetAddPage()).setTag("add-home-widget");
-  LinearLayout sync=settingsGroup(body,"");option(sync,R.drawable.ic_person,"学校账号","",this::login);
-  LinearLayout caution=settingsGroup(body,"");TextView clear=text("退出并清空当前课表",15,DANGER);clear.setTag("clear-timetable");clear.setGravity(Gravity.CENTER_VERTICAL);clear.setMinHeight(dp(56));clear.setPadding(dp(16),dp(10),dp(16),dp(10));clear.setFocusable(true);clear.setOnClickListener(v->confirmClear());focusOutline(clear);caution.addView(clear,new LinearLayout.LayoutParams(-1,-2));
-  timetableSettingsPage=root;
+  if(navigationOverlay!=null)navigationOverlay.close(false);if(pageBack!=null)home();
+  View anchor=root.findViewWithTag("timetable-settings");NavigationOverlay menu=new NavigationOverlay(true,"课表设置",anchor);
+  TextView current=menuItem(menu,"切换课表","switch-timetable",this::timetablePicker);current.setTooltipText("长按修改课表名称");current.setContentDescription("课表切换，当前："+Timetables.names(this).get(Timetables.active(this)));current.setOnLongClickListener(v->{menu.close(false);renameTimetable(Timetables.active(this));return true;});
+  menuItem(menu,"新增课表","add-timetable",this::newTimetable);secondaryUi.popupDivider(menu.body);
+  menuItem(menu,"开学日期","settings-term",this::termPicker);menuItem(menu,"作息时间","settings-times",this::timesForm);secondaryUi.popupDivider(menu.body);
+  menuItem(menu,"课程管理","manage-courses",()->edit(this::timetableSettings));menuItem(menu,"课程调整","adjustment-manager",this::adjustmentManager);menuItem(menu,"桌面小组件","add-home-widget",this::widgetAddPage);secondaryUi.popupDivider(menu.body);
+  menuItem(menu,"学校账号","school-account",this::login);menuItem(menu,"回到本周","return-current-week",()->changeWeek(currentWeek())).setEnabled(week!=currentWeek());if(getPreferences(0).getBoolean("schoolImported",notes.startsWith("已从学校同步")))menuItem(menu,"刷新课表","refresh-timetable",this::refreshTimetable).setEnabled(!busy);secondaryUi.popupDivider(menu.body);
+  menuItem(menu,"清空当前课表","clear-timetable",this::confirmClear).setTextColor(DANGER);
  }
  private void appearanceSettings(){
   LinearLayout body=secondary("外观","浅色、深色与跟随系统会同时应用到课表、任务、设置和桌面小组件。",()->menu());
@@ -587,8 +579,8 @@ public class MainActivity extends Activity {
   Spinner selected;boolean open;int generation;final int formAccessibility=root.getImportantForAccessibility();
   CourseChoiceSheet(){
    super(MainActivity.this);setVisibility(INVISIBLE);setFocusableInTouchMode(true);setClickable(true);
-   shade=new View(MainActivity.this);shade.setBackgroundColor(0x55000000);shade.setTag("choice-shade");addView(shade,new FrameLayout.LayoutParams(-1,-1));shade.setOnClickListener(v->close(true));
-   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(16),dp(12),dp(16),dp(12));GradientDrawable choiceSurface=bg(CARD,20);choiceSurface.setCornerRadii(new float[]{dp(20),dp(20),dp(20),dp(20),0,0,0,0});panel.setBackground(choiceSurface);panel.setClickable(true);FrameLayout.LayoutParams panelBounds=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);addView(panel,panelBounds);
+   shade=new View(MainActivity.this);shade.setBackgroundColor(Color.TRANSPARENT);shade.setTag("choice-shade");addView(shade,new FrameLayout.LayoutParams(-1,-1));shade.setOnClickListener(v->close(true));
+   panel=new LinearLayout(MainActivity.this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(16),dp(12),dp(16),dp(12));panel.setBackground(secondaryUi.popupSurface());panel.setClickable(true);FrameLayout.LayoutParams panelBounds=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);addView(panel,panelBounds);
    View handle=new View(MainActivity.this);handle.setBackground(bg(HANDLE,2));handle.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);LinearLayout.LayoutParams grip=new LinearLayout.LayoutParams(dp(36),dp(4));grip.gravity=Gravity.CENTER_HORIZONTAL;grip.bottomMargin=dp(16);panel.addView(handle,grip);
    title=text("",18,NAVY);title.setTypeface(null,Typeface.BOLD);panel.addView(title);
    hint=text("",14,MUTED);hint.setPadding(0,dp(8),0,dp(16));panel.addView(hint);
@@ -709,26 +701,26 @@ public class MainActivity extends Activity {
  private void finishTimetableRefresh(){busy=false;if(isDestroyed())return;updateSystemBack();View refresh=root.findViewWithTag("refresh-timetable");if(refresh!=null){refresh.setEnabled(true);refresh.setContentDescription("刷新课表");}}
  private void schoolPicker(){
   if(busy){toast("请等待同步结束");return;}NavigationOverlay menu=sheetMenu("选择学校");String[] ids={"squ","xzit"},names={"宿迁学院","徐州工程学院"};
-  for(int i=0;i<ids.length;i++){String id=ids[i];menuItem(menu,names[i],"school-"+id,()->{if(password!=null)password.getText().clear();if(account!=null)account.getText().clear();loginAccountPrefill=null;SchoolClient previous=school;worker.execute(previous::logout);loginSchool=id;school=schoolClient(id);login();});}
+  for(int i=0;i<ids.length;i++){String id=ids[i];TextView item=menuItem(menu,names[i],"school-"+id,()->{if(password!=null)password.getText().clear();if(account!=null)account.getText().clear();loginAccountPrefill=null;SchoolClient previous=school;worker.execute(previous::logout);loginSchool=id;school=schoolClient(id);login();});secondaryUi.popupChecked(item,id.equals(loginSchool));}
  }
  private void reloadTimetable(){reloadTimetable(this::home);}
  private void reloadTimetable(Runnable destination){
   if(password!=null)password.getText().clear();account=null;password=null;loginAccountPrefill=null;SchoolClient previous=school;worker.execute(previous::logout);SharedPreferences prefs=getPreferences(0);
-  data=prefs.getString("courses","");notes=prefs.getString("notes","");term=prefs.getString("term","2026-08-31");week=prefs.getInt("week",1);adjustments=prefs.getString("courseAdjustments","");displayChoices=new HashSet<>(prefs.getStringSet("displayChoices",Collections.emptySet()));setTimes(ClassTimes.parse(prefs.getString("classTimes","")));schoolId=prefs.getString("school","squ");loginSchool=schoolId;school=schoolClient(schoolId);homePage=null;cachedData=null;timetableScrollY=0;settingsScrollY=0;settingsPage=null;timetableSettingsPage=null;timetableSettingsScrollY=0;destination.run();CourseWidget.updateAll(this);
+  data=prefs.getString("courses","");notes=prefs.getString("notes","");term=prefs.getString("term","2026-08-31");week=prefs.getInt("week",1);adjustments=prefs.getString("courseAdjustments","");displayChoices=new HashSet<>(prefs.getStringSet("displayChoices",Collections.emptySet()));setTimes(ClassTimes.parse(prefs.getString("classTimes","")));schoolId=prefs.getString("school","squ");loginSchool=schoolId;school=schoolClient(schoolId);homePage=null;cachedData=null;timetableScrollY=0;settingsScrollY=0;settingsPage=null;destination.run();CourseWidget.updateAll(this);
  }
  private void timetablePicker(){
   if(busy){toast("请等待同步结束");return;}NavigationOverlay menu=sheetMenu("切换课表");String current=Timetables.active(this);
-  for(var entry:Timetables.names(this).entrySet()){String id=entry.getKey();menuItem(menu,entry.getValue()+(id.equals(current)?" ✓":""),"timetable-"+id,()->{try{Timetables.select(this,id);reloadTimetable();}catch(Exception e){toast(e.getMessage());}});View item=menu.body.findViewWithTag("timetable-"+id);item.setTooltipText("长按修改课表名称");item.setOnLongClickListener(v->{menu.close(false);renameTimetable(id);return true;});}
-  menuItem(menu,"新增课表","new-timetable",this::newTimetable);
+  for(var entry:Timetables.names(this).entrySet()){String id=entry.getKey();menuItem(menu,entry.getValue(),"timetable-"+id,()->{try{Timetables.select(this,id);reloadTimetable();}catch(Exception e){toast(e.getMessage());}});TextView item=menu.body.findViewWithTag("timetable-"+id);secondaryUi.popupChecked(item,id.equals(current));item.setTooltipText("长按修改课表名称");item.setOnLongClickListener(v->{menu.close(false);renameTimetable(id);return true;});}
+  secondaryUi.popupDivider(menu.body);menuItem(menu,"新增课表","new-timetable",this::newTimetable);
  }
  private void newTimetable(){
-  if(busy){toast("请等待同步结束");return;}Runnable back=root==timetableSettingsPage?this::timetableSettings:this::home;LinearLayout body=secondary("新增课表","每份课表独立保存，新增后仍可切回已有课表。",back);LinearLayout card=panel(body);EditText name=courseField(card,"课表名称","","例如：大二上学期","timetable-name");Spinner source=courseChoice(card,"创建方式",new String[]{"手动创建","宿迁学院导入","徐州工程学院导入"},0,"timetable-source");TextView error=text("",13,DANGER);error.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);card.addView(error);
+  if(busy){toast("请等待同步结束");return;}Runnable back=this::home;LinearLayout body=secondary("新增课表","每份课表独立保存，新增后仍可切回已有课表。",back);LinearLayout card=panel(body);EditText name=courseField(card,"课表名称","","例如：大二上学期","timetable-name");Spinner source=courseChoice(card,"创建方式",new String[]{"手动创建","宿迁学院导入","徐州工程学院导入"},0,"timetable-source");TextView error=text("",13,DANGER);error.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);card.addView(error);
   Button create=action(body,"创建课表",()->{try{int selected=source.getSelectedItemPosition();String id=selected==2?"xzit":"squ";Timetables.add(this,name.getText().toString(),id,selected==2?ClassTimes.XZIT:ClassTimes.DEFAULT,term);reloadTimetable(back);if(selected>0)login();}catch(Exception e){error.setText(e.getMessage());}});create.setTag("create-timetable");saveHeader(body,create);choiceSheet=new CourseChoiceSheet();((FrameLayout)root.getParent()).addView(choiceSheet,new FrameLayout.LayoutParams(-1,-1));
  }
  private void renameTimetable(String id){
-  if(busy){toast("请等待同步结束");return;}Runnable back=root==timetableSettingsPage?this::timetableSettings:()->{home();timetablePicker();};
+  if(busy){toast("请等待同步结束");return;}Runnable back=()->{home();timetablePicker();};
   LinearLayout body=secondary("修改课表名称","名称只用于区分课表，不影响课程和作息时间。",back);EditText name=courseField(panel(body),"课表名称",Timetables.names(this).get(id),"1–40 个字","rename-timetable-name");
-  Button save=action(body,"保存课表名称",()->{try{Timetables.rename(this,id,name.getText().toString());timetableSettingsPage=null;back.run();}catch(Exception e){name.setError(e.getMessage());}});save.setTag("save-timetable-name");saveHeader(body,save);
+  Button save=action(body,"保存课表名称",()->{try{Timetables.rename(this,id,name.getText().toString());back.run();}catch(Exception e){name.setError(e.getMessage());}});save.setTag("save-timetable-name");saveHeader(body,save);
  }
  private void timesForm(){
   LinearLayout body=secondary("作息时间","点击时间调整上课和下课时刻；按节次顺序排列，最多 30 节。学校导入时会更新当前课表的作息。",this::timetableSettings);
@@ -741,7 +733,7 @@ public class MainActivity extends Activity {
   Button remove=action(actions,"移除末节",()->{rows.removeViewAt(rows.getChildCount()-1);error.setText("");});remove.setTag("remove-class-time");
   for(Button control:new Button[]{add,remove}){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(4),dp(12),dp(4),0);actions.updateViewLayout(control,lp);}
   Runnable update=()->{int count=rows.getChildCount();summary.setText("每天 "+count+" 节");add.setEnabled(count<ClassTimes.MAX_PERIODS);remove.setEnabled(count>1);};update.run();rows.setOnHierarchyChangeListener(new ViewGroup.OnHierarchyChangeListener(){public void onChildViewAdded(View parent,View child){update.run();}public void onChildViewRemoved(View parent,View child){update.run();}});
-  Button button=action(body,"保存作息时间",()->{try{String[] starts=new String[rows.getChildCount()],ends=new String[starts.length];for(int i=0;i<starts.length;i++){LinearLayout row=(LinearLayout)rows.getChildAt(i);starts[i]=((EditText)row.getChildAt(1)).getText().toString();ends[i]=((EditText)row.getChildAt(2)).getText().toString();}ClassTimes next=new ClassTimes(starts,ends);next.validate(Course.parse(data));for(CourseAdjustment change:CourseAdjustment.parse(adjustments))if(change.replacement!=null)next.validate(Collections.singletonList(change.replacement));setTimes(next);homePage=null;save();timetableSettingsPage=null;timetableSettings();}catch(Exception e){error.setText(e.getMessage());error.post(()->error.requestRectangleOnScreen(new Rect(0,0,error.getWidth(),error.getHeight()),false));}});button.setTag("save-class-times");saveHeader(body,button);
+  Button button=action(body,"保存作息时间",()->{try{String[] starts=new String[rows.getChildCount()],ends=new String[starts.length];for(int i=0;i<starts.length;i++){LinearLayout row=(LinearLayout)rows.getChildAt(i);starts[i]=((EditText)row.getChildAt(1)).getText().toString();ends[i]=((EditText)row.getChildAt(2)).getText().toString();}ClassTimes next=new ClassTimes(starts,ends);next.validate(Course.parse(data));for(CourseAdjustment change:CourseAdjustment.parse(adjustments))if(change.replacement!=null)next.validate(Collections.singletonList(change.replacement));setTimes(next);homePage=null;save();timetableSettings();}catch(Exception e){error.setText(e.getMessage());error.post(()->error.requestRectangleOnScreen(new Rect(0,0,error.getWidth(),error.getHeight()),false));}});button.setTag("save-class-times");saveHeader(body,button);
  }
  private void addClassTimeRow(LinearLayout rows,String start,String end){
   int number=rows.getChildCount()+1;LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);TextView label=text(String.valueOf(number),13,MUTED);label.setGravity(Gravity.CENTER);label.setContentDescription("第 "+number+" 节");row.addView(label,new LinearLayout.LayoutParams(dp(52),-2));
