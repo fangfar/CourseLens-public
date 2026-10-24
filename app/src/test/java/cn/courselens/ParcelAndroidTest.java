@@ -11,7 +11,6 @@ import org.robolectric.*;
 import org.robolectric.annotation.Config;
 import org.robolectric.android.controller.ActivityController;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.*;
 import static org.robolectric.Shadows.shadowOf;
 
@@ -46,16 +45,6 @@ public class ParcelAndroidTest {
   p.state=ParcelRecord.DONE;repository.save(p);repository.undoComplete(p.id,p.updatedAt,ParcelRecord.READY,1234,567);assertEquals(ParcelRecord.READY,db.parcels().get(p.id).state);assertEquals(1234,db.parcels().get(p.id).remindAt);
   try{repository.undoComplete(p.id,p.updatedAt,ParcelRecord.READY,1234,567);fail("stale undo must not change a record");}catch(IllegalArgumentException expected){}
  }
- @Test public void queriesPreserveDataAndRejectLateResponses(){
-  ParcelRecord p=record("","","SF00000000001");p.state=ParcelRecord.TRANSIT;repository.save(p);AtomicInteger calls=new AtomicInteger();
-  TrackingProvider fake=(number,carrier)->{calls.incrementAndGet();return new TrackingProvider.Result(TrackingProvider.Error.NONE,"IN_TRANSIT",Collections.singletonList(new TrackingProvider.Event("合成时间","合成物流")),0);};
-  ParcelTracking.query(context,p.id,fake,db);assertEquals(1,calls.get());ParcelTracking.query(context,p.id,fake,db);assertEquals(1,calls.get());assertTrue(db.parcels().get(p.id).trackingEvents.contains("合成物流"));
-  ParcelRecord fresh=db.parcels().get(p.id);fresh.lastQueryAt=fresh.retryAt=0;db.parcels().update(fresh);
-  ParcelTracking.query(context,p.id,(number,carrier)->TrackingProvider.Result.failure(TrackingProvider.Error.NETWORK,60000),db);assertTrue(db.parcels().get(p.id).trackingEvents.contains("合成物流"));
-  fresh=db.parcels().get(p.id);fresh.lastQueryAt=fresh.retryAt=0;db.parcels().update(fresh);
-  ParcelTracking.query(context,p.id,(number,carrier)->{ParcelRecord edited=db.parcels().get(p.id);edited.trackingNumber="SF00000000002";repository.save(edited);return new TrackingProvider.Result(TrackingProvider.Error.NONE,"DELIVERED",Collections.emptyList(),0);},db);
-  assertEquals("IN_TRANSIT",db.parcels().get(p.id).trackingState);
- }
  @Test public void notificationPermissionAndSwitchAreIndependent(){
   shadowOf((Application)context).denyPermissions(Manifest.permission.POST_NOTIFICATIONS);
   assertFalse(ParcelNotifications.post(context,1,"合成提醒","不含取件码"));
@@ -66,9 +55,20 @@ public class ParcelAndroidTest {
   ParcelNotifications.cancel(context,1);assertEquals(0,shadowOf(context.getSystemService(NotificationManager.class)).getAllNotifications().size());
   assertFalse(ParcelNotificationListener.settings(context).getBoolean("recognition",false));
  }
- @Test public void rateLimitAppliesAcrossRecords(){
-  ParcelRecord a=record("","","SF00000000001"),b=record("","","SF00000000002");a.state=b.state=ParcelRecord.TRANSIT;repository.save(a);repository.save(b);AtomicInteger calls=new AtomicInteger();TrackingProvider limited=(number,carrier)->{calls.incrementAndGet();return TrackingProvider.Result.failure(TrackingProvider.Error.RATE_LIMIT,900000);};
-  ParcelTracking.query(context,a.id,limited,db);ParcelTracking.query(context,b.id,limited,db);assertEquals(1,calls.get());assertTrue(db.parcels().get(a.id).retryAt>System.currentTimeMillis());
+ @Test public void removingOnlineTrackingCancelsLegacyWorkAndKeepsReminders()throws Exception{
+  android.content.SharedPreferences settings=ParcelNotificationListener.settings(context);
+  settings.edit().putString("proxy","https://example.com/track").putBoolean("backgroundTracking",true).putLong("trackingRetryAt",1234).putBoolean("reminders",true).putBoolean("recognition",true).commit();
+  Object previousDefault=org.robolectric.util.ReflectionHelpers.getStaticField(androidx.work.impl.WorkManagerImpl.class,"sDefaultInstance"),previousDelegate=org.robolectric.util.ReflectionHelpers.getStaticField(androidx.work.impl.WorkManagerImpl.class,"sDelegatedInstance");
+  if(previousDefault==null&&previousDelegate==null)androidx.work.WorkManager.initialize(context,new androidx.work.Configuration.Builder().build());
+  androidx.work.WorkManager manager=androidx.work.WorkManager.getInstance(context);
+  androidx.work.PeriodicWorkRequest legacy=new androidx.work.PeriodicWorkRequest.Builder(ParcelWorker.class,6,java.util.concurrent.TimeUnit.HOURS).setInputData(new androidx.work.Data.Builder().putBoolean("tracking",true).build()).build();
+  try{
+  manager.enqueueUniquePeriodicWork("parcel-tracking",androidx.work.ExistingPeriodicWorkPolicy.KEEP,legacy).getResult().get(10,java.util.concurrent.TimeUnit.SECONDS);
+  ParcelWorker.schedule(context);
+  assertEquals(androidx.work.WorkInfo.State.CANCELLED,manager.getWorkInfoById(legacy.getId()).get(10,java.util.concurrent.TimeUnit.SECONDS).getState());
+  assertFalse(settings.contains("proxy"));assertFalse(settings.contains("backgroundTracking"));assertFalse(settings.contains("trackingRetryAt"));assertTrue(settings.getBoolean("recognition",false));assertTrue(settings.getBoolean("reminders",false));
+  assertFalse(manager.getWorkInfosForUniqueWork("parcel-reminders").get(10,java.util.concurrent.TimeUnit.SECONDS).isEmpty());
+  }finally{manager.cancelAllWork().getResult().get(10,java.util.concurrent.TimeUnit.SECONDS);org.robolectric.util.ReflectionHelpers.setStaticField(androidx.work.impl.WorkManagerImpl.class,"sDefaultInstance",previousDefault);org.robolectric.util.ReflectionHelpers.setStaticField(androidx.work.impl.WorkManagerImpl.class,"sDelegatedInstance",previousDelegate);}
  }
  @Test public void manifestHasOnlyRequiredPermissions()throws Exception {
   String[] permissions=context.getPackageManager().getPackageInfo(context.getPackageName(),PackageManager.GET_PERMISSIONS).requestedPermissions;
