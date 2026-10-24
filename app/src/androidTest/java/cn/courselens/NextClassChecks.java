@@ -41,18 +41,16 @@ public final class NextClassChecks {
     Method method=MainActivity.class.getDeclaredMethod("currentWeek");method.setAccessible(true);currentWeek[0]=(Integer)method.invoke(a);
     java.time.LocalDate today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai"));String term=(String)field("term").get(a);
     field("term").set(a,today.minusDays(today.getDayOfWeek().getValue()-1).minusWeeks(14).toString());field("week").setInt(a,15);call(a,"home");
-    View home=(View)field("root").get(a),dates=home.findViewWithTag("home-date"),more=home.findViewWithTag("quick-menu-button");
-    check(!dates.isClickable()&&!dates.hasOnClickListeners(),"Date still opens week picker");
-    check(more!=null&&home.findViewWithTag("return-current-week")==null,"Home retains a second toolbar action");
-    androidx.viewpager.widget.ViewPager testPager=(androidx.viewpager.widget.ViewPager)field("pager").get(a);
-    for(int offset:new int[]{0,-1,1,-2,2}){testPager.setCurrentItem(14+offset,false);call(a,"quickMenu");View item=((View)field("root").get(a)).findViewWithTag("return-current-week");check(item!=null&&item.isEnabled()==(offset!=0),"Return-to-week menu enabled state is wrong");a.onBackPressed();}
-    field("term").set(a,term);call(a,"home");androidx.viewpager.widget.ViewPager pager=(androidx.viewpager.widget.ViewPager)field("pager").get(a);pager.setCurrentItem(currentWeek[0]<=15?29:0,false);call(a,"quickMenu");
-    check(((View)field("root").get(a)).findViewWithTag("return-current-week").isEnabled(),"Far week return action missing");
+    View home=(View)field("root").get(a),dates=home.findViewWithTag("home-date");
+    check(dates.isClickable()&&dates.isFocusable()&&dates.hasOnClickListeners(),"Date cannot return to current week");
+    check(home.findViewWithTag("quick-menu-button")==null&&home.findViewWithTag("timetable-settings")!=null,"Standalone course action remains or settings missing");
+    call(a,"timetableSettings");View menu=(View)field("root").get(a);check(menu.findViewWithTag("manage-courses")!=null&&menu.findViewWithTag("return-current-week")==null,"Course management missing or duplicate return action remains");a.onBackPressed();
+    field("term").set(a,term);call(a,"home");androidx.viewpager.widget.ViewPager pager=(androidx.viewpager.widget.ViewPager)field("pager").get(a);pager.setCurrentItem(currentWeek[0]<=15?29:0,false);
    }catch(Throwable e){failure.set(e);}});
    runner.waitForIdleSync();android.os.SystemClock.sleep(400);if(failure.get()!=null)throw new RuntimeException(failure.get());
-   runner.runOnMainSync(()->{try{TextView button=((View)field("root").get(a)).findViewWithTag("return-current-week");float density=a.getResources().getDisplayMetrics().density;check(a.hasWindowFocus()&&button.isShown()&&button.getText().toString().equals("回到本周"),"Return action is not visible in the menu");check(button.getHeight()>=48*density&&button.getLayout().getEllipsisCount(0)==0,"Return action is clipped or too small");}catch(Throwable e){failure.set(e);}});if(failure.get()!=null)throw new RuntimeException(failure.get());
+   runner.runOnMainSync(()->{try{View button=((View)field("root").get(a)).findViewWithTag("home-date");float density=a.getResources().getDisplayMetrics().density;check(a.hasWindowFocus()&&button.isShown()&&button.getContentDescription().toString().contains("回到本周"),"Date return action unavailable");check(button.getHeight()>=48*density,"Date touch target too small");TextView title=((View)field("root").get(a)).findViewWithTag("primary-page-title");check(title.getLayout().getEllipsisCount(0)==0,"Date title clipped");if(a.getResources().getConfiguration().fontScale<=1.1f&&((View)field("root").get(a)).getWidth()>=360*density)check(button.getParent()==((View)field("root").get(a)).findViewWithTag("timetable-settings").getParent(),"Normal header unnecessarily stacked");}catch(Throwable e){failure.set(e);}});if(failure.get()!=null)throw new RuntimeException(failure.get());
    android.graphics.Bitmap shortcut=runner.getUiAutomation().takeScreenshot();check(shortcut!=null,"Shortcut screenshot unavailable");try(java.io.FileOutputStream out=runner.getTargetContext().openFileOutput("qa-return-current-week.png",0)){shortcut.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}finally{shortcut.recycle();}
-   runner.runOnMainSync(()->{try{((View)field("root").get(a)).findViewWithTag("return-current-week").performClick();}catch(Throwable e){failure.set(e);}});
+   runner.runOnMainSync(()->{try{((View)field("root").get(a)).findViewWithTag("home-date").performClick();}catch(Throwable e){failure.set(e);}});
    runner.waitForIdleSync();android.os.SystemClock.sleep(500);
    runner.runOnMainSync(()->{try{
     check(field("week").getInt(a)==currentWeek[0]&&((androidx.viewpager.widget.ViewPager)field("pager").get(a)).getCurrentItem()==currentWeek[0]-1,"Return to current week failed");
@@ -61,6 +59,12 @@ public final class NextClassChecks {
     check(activityPrefs.getInt("week",-1)==currentWeek[0],"Current week not saved");
    }catch(Throwable e){failure.set(e);}});
    if(failure.get()!=null)throw new RuntimeException(failure.get());
+   for(int offset:new int[]{0,-1,1,-2,2}){
+    runner.runOnMainSync(()->{try{androidx.viewpager.widget.ViewPager pager=(androidx.viewpager.widget.ViewPager)field("pager").get(a);int target=Math.max(0,Math.min(29,currentWeek[0]-1+offset));pager.setCurrentItem(target,false);((View)field("root").get(a)).findViewWithTag("home-date").performClick();}catch(Throwable e){failure.set(e);}});
+    runner.waitForIdleSync();android.os.SystemClock.sleep(500);
+    runner.runOnMainSync(()->{try{check(field("week").getInt(a)==currentWeek[0]&&activityPrefs.getInt("week",-1)==currentWeek[0],"Date return failed at offset "+offset);}catch(Throwable e){failure.set(e);}});
+    if(failure.get()!=null)throw new RuntimeException(failure.get());
+   }
    runner.runOnMainSync(()->{try{
     java.time.LocalDate today=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Shanghai"));
     field("term").set(a,today.minusDays(today.getDayOfWeek().getValue()-1).toString());field("week").setInt(a,1);
@@ -99,7 +103,7 @@ public final class NextClassChecks {
    runner.waitForIdleSync();android.os.SystemClock.sleep(400);
    runner.runOnMainSync(()->{try{check(((android.widget.ScrollView)field("timetableScroll").get(a)).getScrollY()==scrollY[0],"Settings return reset scroll");check(field("week").getInt(a)==1,"Settings return changed viewed week");}catch(Throwable e){failure.set(e);}});
    if(failure.get()!=null)throw new RuntimeException(failure.get());
-   result.putString("result","PASS: return-to-week in more menu, both-direction 0/1/2-week enabled state, return and menu dismissal, hidden direct week selection, read-only date, no home next-class hint, preserved saved timetable, secondary navigation, lifecycle, month/date row follows partial horizontal drag, vertically pinned header and scroll return");code=Activity.RESULT_OK;
+   result.putString("result","PASS: date tap returns to current week, compact header without standalone course action, course management in settings, hidden direct week selection, no home next-class hint, preserved saved timetable, secondary navigation, lifecycle, month/date row follows partial horizontal drag, vertically pinned header and scroll return");code=Activity.RESULT_OK;
   }catch(Throwable e){result.putString("result","FAIL: "+e);}
   finally{if(activity!=null){MainActivity a=activity;runner.runOnMainSync(a::finish);}if(prefs!=null){android.content.SharedPreferences.Editor editor=prefs.edit();if(savedPreferences.containsKey("week"))editor.putInt("week",(Integer)savedPreferences.get("week"));else editor.remove("week");for(String key:new String[]{"courses","notes","term"})if(savedPreferences.containsKey(key))editor.putString(key,(String)savedPreferences.get(key));else editor.remove(key);check(editor.commit()&&prefs.getAll().equals(savedPreferences),"Original preferences not restored");}runner.finish(code,result);}
  }
