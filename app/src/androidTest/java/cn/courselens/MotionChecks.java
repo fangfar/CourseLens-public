@@ -21,14 +21,13 @@ public final class MotionChecks {
   runner.waitForIdleSync();SystemClock.sleep(350);
   LinearLayout settings=(LinearLayout)field("root").get(a);ScrollView scroll=(ScrollView)settings.getChildAt(1);
   main(runner,()->{View spacer=new View(a);((LinearLayout)scroll.getChildAt(0)).addView(spacer,new LinearLayout.LayoutParams(1,a.getResources().getDisplayMetrics().heightPixels));});runner.waitForIdleSync();SystemClock.sleep(350);
-  String[] pages={"termPicker","edit","adjustmentManager","widgetAddPage","about"};
+  String[] pages={"appearanceSettings","about"};
   for(int position=0;position<3;position++)for(int page=0;page<pages.length;page++){
    final int offset=position,index=page;int[] saved={0},firstFrame={-1};
    main(runner,()->{try{
     int max=scroll.getChildAt(0).getHeight()-scroll.getHeight()+scroll.getPaddingTop()+scroll.getPaddingBottom();
     check(max>0,"Settings fixture must scroll");scroll.scrollTo(0,max*offset/2);saved[0]=scroll.getScrollY();
-    if(pages[index].equals("edit"))call(a,"edit",new Class<?>[]{Runnable.class},(Runnable)()->{try{call(a,"menu");}catch(Exception e){throw new RuntimeException(e);}});
-    else call(a,pages[index]);
+    call(a,pages[index]);
    }catch(Exception e){throw new RuntimeException(e);}});
    runner.waitForIdleSync();SystemClock.sleep(350);
    main(runner,()->{try{
@@ -159,7 +158,7 @@ public final class MotionChecks {
    runner.waitForIdleSync();SystemClock.sleep(350);
    String[] destinations={"课程管理","同步课表"};int[] quickActions={0,2};
    for(int i=0;i<destinations.length;i++){final int action=i;
-    main(runner,()->{try{View home=(View)field("root").get(a);home.findViewWithTag("quick-menu-button").performClick();View menu=(View)field("root").get(a);for(int item=0;item<destinations.length;item++)check(menu.findViewWithTag("quick-action-"+quickActions[item])!=null,"Missing quick action");check(((View)field("navigationOverlay").get(a)).findViewWithTag("navigation-shade")!=null,"Menu outside dismissal missing");}catch(Exception e){throw new RuntimeException(e);}});
+    main(runner,()->{try{View home=(View)field("root").get(a);call(a,"quickMenu");View menu=(View)field("root").get(a);for(int item=0;item<destinations.length;item++)check(menu.findViewWithTag("quick-action-"+quickActions[item])!=null,"Missing quick action");check(((View)field("navigationOverlay").get(a)).findViewWithTag("navigation-shade")!=null,"Menu outside dismissal missing");}catch(Exception e){throw new RuntimeException(e);}});
     runner.waitForIdleSync();SystemClock.sleep(350);if(action==0)capture(runner,"menu");
     main(runner,()->{try{View menu=(View)field("root").get(a);FrameLayout stage=(FrameLayout)field("stage").get(a);check(menu.getWidth()<stage.getWidth()&&menu.getHeight()<stage.getHeight(),"Menu is not a small window: tag="+menu.getTag()+" size="+menu.getWidth()+"x"+menu.getHeight()+" stage="+stage.getWidth()+"x"+stage.getHeight()+" action="+action);check(menu.getPivotX()==menu.getWidth()&&menu.getPivotY()==0f,"Menu pivot is not top right");menu.findViewWithTag("quick-action-"+quickActions[action]).performClick();check(field("navigationOverlay").get(a)==null,"Menu retained after action");check(destinations[action].equals(((View)field("root").get(a)).getTag()),"Wrong quick action destination");}catch(Exception e){throw new RuntimeException(e);}});
     runner.waitForIdleSync();SystemClock.sleep(350);

@@ -1,0 +1,14 @@
+<resources>
+    <integer name="popup_menu_enter">300</integer>
+    <integer name="popup_menu_exit">220</integer>
+    <integer name="popup_sheet_enter">320</integer>
+    <integer name="popup_sheet_exit">260</integer>
+    <style name="DropdownPopupMotion">
+        <item name="android:windowEnterAnimation">@anim/popup_menu_enter</item>
+        <item name="android:windowExitAnimation">@anim/popup_menu_exit</item>
+    </style>
+    <style name="BottomPopupMotion">
+        <item name="android:windowEnterAnimation">@anim/popup_sheet_enter</item>
+        <item name="android:windowExitAnimation">@anim/popup_sheet_exit</item>
+    </style>
+</resources>

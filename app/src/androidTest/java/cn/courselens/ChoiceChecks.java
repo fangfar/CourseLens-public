@@ -16,7 +16,7 @@ public final class ChoiceChecks {
  private static void set(MainActivity a,String name,Object value)throws Exception{Field f=MainActivity.class.getDeclaredField(name);f.setAccessible(true);f.set(a,value);}
  private static void call(MainActivity a,String name,Class<?>[] types,Object... args)throws Exception{Method m=MainActivity.class.getDeclaredMethod(name,types);m.setAccessible(true);m.invoke(a,args);}
  private static void check(boolean value,String message){if(!value)throw new AssertionError(message);}
- private static void settle(Instrumentation r){r.waitForIdleSync();SystemClock.sleep(250);}
+ private static void settle(Instrumentation r){r.waitForIdleSync();SystemClock.sleep(r.getTargetContext().getResources().getInteger(R.integer.popup_sheet_enter)+80);}
  private static void picker(Instrumentation r,MainActivity a,String tag)throws Exception{
   Spinner[] field=new Spinner[1];Object[] sheet=new Object[1];int[] initial=new int[1];
   main(r,()->{field[0]=((View)get(a,"root")).findViewWithTag(tag);initial[0]=field[0].getSelectedItemPosition();check(field[0].performClick(),tag+": not clickable");sheet[0]=get(a,"choiceSheet");});settle(r);
