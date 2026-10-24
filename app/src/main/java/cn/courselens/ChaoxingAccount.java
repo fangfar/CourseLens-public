@@ -29,6 +29,7 @@ final class ChaoxingAccount {
   byte[] data=new JSONObject().put("account",account).put("password",password).toString().getBytes(StandardCharsets.UTF_8);
   try{String encrypted=Base64.encodeToString(cipher.doFinal(data),Base64.NO_WRAP),iv=Base64.encodeToString(cipher.getIV(),Base64.NO_WRAP);String previous=prefs.getString("credentials",null),previousIv=prefs.getString("iv",null);if(!prefs.edit().putString("credentials",encrypted).putString("iv",iv).commit()){SharedPreferences.Editor rollback=prefs.edit().remove("credentials").remove("iv");if(previous!=null)rollback.putString("credentials",previous);if(previousIv!=null)rollback.putString("iv",previousIv);rollback.commit();throw new java.io.IOException("密码配置保存失败，请重试。");}}finally{java.util.Arrays.fill(data,(byte)0);}
  }
+ void clear()throws java.io.IOException {if(!prefs.edit().clear().commit())throw new java.io.IOException("账号配置删除失败，请重试。");}
  Saved load()throws Exception {
   Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.DECRYPT_MODE,key(false),new GCMParameterSpec(128,Base64.decode(prefs.getString("iv",""),Base64.NO_WRAP)));cipher.updateAAD(context);
   byte[] data=cipher.doFinal(Base64.decode(prefs.getString("credentials",""),Base64.NO_WRAP));

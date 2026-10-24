@@ -202,17 +202,23 @@ final class TaskPage extends LinearLayout {
   saveChange(change,message,local,()->{});
  }
  private void saveChange(java.util.function.Consumer<ChaoxingClient.Result> change,String message,boolean local,Runnable savedAction){
-  if(busy||closed)return;busy(true);int token=generation;feedback("正在保存任务设置…");worker.execute(()->{if(!current(token))return;try{ChaoxingCache cache=new ChaoxingCache(getContext(),local?"":account.load().account);ChaoxingClient.Result saved=cache.load(),next=saved==null?ChaoxingCache.copy(local?localTasks:snapshot):saved;change.accept(next);cache.save(next);activity.runOnUiThread(()->{if(current(token)){if(local)localTasks=next;else snapshot=next;busy(false);feedback(message);render();savedAction.run();}});}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);feedback("保存失败，原有任务和设置已保留，请重新打开后重试。");}});}});
+  if(busy||closed)return;busy(true);int token=generation;feedback("正在保存任务设置…");worker.execute(()->{if(!current(token))return;try{ChaoxingCache cache=new ChaoxingCache(getContext(),local?"":account.load().account);ChaoxingClient.Result saved=cache.load(),next=saved==null?ChaoxingCache.copy(local?localTasks:snapshot):saved;change.accept(next);cache.save(next);activity.runOnUiThread(()->{if(current(token)){if(local)localTasks=next;else snapshot=next;busy(false);feedback(message);if(getParent()==null)Toast.makeText(activity,message,Toast.LENGTH_LONG).show();render();savedAction.run();}});}catch(Exception e){activity.runOnUiThread(()->{if(current(token)){busy(false);feedback("保存失败，原有任务和设置已保留，请重新打开后重试。");if(getParent()==null)Toast.makeText(activity,"保存失败，原有任务和设置已保留。",Toast.LENGTH_LONG).show();}});}});
  }
  private void delete(ChaoxingClient.Work work){
-  if(busy||closed||snapshot==null)return;saveChange(next->{ChaoxingClient.Work removed=ChaoxingCache.find(next.items,work);if(removed!=null)next.items.remove(removed);else removed=ChaoxingCache.copy(work);if(ChaoxingCache.find(next.deleted,work)==null){removed.deletedAt=System.currentTimeMillis();next.deleted.add(removed);}},"任务已删除，可在任务设置的删除历史中恢复。",work.local(),()->undoBar(work));
+  if(busy||closed||snapshot==null)return;saveChange(next->{ChaoxingClient.Work removed=ChaoxingCache.find(next.items,work);if(removed!=null)next.items.remove(removed);else removed=ChaoxingCache.copy(work);if(ChaoxingCache.find(next.deleted,work)==null){removed.deletedAt=System.currentTimeMillis();next.deleted.add(removed);}},"任务已删除，可在总设置的数据管理中恢复。",work.local(),()->undoBar(work));
+ }
+ void clearData(){
+  if(busy||closed){Toast.makeText(activity,"任务正在加载或保存，请稍后重试。",Toast.LENGTH_SHORT).show();return;}
+  AlertDialog dialog=new AlertDialog.Builder(activity,R.style.SecondaryDialog).setTitle("删除全部任务数据？").setMessage("将删除所有手动任务、所有学习通账号的本机任务缓存、删除历史和任务设置，并退出学习通账号。学校平台上的作业不会删除，课表和快递不受影响。此操作无法撤销。").setNegativeButton("取消",null).setPositiveButton("全部删除",(d,w)->{
+   if(busy||closed)return;int token=++generation;if(client!=null)client.close();busy(true);refreshing(false);hideSnack();
+   worker.execute(()->{String message;try{account.clear();ChaoxingCache.clearAll(getContext());message="任务数据已删除，学习通账号已退出。";}catch(Exception e){message="部分任务数据未能删除，请重试；已删除的数据无法恢复。";}String result=message;activity.runOnUiThread(()->{if(current(token)){connected(false);loadLocal();Toast.makeText(activity,result,Toast.LENGTH_LONG).show();}});});
+  }).create();dialog.show();ui.styleDialog(dialog,true);
  }
  void settings(){
   if(busy||closed||!localReady)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(true,"任务设置",settings);
   activity.menuItem(sheet,"学习通账号","chaoxing-connect",this::configure);ui.popupDivider(sheet.body);
   View courses=activity.menuItem(sheet,"加载的课程","task-course-settings",this::courses);courses.setEnabled(account.configured()&&platformReady);
-  View interval=activity.menuItem(sheet,"自动刷新","task-refresh-settings",this::interval);interval.setEnabled(account.configured()&&platformReady);ui.popupDivider(sheet.body);
-  activity.menuItem(sheet,"删除历史","task-deletion-history",this::history);
+  View interval=activity.menuItem(sheet,"自动刷新","task-refresh-settings",this::interval);interval.setEnabled(account.configured()&&platformReady);
  }
 
  private void courses(){
@@ -224,8 +230,8 @@ final class TaskPage extends LinearLayout {
   for(ChaoxingClient.Subject course:snapshot.courses){CheckBox choice=new CheckBox(getContext());choice.setText(course.name+(names.get(course.name)>1?"（"+course.key()+"）":""));choice.setTextColor(ui.INK);choice.setTextSize(15);choice.setMinHeight(ui.dp(48));choice.setTag("task-course-"+course.key());choice.setChecked(!disabled.contains(course.key()));choice.setOnCheckedChangeListener((button,checked)->{if(checked)disabled.remove(course.key());else disabled.add(course.key());});sheet.body.addView(choice,new LayoutParams(-1,-2));}
   taskButton(sheet.body,"保存",()->{if(busy)return;sheet.close(false);saveChange(next->{next.disabledCourses.clear();next.disabledCourses.addAll(disabled);},"课程加载设置已保存。");}).setTag("task-courses-save");
  }
- private void history(){
-  if(busy||closed)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"删除历史");sheet.body.setTag("task-history");
+ void history(){
+  if(busy||closed||!localReady){Toast.makeText(activity,"任务正在加载或保存，请稍后重试。",Toast.LENGTH_SHORT).show();return;}MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"删除历史");sheet.body.setTag("task-history");
   if(snapshot.deleted.isEmpty()&&localTasks.deleted.isEmpty())sheet.body.addView(ui.text("还没有删除记录。",14,ui.MUTED));
   List<ChaoxingClient.Work> removed=new ArrayList<>(snapshot.deleted);removed.addAll(localTasks.deleted);removed.sort((a,b)->Long.compare(b.deletedAt,a.deletedAt));for(ChaoxingClient.Work work:removed){String when=work.deletedAt==0?"":new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.getDefault()).format(new Date(work.deletedAt));
    activity.option(sheet.body,R.drawable.ic_tasks,work.title,work.course+" · "+when+" · 点击恢复",()->{if(busy)return;sheet.close(false);saveChange(next->{ChaoxingClient.Work restored=ChaoxingCache.find(next.deleted,work);if(restored==null)throw new IllegalStateException("Task changed");next.deleted.remove(restored);restored.deletedAt=0;if(ChaoxingCache.find(next.items,restored)==null)next.items.add(restored);},"任务已恢复；若该课程关闭了加载，开启后即可显示。",work.local());}).setTag("task-restore");

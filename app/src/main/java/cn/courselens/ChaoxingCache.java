@@ -16,6 +16,10 @@ final class ChaoxingCache {
   byte[] digest=MessageDigest.getInstance("SHA-256").digest(account.trim().getBytes(StandardCharsets.UTF_8));StringBuilder key=new StringBuilder();for(byte value:digest)key.append(String.format(java.util.Locale.ROOT,"%02x",value&255));
   file=new AtomicFile(new File(context.getFilesDir(),"chaoxing-work-"+key+".json"));
  }
+ static void clearAll(Context context)throws IOException {
+  File[] files=context.getFilesDir().listFiles();if(files==null)throw new IOException("任务数据目录无法读取");
+  for(File cached:files)if(cached.getName().matches("chaoxing-work-[0-9a-f]{64}\\.json(\\.bak|\\.new)?")&&!cached.delete()&&cached.exists())throw new IOException("任务缓存删除失败");
+ }
  private static JSONArray encodeWorks(List<ChaoxingClient.Work> works)throws JSONException {
   if(works.size()>20000)throw new JSONException("Cache entries exceed limit");JSONArray items=new JSONArray();for(ChaoxingClient.Work work:works)items.put(new JSONObject().put("course",work.course).put("title",work.title).put("status",work.status).put("deadline",work.deadline).put("courseKey",work.courseKey).put("workKey",work.workKey).put("deletedAt",work.deletedAt).put("edited",work.edited).put("deadlineEdited",work.deadlineEdited).put("originalTitle",work.originalTitle));return items;
  }
