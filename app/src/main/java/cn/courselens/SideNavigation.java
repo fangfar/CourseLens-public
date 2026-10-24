@@ -40,7 +40,7 @@ final class SideNavigation extends FrameLayout {
  }
  private TextView item(String title,int drawable,String tag,Runnable action){
   TextView item=ui.text(title,20,ink);item.setTag(tag);item.setGravity(Gravity.CENTER_VERTICAL);item.setPadding(ui.dp(16),ui.dp(14),ui.dp(12),ui.dp(14));item.setMinHeight(ui.dp(56));item.setFocusable(true);
-  android.graphics.drawable.Drawable icon=activity.getDrawable(drawable).mutate();icon.setTint(ink);icon.setBounds(0,0,ui.dp(24),ui.dp(24));item.setCompoundDrawables(icon,null,null,null);item.setCompoundDrawablePadding(ui.dp(16));item.setOnClickListener(v->action.run());ui.ripple(item);return item;
+  android.graphics.drawable.Drawable icon=activity.getDrawable(drawable).mutate();icon.setTint(ink);icon.setBounds(0,0,ui.dp(24),ui.dp(24));item.setCompoundDrawables(icon,null,null,null);item.setCompoundDrawablePadding(ui.dp(16));item.setOnClickListener(v->action.run());ui.focusOutline(item);return item;
  }
  void select(int selected){
   for(int i=0;i<destinations.length;i++){boolean active=i==selected;destinations[i].setSelected(active);destinations[i].setTypeface(null,active?Typeface.BOLD:Typeface.NORMAL);destinations[i].setBackground(active?ui.bg(surface,16):null);}

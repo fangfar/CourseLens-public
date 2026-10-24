@@ -36,13 +36,13 @@ public final class NavigationChecks {
   android.content.res.Configuration original=new android.content.res.Configuration(activity.getResources().getConfiguration());
   Map<String,?> preferences=new HashMap<>(activity.getPreferences(0).getAll());String originalData;try{originalData=(String)get(activity,"data");}catch(Exception e){throw new RuntimeException(e);}
   try{for(float scale:(((NativeChecks)runner).normalFontOnly?new float[]{original.fontScale}:new float[]{1f,1.45f})){
-   main(runner,()->{android.content.res.Configuration config=new android.content.res.Configuration(original);config.fontScale=scale;activity.getResources().updateConfiguration(config,activity.getResources().getDisplayMetrics());call(activity,"menu");});settled(runner);
+   main(runner,()->{android.content.res.Configuration config=new android.content.res.Configuration(original);config.fontScale=scale;activity.getResources().updateConfiguration(config,activity.getResources().getDisplayMetrics());call(activity,"timetableSettings");});settled(runner);
    main(runner,()->{View root=(View)get(activity,"root");textFits(root);check(root.findViewWithTag("select-teaching-week")==null,"Week-selection entry is still visible");View clear=root.findViewWithTag("clear-timetable");check(clear instanceof TextView&&!(clear instanceof Button)&&clear.hasOnClickListeners(),"Clear is still a large button or has no action");Method method=MainActivity.class.getDeclaredMethod("confirmClear");method.setAccessible(true);AlertDialog dialog=(AlertDialog)method.invoke(activity);dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();});settled(runner);
    capture(runner,activity,"qa-compact-settings-"+scale+".png");
    main(runner,()->call(activity,"termPicker"));settled(runner);main(runner,()->{View root=(View)get(activity,"root");textFits(root);check(((TextView)root.findViewWithTag("save-term")).getLineCount()==1,"Header save wraps onto multiple lines");});capture(runner,activity,"qa-polish-date-"+scale+".png");main(runner,activity::onBackPressed);settled(runner);
    main(runner,()->{activity.onBackPressed();TaskPage previous=(TaskPage)get(activity,"taskPage");if(previous!=null)previous.close();Field page=MainActivity.class.getDeclaredField("taskPage");page.setAccessible(true);page.set(activity,null);call(activity,"tasks");});settled(runner);
    main(runner,()->{View root=(View)get(activity,"root");textFits(root);float density=activity.getResources().getDisplayMetrics().density;
-    for(String tag:new String[]{"task-add"}){TextView action=root.findViewWithTag(tag);check(action.getContentDescription()!=null,"Header action lost its accessible label");check(action.getWidth()/density>=48&&action.getHeight()/density>=48,"Header action is not compact or has a small touch target");}
+    for(String tag:new String[]{"task-add","task-settings"}){TextView action=root.findViewWithTag(tag);check(action.getContentDescription()!=null,"Header action lost its accessible label");check(action.getWidth()/density>=48&&action.getHeight()/density>=48,"Header action is not compact or has a small touch target");}
     View navigation=activity.findViewById(android.R.id.content).findViewWithTag("bottom-navigation");
     for(String tag:new String[]{"nav-timetable","nav-tasks","nav-parcels"}){ImageButton tab=navigation.findViewWithTag(tag);check(tab.getDrawable()!=null&&tab.getContentDescription()!=null,"Bottom tab is not an accessible icon");check(tab.getBackground()==null,"Bottom tab retains a large selection block");}
     check(root.findViewWithTag("quick-menu-button")==null,"Removed task menu is still visible");
@@ -82,26 +82,18 @@ public final class NavigationChecks {
  }
 
  private static void parcelSettingsContext(Instrumentation runner,MainActivity activity){
-  View[] origin=new View[1];int[] scrollY=new int[1];AlertDialog[] sheet=new AlertDialog[1];
-  main(runner,()->{call(activity,"tasks");});settled(runner);
-  main(runner,()->{activity.openSideMenu();});settled(runner);
-  capture(runner,activity,"qa-audit-drawer.png");
+  View[] origin=new View[1];AlertDialog[] sheet=new AlertDialog[1];
+  main(runner,()->call(activity,"tasks"));settled(runner);main(runner,activity::openSideMenu);settled(runner);
   main(runner,()->{View tasks=(View)get(activity,"root");activity.onBackPressed();activity.onBackPressed();check(get(activity,"root")==tasks,"Repeated back escaped the closing drawer");});settled(runner);
-  main(runner,activity::openSideMenu);settled(runner);
-  main(runner,()->activity.findViewById(android.R.id.content).findViewWithTag("drawer-settings").performClick());settled(runner);
-  main(runner,()->{origin[0]=(View)get(activity,"root");((ScrollView)((ViewGroup)origin[0]).getChildAt(1)).fullScroll(View.FOCUS_DOWN);});settled(runner);
-  main(runner,()->{scrollY[0]=((ScrollView)((ViewGroup)origin[0]).getChildAt(1)).getScrollY();});
-  capture(runner,activity,"qa-audit-settings-before.png");
-  main(runner,()->{origin[0].findViewWithTag("parcel-settings").performClick();ParcelPage page=(ParcelPage)get(activity,"parcelPage");Field field=ParcelPage.class.getDeclaredField("currentSheet");field.setAccessible(true);sheet[0]=(AlertDialog)field.get(page);check(sheet[0]!=null&&sheet[0].isShowing(),"Parcel settings did not open");});settled(runner);
-  capture(runner,activity,"qa-audit-parcel-settings.png");
-  main(runner,()->sheet[0].cancel());settled(runner);
-  capture(runner,activity,"qa-audit-settings-after.png");
-  main(runner,()->{check(get(activity,"root")==origin[0],"Closing parcel settings lost the common settings page");check(((ScrollView)((ViewGroup)origin[0]).getChildAt(1)).getScrollY()==scrollY[0],"Closing parcel settings lost scroll position");activity.onBackPressed();});settled(runner);
-  main(runner,()->{check("tasks-page".equals(((View)get(activity,"root")).getTag()),"Settings returned to the wrong primary module");call(activity,"home");});settled(runner);
+  main(runner,activity::openSideMenu);settled(runner);main(runner,()->activity.findViewById(android.R.id.content).findViewWithTag("drawer-settings").performClick());settled(runner);
+  main(runner,()->{View general=(View)get(activity,"root");check(general.findViewWithTag("parcel-settings")==null&&general.findViewWithTag("task-settings")==null&&general.findViewWithTag("settings-term")==null,"Global settings still contain module settings");activity.onBackPressed();});settled(runner);
+  main(runner,()->call(activity,"parcels"));settled(runner);
+  main(runner,()->{origin[0]=(View)get(activity,"root");origin[0].findViewWithTag("parcel-settings").performClick();ParcelPage page=(ParcelPage)get(activity,"parcelPage");Field field=ParcelPage.class.getDeclaredField("currentSheet");field.setAccessible(true);sheet[0]=(AlertDialog)field.get(page);check(sheet[0]!=null&&sheet[0].isShowing(),"Parcel settings did not open");});settled(runner);capture(runner,activity,"qa-module-parcel-settings.png");
+  main(runner,()->sheet[0].cancel());settled(runner);main(runner,()->{check(get(activity,"root")==origin[0],"Closing parcel settings lost the parcel module");check(activity.findViewById(android.R.id.content).findViewWithTag("nav-parcels").isSelected(),"Parcel settings changed navigation");call(activity,"home");});settled(runner);
  }
  public static void run(Instrumentation runner){
   Bundle result=new Bundle();int code=Activity.RESULT_CANCELED;MainActivity activity=null;
-  try{check(runner.getTargetContext().getPackageName().endsWith(".qa"),"QA only");activity=NativeChecks.startQaActivity(runner);parcelSettingsContext(runner,activity);verify(runner,activity);compactLayout(runner,activity);result.putString("fontProfile",((NativeChecks)runner).normalFontOnly?"current font only":"normal and large fonts");result.putString("result","PASS: parcel settings retain parent, scroll and originating module; task swipes, synchronized capsule, tap jumps and retargeting, vertical scrolling, per-filter positions, grouped tasks, non-adjacent course grouping and source order, completed/all filters, unknown metadata, partial empty results, independent task page, saved filter, tab selection, timetable retention, back, compact actions and unclipped layouts at the requested font profile, clear cancellation and unchanged preferences");code=Activity.RESULT_OK;}
+  try{check(runner.getTargetContext().getPackageName().endsWith(".qa"),"QA only");activity=NativeChecks.startQaActivity(runner);parcelSettingsContext(runner,activity);verify(runner,activity);compactLayout(runner,activity);result.putString("fontProfile",((NativeChecks)runner).normalFontOnly?"current font only":"normal and large fonts");result.putString("result","PASS: global settings exclude modules; parcel settings retain module; task capsules hide completed records; task account settings, timetable retention, drawer back guard, compact actions, unclipped layouts, clear cancellation and unchanged timetable preferences");code=Activity.RESULT_OK;}
   catch(Throwable e){result.putString("error",android.util.Log.getStackTraceString(e));}
   finally{if(activity!=null){MainActivity current=activity;main(runner,current::finish);}runner.finish(code,result);}
  }

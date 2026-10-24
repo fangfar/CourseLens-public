@@ -135,7 +135,7 @@ public class AppNavigationTest {
  @Test public void taskAddUsesHeaderAndConfigurationLivesInManagement()throws Exception {
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);content.findViewWithTag("nav-tasks").performClick();TaskPage page=content.findViewWithTag("tasks-page");java.util.concurrent.ExecutorService worker=org.robolectric.util.ReflectionHelpers.getField(page,"worker");worker.submit(()->{}).get(10,java.util.concurrent.TimeUnit.SECONDS);shadowOf(android.os.Looper.getMainLooper()).idle();
-   assertNotNull(page.findViewWithTag("task-add"));assertEquals("打开导航菜单",((android.view.ViewGroup)page.findViewWithTag("task-add").getParent()).getChildAt(0).getContentDescription());assertNull(page.findViewWithTag("quick-menu-button"));assertNull(page.findViewWithTag("chaoxing-connect"));org.robolectric.util.ReflectionHelpers.callInstanceMethod(page,"settings");assertNotNull(content.findViewWithTag("chaoxing-connect"));content.findViewWithTag("chaoxing-connect").performClick();android.app.AlertDialog configuration=org.robolectric.util.ReflectionHelpers.getField(page,"configuration");assertNotNull(configuration);assertTrue(configuration.isShowing());
+   assertNotNull(page.findViewWithTag("task-add"));assertEquals("打开导航菜单",((android.view.ViewGroup)page.findViewWithTag("task-add").getParent()).getChildAt(0).getContentDescription());assertNull(page.findViewWithTag("quick-menu-button"));assertNull(page.findViewWithTag("chaoxing-connect"));page.findViewWithTag("task-settings").performClick();assertNotNull(content.findViewWithTag("chaoxing-connect"));content.findViewWithTag("chaoxing-connect").performClick();android.app.AlertDialog configuration=org.robolectric.util.ReflectionHelpers.getField(page,"configuration");assertNotNull(configuration);assertTrue(configuration.isShowing());
   }
  }
  @Test public void parcelActionsRemainAvailableFromAdd(){
@@ -144,23 +144,19 @@ public class AppNavigationTest {
    android.app.AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();for(String tag:new String[]{"parcel-add","parcel-import"})assertNotNull(menu.getWindow().getDecorView().findViewWithTag(tag));assertNull(menu.getWindow().getDecorView().findViewWithTag("parcel-settings"));menu.getWindow().getDecorView().findViewWithTag("parcel-add").performClick();assertNotSame(menu,org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog());
   }
  }
- @Test public void timetableAndTaskGearOpenTheSameSettingsAndReturnToTheirModule()throws Exception {
+ @Test public void commonSettingsContainOnlyGlobalOptionsAndReturnToTheirModule()throws Exception {
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);
    for(String module:new String[]{"nav-timetable","nav-tasks"}){
     content.findViewWithTag(module).performClick();content.findViewWithTag("side-menu-button").performClick();content.findViewWithTag("drawer-settings").performClick();
-    View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("设置",root.getTag());assertNotNull(root.findViewWithTag("settings-term"));assertNotNull(root.findViewWithTag("task-settings"));assertNotNull(root.findViewWithTag("parcel-settings"));
-    shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));
-    TaskPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"taskPage");java.util.concurrent.ExecutorService worker=org.robolectric.util.ReflectionHelpers.getField(page,"worker");worker.submit(()->{}).get(10,java.util.concurrent.TimeUnit.SECONDS);shadowOf(android.os.Looper.getMainLooper()).idle();
-    assertTrue(root.findViewWithTag("task-settings").isEnabled());
-    root.findViewWithTag("task-settings").performClick();
-    assertNotNull(content.findViewWithTag("task-deletion-history"));
-    activity.onBackPressed();
-    assertSame(root,org.robolectric.util.ReflectionHelpers.getField(activity,"root"));
-    activity.onBackPressed();
-    assertTrue(content.findViewWithTag(module).isSelected());
-    settle(org.robolectric.util.ReflectionHelpers.getField(activity,"stage"));
+    View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("设置",root.getTag());assertNull(root.findViewWithTag("settings-term"));assertNull(root.findViewWithTag("task-settings"));assertNull(root.findViewWithTag("parcel-settings"));assertNull(root.findViewWithTag("switch-timetable"));assertNotNull(root.findViewWithTag("dark-mode-setting"));assertNotNull(root.findViewWithTag("about-app"));
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));activity.onBackPressed();assertTrue(content.findViewWithTag(module).isSelected());settle(org.robolectric.util.ReflectionHelpers.getField(activity,"stage"));
    }
+  }
+ }
+ @Test public void timetableSettingsRetainTheirPageWhenReturningFromChildren(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);content.findViewWithTag("timetable-settings").performClick();View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("课表设置",root.getTag());assertNotNull(root.findViewWithTag("settings-term"));assertNotNull(root.findViewWithTag("add-timetable"));assertNull(root.findViewWithTag("about-app"));root.findViewWithTag("settings-times").performClick();assertEquals("作息时间",((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getTag());activity.onBackPressed();assertSame(root,org.robolectric.util.ReflectionHelpers.getField(activity,"root"));activity.onBackPressed();assertTrue(content.findViewWithTag("nav-timetable").isSelected());
   }
  }
  @Test public void parcelGearInTheEmbeddedPageReturnsToTheParcelModule(){
@@ -168,24 +164,17 @@ public class AppNavigationTest {
    MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);
    content.findViewWithTag("nav-parcels").performClick();
    content.findViewWithTag("side-menu-button").performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));content.findViewWithTag("drawer-settings").performClick();
-   View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("设置",root.getTag());assertNotNull(root.findViewWithTag("parcel-settings"));
+   View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("设置",root.getTag());assertNull(root.findViewWithTag("parcel-settings"));
    shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));
    activity.onBackPressed();
    settle(org.robolectric.util.ReflectionHelpers.getField(activity,"stage"));layoutContent(content);
    assertEquals("parcel-center",((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getTag());assertTrue(content.findViewWithTag("nav-parcels").isSelected());
   }
  }
- @Test public void parcelManagementRetainsCommonSettingsAndReportsFeedback(){
+ @Test public void parcelManagementStaysInItsModuleAndReportsFeedback(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
-   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);
-   content.findViewWithTag("side-menu-button").performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));content.findViewWithTag("drawer-settings").performClick();
-   shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(320));
-   View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");root.findViewWithTag("parcel-settings").performClick();
-   assertSame(root,org.robolectric.util.ReflectionHelpers.getField(activity,"root"));assertTrue(content.findViewWithTag("nav-timetable").isSelected());assertNull(shadowOf(activity).getNextStartedActivity());
-   ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"parcelPage");AlertDialog sheet=org.robolectric.util.ReflectionHelpers.getField(page,"currentSheet");assertNotNull(sheet);assertTrue(sheet.isShowing());sheet.dismiss();
-   assertSame(root,org.robolectric.util.ReflectionHelpers.getField(activity,"root"));
-   org.robolectric.util.ReflectionHelpers.callInstanceMethod(page,"message",org.robolectric.util.ReflectionHelpers.ClassParameter.from(String.class,"合成反馈"));assertEquals("合成反馈",org.robolectric.shadows.ShadowToast.getTextOfLatestToast());
-   activity.onBackPressed();assertTrue(content.findViewWithTag("nav-timetable").isSelected());
+   MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);content.findViewWithTag("nav-parcels").performClick();View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");root.findViewWithTag("parcel-settings").performClick();assertSame(root,org.robolectric.util.ReflectionHelpers.getField(activity,"root"));assertTrue(content.findViewWithTag("nav-parcels").isSelected());assertNull(shadowOf(activity).getNextStartedActivity());
+   ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"parcelPage");AlertDialog sheet=org.robolectric.util.ReflectionHelpers.getField(page,"currentSheet");assertNotNull(sheet);assertTrue(sheet.isShowing());org.robolectric.util.ReflectionHelpers.callInstanceMethod(page,"message",org.robolectric.util.ReflectionHelpers.ClassParameter.from(String.class,"合成反馈"));assertEquals("合成反馈",org.robolectric.shadows.ShadowToast.getTextOfLatestToast());sheet.dismiss();assertSame(root,org.robolectric.util.ReflectionHelpers.getField(activity,"root"));
   }
  }
  @Test public void commonSettingsFromParcelActivityReturnsToHostOnBack(){

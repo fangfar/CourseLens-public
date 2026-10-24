@@ -1,0 +1,25 @@
+package cn.courselens;
+import android.app.*;import android.graphics.*;import android.graphics.drawable.*;import android.view.*;import android.widget.*;
+import org.junit.Test;import org.junit.runner.RunWith;import org.robolectric.*;import org.robolectric.annotation.*;import org.robolectric.android.controller.ActivityController;import java.util.concurrent.ExecutorService;
+import static org.junit.Assert.*;import static org.robolectric.Shadows.shadowOf;import static org.robolectric.util.ReflectionHelpers.*;
+@RunWith(RobolectricTestRunner.class) @Config(sdk=34) @GraphicsMode(GraphicsMode.Mode.NATIVE)
+public class ModuleSettingsStyleTest {
+ @Test public void normalHeaders()throws Exception{check("w380dp-h800dp-notnight",1f,"normal");}
+ @Test public void narrowLargeHeaders()throws Exception{check("w320dp-h640dp-notnight",2f,"large");}
+ @Test public void darkHeaders()throws Exception{check("w380dp-h800dp-night",1f,"dark");}
+ private void check(String qualifiers,float font,String name)throws Exception{
+  RuntimeEnvironment.setQualifiers(qualifiers);RuntimeEnvironment.setFontScale(font);
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();View root=a.findViewById(android.R.id.content);
+   for(String[] entry:new String[][]{{"nav-timetable","timetable-settings","quick-menu-button"},{"nav-tasks","task-settings","task-add"},{"nav-parcels","parcel-settings","quick-menu-button"}}){
+    root.findViewWithTag(entry[0]).performClick();TaskPage task=getField(a,"taskPage");if(task!=null){ExecutorService worker=getField(task,"worker");worker.submit(()->{}).get();}shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(350));layout(root,a);
+    View settings=root.findViewWithTag(entry[1]),action=root.findViewWithTag(entry[2]);assertNotNull(settings);assertNotNull(action);assertTrue(((TextView)root.findViewWithTag("primary-page-title")).getLineCount()<=2);assertSame(action.getParent(),settings.getParent());assertTrue(settings.getLeft()>=action.getRight());assertTrue(settings.getRight()<=((View)settings.getParent()).getWidth());assertEquals(a.getResources().getDisplayMetrics().density*48,settings.getWidth(),1);assertFalse(settings.getForeground() instanceof RippleDrawable);assertTrue(settings.getBackground() instanceof GradientDrawable);assertTrue(settings.getContentDescription().toString().endsWith("设置"));snapshot(root,name+"-"+entry[0]);
+   }
+   for(int theme:new int[]{R.style.AppTheme,R.style.SecondaryDialog,R.style.SecondaryPicker}){android.util.TypedValue highlight=new android.util.TypedValue();assertTrue(new ContextThemeWrapper(a,theme).getTheme().resolveAttribute(android.R.attr.colorControlHighlight,highlight,true));assertEquals(Color.TRANSPARENT,highlight.data);}
+   AlertDialog dialog=new AlertDialog.Builder(a).setPositiveButton("确定",null).create();dialog.show();android.util.TypedValue dialogHighlight=new android.util.TypedValue();assertTrue(dialog.getContext().getTheme().resolveAttribute(android.R.attr.colorControlHighlight,dialogHighlight,true));assertEquals(Color.TRANSPARENT,dialogHighlight.data);dialog.dismiss();
+   SecondaryUi ui=new SecondaryUi(a);View control=new View(a);ui.focusOutline(control);control.setPressed(true);assertFalse(control.getForeground() instanceof RippleDrawable);assertTrue(control.getForeground() instanceof StateListDrawable);
+  }
+ }
+ private void layout(View root,Activity activity){android.util.DisplayMetrics dm=activity.getResources().getDisplayMetrics();root.measure(View.MeasureSpec.makeMeasureSpec(dm.widthPixels,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(dm.heightPixels,View.MeasureSpec.EXACTLY));root.layout(0,0,dm.widthPixels,dm.heightPixels);}
+ private void snapshot(View root,String name)throws Exception{String dir=System.getProperty("courselens.parcelPreviewDir");if(dir==null)return;java.io.File folder=new java.io.File(dir);folder.mkdirs();Bitmap b=Bitmap.createBitmap(root.getWidth(),root.getHeight(),Bitmap.Config.ARGB_8888);root.draw(new Canvas(b));try(java.io.FileOutputStream out=new java.io.FileOutputStream(new java.io.File(folder,name+".png"))){b.compress(Bitmap.CompressFormat.PNG,100,out);}b.recycle();}
+}
