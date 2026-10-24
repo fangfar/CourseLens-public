@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Build;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowInsetsController;
 
 /** App-wide light/dark choice; resources and programmatic surfaces share the same mode. */
@@ -46,6 +47,17 @@ final class Appearance {
   return base.createConfigurationContext(configuration);
  }
 
+ /** Enable edge-to-edge and let the app background paint beneath system bars. */
+ static void edgeToEdge(Activity activity){
+  Window window=activity.getWindow();
+  androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window,false);
+  systemBars(activity);
+  if(Build.VERSION.SDK_INT>=29){
+   try{window.setNavigationBarContrastEnforced(false);}catch(RuntimeException ignored){}
+  }
+ }
+
+ /** Re-apply icon appearance after the page background changes. */
  static void systemBars(Activity activity){
   boolean light=!dark(activity);
   View decor=activity.getWindow().getDecorView();

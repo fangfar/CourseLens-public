@@ -7,8 +7,8 @@
         <item name="android:colorControlHighlight">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowBackground">@color/app_surface</item>
-        <item name="android:statusBarColor">@color/app_surface</item>
-        <item name="android:navigationBarColor">@color/app_surface</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
     <style name="SecondaryPicker" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:colorAccent">@color/app_accent</item>
