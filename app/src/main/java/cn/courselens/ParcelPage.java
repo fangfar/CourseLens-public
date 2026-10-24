@@ -60,7 +60,7 @@ final class ParcelPage extends LinearLayout {
   pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener(){public void onPageScrolled(int position,float offset,int pixels){pagePosition=position+offset;moveCapsule();}public void onPageSelected(int position){markFilter(position);}});
   choices.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->moveCapsule());filter=Math.max(0,Math.min(2,filter));pagePosition=filter;pager.setCurrentItem(filter,false);markFilter(filter);
   snack=new LinearLayout(activity);snack.setGravity(Gravity.CENTER_VERTICAL);snack.setPadding(ui.dp(16),0,ui.dp(8),0);snack.setBackground(ui.bg(ink,16));snack.setVisibility(GONE);addView(snack,new LinearLayout.LayoutParams(-1,-2));
-  ParcelRepository.IO.execute(()->{if(!closed)ParcelDatabase.get(activity).getInvalidationTracker().addObserver(observer);});
+  ParcelRepository.IO.execute(()->{if(!closed){SharedPreferences settings=ParcelNotificationListener.settings(activity);if(settings.contains("proxy")||settings.contains("backgroundTracking")||settings.contains("trackingRetryAt"))ParcelWorker.schedule(activity);ParcelDatabase.get(activity).getInvalidationTracker().addObserver(observer);}});
   if(state!=null&&state.containsKey("draftCode")){ParcelRecord restored=new ParcelRecord();restored.id=state.getLong("draftId");restored.code=state.getString("draftCode","");restored.station=state.getString("draftStation","");restored.trackingNumber=state.getString("draftTracking","");restored.carrier=state.getString("draftCarrier","");restored.state=state.getInt("draftState");restoreDraft(restored);}
  }
  void resume(){if(active)return;active=true;load();}
@@ -86,11 +86,11 @@ final class ParcelPage extends LinearLayout {
  }
  void settings(){
   LinearLayout body=sheet("快递设置",true);AlertDialog menu=currentSheet;
-  String[] labels={"识别设置","提醒设置","物流查询","桌面小组件"};
+  String[] labels={"识别设置","提醒设置","桌面小组件"};
   for(int i=0;i<labels.length;i++){final int section=i;if(i==2)ui.popupDivider(body);TextView item=ui.popupItem(body,labels[i],()->{menu.dismiss();settingsSection(section);});item.setTag("parcel-setting-"+i);}
  }
  private void settingsSection(int section){
-  String[] labels={"识别设置","提醒设置","物流查询","桌面小组件"};LinearLayout settings=sheet(labels[section]),body;SharedPreferences prefs=ParcelNotificationListener.settings(activity);
+  String[] labels={"识别设置","提醒设置","桌面小组件"};LinearLayout settings=sheet(labels[section]),body;SharedPreferences prefs=ParcelNotificationListener.settings(activity);
   if(section==0){body=settingGroup(settings,"识别");
   body.addView(text("只在本机处理选中来源的通知，不读取短信数据库，不上传通知全文。关闭后停止识别。",14,muted));
   Switch recognition=toggle(body,"后台通知识别",prefs.getBoolean("recognition",false));
@@ -107,9 +107,7 @@ final class ParcelPage extends LinearLayout {
   boolean notifications=androidx.core.app.NotificationManagerCompat.from(activity).areNotificationsEnabled();
   button(body,"系统通知 · "+(notifications?"已开启":"未开启"),()->{try{activity.startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,activity.getPackageName()));}catch(ActivityNotFoundException e){message("请在系统设置中调整课表镜的通知权限和快递提醒频道");}});
   }
-  if(section==2){body=settingGroup(settings,"物流查询");button(body,prefs.getString("proxy","").isEmpty()?"物流代理 · 未配置":"物流代理 · 已配置",this::proxySettings);
-  }
-  if(section==3){body=settingGroup(settings,"小组件");
+  if(section==2){body=settingGroup(settings,"小组件");
   Switch widget=toggle(body,"桌面小组件显示取件码与地址",prefs.getBoolean("widgetCodes",false));widget.setOnCheckedChangeListener((v,enabled)->{prefs.edit().putBoolean("widgetCodes",enabled).apply();ParcelRepository.IO.execute(()->ParcelWidget.updateAll(activity));});body.addView(text("开启后，桌面可见的人也能看到取件码。默认只显示待取数量。",13,muted));
   button(body,"添加快递小组件",()->{android.appwidget.AppWidgetManager manager=android.appwidget.AppWidgetManager.getInstance(activity);if(manager.isRequestPinAppWidgetSupported()){boolean accepted=manager.requestPinAppWidget(new ComponentName(activity,ParcelWidget.class),null,null);message(accepted?"已向桌面请求添加，请在系统面板中确认":"桌面未接受请求，请长按桌面手动添加快递中心组件");}else message("请长按桌面 → 小组件 → 课表镜 → 快递中心");});
   }
@@ -169,7 +167,7 @@ final class ParcelPage extends LinearLayout {
    for(ParcelRecord p:records)if(!p.confirmed?page==0:p.state==page)groups.computeIfAbsent(!p.confirmed?"待确认 · 识别结果":page==0?p.group():page==1?"运输中":"已取件",ignored->new ArrayList<>()).add(p);
    if(groups.isEmpty()){
     LinearLayout empty=card(list,false);empty.setPadding(ui.dp(16),ui.dp(32),ui.dp(16),ui.dp(28));TextView title=text(page==0?"没有待取件的快递":page==1?"暂无运输中的快递":"还没有已取件记录",18,ink);title.setGravity(Gravity.CENTER);empty.addView(title);
-    if(page!=2){TextView hint=text(page==0?"手动添加，或开启通知识别自动整理取件信息":"添加运单号后，可查询物流进度",13,muted);hint.setGravity(Gravity.CENTER);hint.setPadding(0,ui.dp(12),0,ui.dp(8));empty.addView(hint);LinearLayout actions=actionRow(empty);String recognizeLabel=ParcelNotificationListener.settings(activity).getBoolean("recognition",false)?"识别设置":"开启通知识别";pill(actions,"添加快递",true,this::showActions);if(page==0)pill(actions,recognizeLabel,false,this::settings);}
+    if(page!=2){TextView hint=text(page==0?"手动添加，或开启通知识别自动整理取件信息":"添加运单号，集中管理运输中的快递",13,muted);hint.setGravity(Gravity.CENTER);hint.setPadding(0,ui.dp(12),0,ui.dp(8));empty.addView(hint);LinearLayout actions=actionRow(empty);String recognizeLabel=ParcelNotificationListener.settings(activity).getBoolean("recognition",false)?"识别设置":"开启通知识别";pill(actions,"添加快递",true,this::showActions);if(page==0)pill(actions,recognizeLabel,false,this::settings);}
    }
    for(Map.Entry<String,List<ParcelRecord>> group:groups.entrySet()){
     TextView heading=text(group.getKey()+"  ·  "+group.getValue().size()+" 件",13,muted);heading.setTypeface(null,Typeface.BOLD);heading.setPadding(ui.dp(2),ui.dp(8),0,ui.dp(12));list.addView(heading);
@@ -201,9 +199,7 @@ final class ParcelPage extends LinearLayout {
    LinearLayout timeline=column();row.addView(timeline);timeline.setVisibility(expandedTracking==p.id?VISIBLE:GONE);for(int i=0;i<events.length();i++){org.json.JSONObject e=events.optJSONObject(i);if(e!=null)trackingEvent(timeline,e.optString("time"),e.optString("description"));}
    Button expand=button(row,expandedTracking==p.id?"收起物流记录":"展开物流记录",()->{});expand.setOnClickListener(v->{boolean open=timeline.getVisibility()!=VISIBLE;timeline.setVisibility(open?VISIBLE:GONE);expandedTracking=open?p.id:0;expand.setText(open?"收起物流记录":"展开物流记录");});row.setFocusable(true);row.setOnClickListener(v->expand.performClick());ui.focusOutline(row);
   }else{TextView empty=text("暂无物流动态",16,muted);empty.setPadding(0,ui.dp(12),0,ui.dp(4));row.addView(empty);}
-  if(!p.trackingError.isEmpty())row.addView(text(p.trackingError,13,muted));
-  boolean configured=!ParcelNotificationListener.settings(activity).getString("proxy","").isEmpty();if(!configured)row.addView(text("配置物流代理后可查进度，已有物流记录仍可查看",13,muted));
-  LinearLayout actions=actionRow(row);pill(actions,configured?"查询物流":"去配置",true,configured?()->tracking(p):this::proxySettings);pill(actions,"管理",false,()->actions(p));
+  LinearLayout actions=actionRow(row);pill(actions,"管理",false,()->actions(p));
  }
  private void trackingEvent(LinearLayout host,String time,String value){
   LinearLayout entry=column();entry.setPadding(0,ui.dp(14),0,ui.dp(14));host.addView(entry,new LinearLayout.LayoutParams(-1,-2));entry.addView(text(time,12,muted));TextView description=text(value,15,ink);description.setPadding(0,ui.dp(6),0,0);entry.addView(description);View divider=new View(activity);divider.setBackgroundColor(ui.DIVIDER);host.addView(divider,new LinearLayout.LayoutParams(-1,ui.dp(1)));
@@ -226,7 +222,7 @@ final class ParcelPage extends LinearLayout {
  private void edit(ParcelRecord p){
   LinearLayout body=sheet(p.confirmed?(p.id==0?"添加快递":"编辑快递"):"确认识别结果");draft=p;
   body.addView(text(p.state==ParcelRecord.DONE?"修改信息后仍保留在已取件记录中。":"填写取件码后归入待取件；只有运单号时归入运输中。取件后请在列表点“已取件”。",13,muted));
-  codeField=field(body,"取件码（与运单号分开）",p.code);codeField.setTag("parcel-editor-code");stationField=field(body,"驿站 / 地址",p.station);trackingField=field(body,"运单号（选填）",p.trackingNumber);carrierField=field(body,"快递公司 / 查询编码（选填）",p.carrier);
+  codeField=field(body,"取件码（与运单号分开）",p.code);codeField.setTag("parcel-editor-code");stationField=field(body,"驿站 / 地址",p.station);trackingField=field(body,"运单号（选填）",p.trackingNumber);carrierField=field(body,"快递公司（选填）",p.carrier);
   TextView error=text("",14,ui.DANGER);error.setVisibility(GONE);error.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);AlertDialog editor=currentSheet;
   Button save=ui.action(body,p.confirmed?"保存":"保存并确认",()->{
    if(saving)return;ParcelRecord value=new ParcelRecord();value.id=p.id;value.code=codeField.getText().toString();value.station=stationField.getText().toString();value.trackingNumber=trackingField.getText().toString();value.carrier=carrierField.getText().toString();value.state=p.state==ParcelRecord.DONE?ParcelRecord.DONE:value.code.trim().isEmpty()?ParcelRecord.TRANSIT:ParcelRecord.READY;
@@ -243,7 +239,7 @@ final class ParcelPage extends LinearLayout {
   int available=getHeight()>0?getHeight():activity.getResources().getDisplayMetrics().heightPixels;dialog.getWindow().setLayout(-1,Math.max(ui.dp(240),available-ui.dp(48)));
  }
  private void actions(ParcelRecord p){LinearLayout body=sheet("快递管理");TextView summary=text(p.code.isEmpty()?p.trackingNumber:p.code,22,ink);summary.setTypeface(Typeface.MONOSPACE,Typeface.BOLD);body.addView(summary);if(!p.station.isEmpty())body.addView(text(p.station,14,muted));button(body,p.confirmed?"编辑":"核对并确认",()->edit(p));
-  if(p.confirmed){button(body,"物流记录 / 查询",()->tracking(p));if(p.state==ParcelRecord.READY)button(body,"未领取提醒",()->reminder(p));}
+  if(p.confirmed){if(!p.trackingEvents.isEmpty())button(body,"物流记录",()->tracking(p));if(p.state==ParcelRecord.READY)button(body,"未领取提醒",()->reminder(p));}
   button(body,"删除",()->delete(p)).setTextColor(ui.DANGER);}
  private LinearLayout settingGroup(LinearLayout host,String title){TextView heading=text(title,13,muted);heading.setTypeface(null,Typeface.BOLD);heading.setPadding(0,ui.dp(16),0,ui.dp(8));host.addView(heading);LinearLayout group=column();group.setPadding(ui.dp(12),ui.dp(8),ui.dp(12),ui.dp(12));group.setBackground(ui.bg(surface,18));host.addView(group,new LinearLayout.LayoutParams(-1,-2));return group;}
  private void undoBar(String label,Runnable undo){
@@ -261,15 +257,12 @@ final class ParcelPage extends LinearLayout {
   List<ParcelRules.Candidate> found=ParcelRules.extract(input);if(found.isEmpty()){message("没有识别到明确的取件码；请检查内容或手动添加");return;}
   String epoch=ParcelNotificationListener.settings(activity).getString("epoch","");ParcelRepository.IO.execute(()->{int added=0;try{if(!epoch.equals(ParcelNotificationListener.settings(activity).getString("epoch","")))return;for(ParcelRules.Candidate c:found)if(new ParcelRepository(activity).ingest(ParcelNotificationListener.record(c,source,true)))added++;int count=added;activity.runOnUiThread(()->{if(closed)return;if(currentSheet!=null)currentSheet.dismiss();selectFilter(0);message(count==0?"识别结果已存在，未重复添加":"已识别 "+count+" 条，请在待确认列表核对后保存");load();});}catch(RuntimeException e){activity.runOnUiThread(()->{if(!closed)message("识别结果保存失败，请重试");});}});
  }
+ private String trackingStateLabel(String state){switch(state){case "IN_TRANSIT":return "运输中";case "READY":return "到达取件点";case "DELIVERED":return "物流显示已签收";default:return "状态未知";}}
  private void tracking(ParcelRecord p){
   LinearLayout body=sheet("物流记录");body.addView(text(p.trackingNumber.isEmpty()?"请先编辑并填写运单号":p.trackingNumber,17,ink));
-  if(!p.trackingState.isEmpty())body.addView(text(ParcelTracking.stateLabel(p.trackingState),15,ink));
-  if(!p.trackingError.isEmpty())body.addView(text(p.trackingError,14,muted));
-  try{if(!p.trackingEvents.isEmpty()){org.json.JSONArray events=new org.json.JSONArray(p.trackingEvents);for(int i=0;i<events.length();i++){org.json.JSONObject event=events.getJSONObject(i);trackingEvent(body,event.getString("time"),event.getString("description"));}}}catch(org.json.JSONException e){body.addView(text("本机物流记录无法显示，可重新查询",14,muted));}
-  body.addView(text("查询仅向你配置的 HTTPS 代理发送运单号和快递公司。物流显示已签收时仍需你确认取件。",13,muted));
-  if(p.trackingNumber.isEmpty())button(body,"补充运单号",()->edit(p));
-  else if(p.state!=ParcelRecord.DONE&&ParcelNotificationListener.settings(activity).getString("proxy","").isEmpty())button(body,"配置物流代理",this::proxySettings);
-  else if(p.state!=ParcelRecord.DONE)button(body,"查询物流",()->{message("正在查询物流…");ParcelTracking.NETWORK.execute(()->{String result=ParcelTracking.query(activity.getApplicationContext(),p.id);activity.runOnUiThread(()->{if(closed)return;message(result);if(currentSheet!=null)currentSheet.dismiss();load();});});});
+  if(!p.trackingState.isEmpty())body.addView(text(trackingStateLabel(p.trackingState),15,ink));
+  try{if(!p.trackingEvents.isEmpty()){org.json.JSONArray events=new org.json.JSONArray(p.trackingEvents);for(int i=0;i<events.length();i++){org.json.JSONObject event=events.getJSONObject(i);trackingEvent(body,event.getString("time"),event.getString("description"));}}}catch(org.json.JSONException e){body.addView(text("本机物流记录无法显示",14,muted));}
+  body.addView(text("仅展示本机已有物流记录，不自动更新；取件后请手动标记已取件。",13,muted));
  }
  private void reminder(ParcelRecord p){
   LinearLayout body=sheet("未领取提醒");body.addView(text("提醒可能因省电、后台限制而延迟。请先在快递管理中开启提醒。",14,muted));
@@ -278,11 +271,5 @@ final class ParcelPage extends LinearLayout {
  }
  private void saveReminder(long id,long time){ParcelRepository.IO.execute(()->{try{ParcelDatabase db=ParcelDatabase.get(activity);db.runInTransaction(()->{ParcelRecord p=db.parcels().get(id);if(p==null||p.state!=ParcelRecord.READY)return;p.remindAt=time;p.remindedAt=0;db.parcels().update(p);});ParcelWorker.schedule(activity);activity.runOnUiThread(()->{if(closed)return;currentSheet.dismiss();message(time==0?"提醒已取消":"提醒时间已保存；请确认系统允许通知");});}catch(RuntimeException e){activity.runOnUiThread(()->message("提醒保存失败，请重试"));}});}
  private Switch toggle(LinearLayout body,String label,boolean checked){Switch view=new Switch(activity);view.setText(label);view.setTextSize(15);view.setTextColor(ink);view.setPadding(0,ui.dp(12),0,ui.dp(12));view.setSwitchPadding(ui.dp(16));view.setMinHeight(ui.dp(56));view.setChecked(checked);body.addView(view,new LinearLayout.LayoutParams(-1,-2));return view;}
- private void proxySettings(){
-  LinearLayout body=sheet("物流服务代理");SharedPreferences prefs=ParcelNotificationListener.settings(activity);body.addView(text("默认不联网。仅连接你信任的 HTTPS 代理，由服务端保管快递100 / 快递鸟密钥；查询只发送运单号和快递公司，不发送取件码、地址、通知或图片。没有代理时仍可离线管理快递。",14,muted));
-  EditText endpoint=field(body,"HTTPS 代理地址（留空关闭）",prefs.getString("proxy",""));endpoint.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(2048)});endpoint.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
-  Switch background=toggle(body,"后台查询（约每 6 小时）",prefs.getBoolean("backgroundTracking",false));TextView error=text("",14,ui.DANGER);error.setVisibility(GONE);error.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);body.addView(error);
-  Button save=button(body,"保存",()->{String value=endpoint.getText().toString().trim();try{if(!value.isEmpty())value=ProxyTrackingProvider.validateEndpoint(value);else if(background.isChecked())throw new IllegalArgumentException("后台查询需要先配置代理地址");prefs.edit().putString("proxy",value).putBoolean("backgroundTracking",background.isChecked()).putLong("trackingRetryAt",0).putString("epoch",UUID.randomUUID().toString()).apply();ParcelWorker.schedule(activity);currentSheet.dismiss();message(value.isEmpty()?"物流联网已关闭":"代理设置已保存；尚未验证真实物流服务");}catch(IllegalArgumentException e){error.setText(e.getMessage());error.setVisibility(VISIBLE);}});fixedActions(body,save,error,"parcel-proxy-actions");
- }
- void clearData(){if(saving||closed||clearing){Toast.makeText(activity,"快递正在保存或删除，请稍后重试。",Toast.LENGTH_SHORT).show();return;}AlertDialog confirmation=new AlertDialog.Builder(activity,R.style.SecondaryDialog).setTitle("删除全部快递数据？").setMessage("将关闭后台识别和查询，删除快递、识别候选、去重记录和快递设置，不影响课表和任务，此操作无法撤销。系统通知访问可在系统设置中撤销。").setNegativeButton("取消",null).setPositiveButton("全部删除",(dialog,which)->{if(saving||closed||clearing)return;clearing=true;snack.setVisibility(GONE);timer.removeCallbacksAndMessages(null);ParcelNotificationListener.settings(activity).edit().clear().putString("epoch",UUID.randomUUID().toString()).apply();ParcelWorker.schedule(activity);ParcelNotifications.cancelAll(activity);ParcelRepository.IO.execute(()->{try{new ParcelRepository(activity).clear();activity.runOnUiThread(()->{clearing=false;if(closed)return;Toast.makeText(activity,"快递数据已删除，后台功能已关闭",Toast.LENGTH_LONG).show();load();});}catch(RuntimeException e){activity.runOnUiThread(()->{clearing=false;Toast.makeText(activity,"删除失败，请重试；后台功能已关闭",Toast.LENGTH_LONG).show();});}});}).create();confirmation.show();ui.styleDialog(confirmation,true);}
+ void clearData(){if(saving||closed||clearing){Toast.makeText(activity,"快递正在保存或删除，请稍后重试。",Toast.LENGTH_SHORT).show();return;}AlertDialog confirmation=new AlertDialog.Builder(activity,R.style.SecondaryDialog).setTitle("删除全部快递数据？").setMessage("将关闭后台识别和提醒，删除快递、识别候选、去重记录和快递设置，不影响课表和任务，此操作无法撤销。系统通知访问可在系统设置中撤销。").setNegativeButton("取消",null).setPositiveButton("全部删除",(dialog,which)->{if(saving||closed||clearing)return;clearing=true;snack.setVisibility(GONE);timer.removeCallbacksAndMessages(null);ParcelNotificationListener.settings(activity).edit().clear().putString("epoch",UUID.randomUUID().toString()).apply();ParcelWorker.schedule(activity);ParcelNotifications.cancelAll(activity);ParcelRepository.IO.execute(()->{try{new ParcelRepository(activity).clear();activity.runOnUiThread(()->{clearing=false;if(closed)return;Toast.makeText(activity,"快递数据已删除，后台功能已关闭",Toast.LENGTH_LONG).show();load();});}catch(RuntimeException e){activity.runOnUiThread(()->{clearing=false;Toast.makeText(activity,"删除失败，请重试；后台功能已关闭",Toast.LENGTH_LONG).show();});}});}).create();confirmation.show();ui.styleDialog(confirmation,true);}
 }

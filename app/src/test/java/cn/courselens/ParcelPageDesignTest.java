@@ -30,14 +30,15 @@ public class ParcelPageDesignTest {
    try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
     ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();layout(activity.findViewById(android.R.id.content),activity);
     ParcelRecord record=new ParcelRecord();record.code="6-2-2088";record.station="合成东门驿站";record.trackingNumber="CL12345678901";record.trackingEvents="[{\"time\":\"10-24 18:30\",\"description\":\"已到达合成转运中心\"}]";
-    String[] methods={"showActions","importSheet","sources","proxySettings","actions","tracking","reminder"};
+    String[] methods={"showActions","importSheet","sources","actions","tracking","reminder"};
     for(String name:methods){
      boolean withRecord=Arrays.asList("actions","tracking","reminder").contains(name);java.lang.reflect.Method method=ParcelPage.class.getDeclaredMethod(name,withRecord?new Class<?>[]{ParcelRecord.class}:new Class<?>[0]);method.setAccessible(true);method.invoke(page,withRecord?new Object[]{record}:new Object[0]);
      AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();View decor=dialog.getWindow().getDecorView();layoutDialog(dialog,activity);View shell=decor.findViewWithTag("parcel-sheet");assertNotNull(shell);assertContained((ViewGroup)shell,findText(shell,"关闭"));
-     if(name.equals("proxySettings")){View footer=decor.findViewWithTag("parcel-proxy-actions");assertContained((ViewGroup)shell,footer);((Switch)findText(shell,"后台查询（约每 6 小时）")).setChecked(true);findText(footer,"保存").performClick();assertTrue(dialog.isShowing());assertTrue(hasText(shell,"后台查询需要先配置代理地址"));layoutDialog(dialog,activity);assertContained((ViewGroup)shell,findText(shell,"后台查询需要先配置代理地址"));}
+
+     assertFalse(hasText(shell,"物流代理"));assertFalse(hasText(shell,"查询物流"));
      snapshot(decor,(qualifiers.contains("notnight")?"normal":"large-dark")+"-"+name);dialog.dismiss();
     }
-    for(int section=0;section<4;section++){java.lang.reflect.Method method=ParcelPage.class.getDeclaredMethod("settingsSection",int.class);method.setAccessible(true);method.invoke(page,section);AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();layoutDialog(dialog,activity);snapshot(dialog.getWindow().getDecorView(),"settings-"+section+"-"+qualifiers);dialog.dismiss();}
+    for(int section=0;section<3;section++){java.lang.reflect.Method method=ParcelPage.class.getDeclaredMethod("settingsSection",int.class);method.setAccessible(true);method.invoke(page,section);AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();layoutDialog(dialog,activity);snapshot(dialog.getWindow().getDecorView(),"settings-"+section+"-"+qualifiers);dialog.dismiss();}
    }
   }
  }
@@ -68,7 +69,7 @@ public class ParcelPageDesignTest {
    assertEquals("待取件 2",((TextView)root.findViewWithTag("parcel-filter-0")).getText().toString());
    View pickup=root.findViewWithTag("parcel-record-101");assertNotNull(findText(pickup,"合成东门驿站"));assertNotNull(findText(pickup,"已取件"));assertFalse(hasText(pickup,"规则评分"));
    View confirmation=root.findViewWithTag("parcel-record-102");assertNotNull(findText(confirmation,"确认无误"));assertTrue(confirmation.getTop()<pickup.getTop());assertEquals(1,((TextView)findText(confirmation,"确认无误")).getLineCount());assertEquals(1,((TextView)findText(pickup,"已取件")).getLineCount());
-   assertNotNull(findText(root,"身份码"));assertNotNull(findText(root,"已到达合成转运中心"));assertNotNull(findText(root,"去配置"));
+   assertNotNull(findText(root,"身份码"));assertNotNull(findText(root,"已到达合成转运中心"));assertNull(findText(root,"去配置"));assertFalse(hasText(root,"查询物流"));
    ViewGroup identity=root.findViewWithTag("parcel-identity");
    for(int i=0;i<3;i++){TextView entry=root.findViewWithTag("parcel-identity-"+i);assertEquals("identity labels should not wrap",1,entry.getLineCount());assertContained(identity,entry);assertTrue("identity touch target",entry.getHeight()>=Math.round(48*activity.getResources().getDisplayMetrics().density));assertTrue("identity text must not be vertically clipped",entry.getLayout().getHeight()+entry.getCompoundPaddingTop()+entry.getCompoundPaddingBottom()<=entry.getHeight());}
    android.graphics.drawable.Drawable addBackground=root.findViewWithTag("quick-menu-button").getBackground();
