@@ -2,7 +2,7 @@
 
 轻量的 Android 课表应用，支持按周查看课程、课程详情、手动编辑、单次调课与停课、冲突课程选择和桌面小组件。已导入的课表可离线查看。
 
-官网：[courselens.xvyan.cn](https://courselens.xvyan.cn/)，查看软件介绍、使用指南并下载最新版。
+官网：[courselens.xvyan.cn](https://morrow.xvyan.cn/)，查看软件介绍、使用指南并下载最新版。
 
 支持 Android 8.0 及以上；学校同步适配宿迁学院和徐州工程学院，其他学校可手动添加。
 
