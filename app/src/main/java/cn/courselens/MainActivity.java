@@ -389,7 +389,7 @@ public class MainActivity extends Activity {
  private long appVersionCode(){try{android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(getPackageName(),0);return Build.VERSION.SDK_INT>=28?info.getLongVersionCode():info.versionCode;}catch(android.content.pm.PackageManager.NameNotFoundException e){throw new IllegalStateException(e);}}
  private void about(){
   LinearLayout body=secondary("关于软件","",this::menu);
-  LinearLayout brand=new LinearLayout(this);brand.setOrientation(LinearLayout.VERTICAL);brand.setGravity(Gravity.CENTER);brand.setPadding(0,dp(24),0,dp(32));ImageView logo=new ImageView(this);logo.setImageResource(R.mipmap.ic_launcher);logo.setContentDescription("课表镜 App 图标");logo.setTag("about-app-icon");brand.addView(logo,new LinearLayout.LayoutParams(dp(80),dp(80)));TextView name=text("课表镜 CourseLens",23,NAVY);name.setTypeface(null,Typeface.BOLD);name.setPadding(0,dp(20),0,dp(10));brand.addView(name);brand.addView(text("版本 "+appVersion(),14,MUTED));body.addView(brand,new LinearLayout.LayoutParams(-1,-2));
+  LinearLayout brand=new LinearLayout(this);brand.setOrientation(LinearLayout.VERTICAL);brand.setGravity(Gravity.CENTER);brand.setPadding(0,dp(24),0,dp(32));ImageView logo=new ImageView(this);logo.setImageResource(R.mipmap.ic_launcher);logo.setContentDescription("Morrow App 图标");logo.setTag("about-app-icon");brand.addView(logo,new LinearLayout.LayoutParams(dp(80),dp(80)));TextView name=text("Morrow",23,NAVY);name.setTypeface(null,Typeface.BOLD);name.setPadding(0,dp(20),0,dp(10));brand.addView(name);brand.addView(text("版本 "+appVersion(),14,MUTED));body.addView(brand,new LinearLayout.LayoutParams(-1,-2));
   LinearLayout updates=settingsGroup(body,"");option(updates,R.drawable.ic_sync,"检查更新","当前版本 "+appVersion(),this::updateSettings).setTag("update-settings");
   LinearLayout links=settingsGroup(body,"");option(links,R.drawable.ic_notes,"网盘下载","通过系统浏览器打开下载页面",()->{String url=remote==null||remote.config==null?"":remote.config.diskUrl;openRemoteLink(url);}).setTag("disk-download");option(links,R.drawable.ic_notes,"GitHub 仓库","公开版本与使用说明",()->openRemoteLink(RemoteConfig.REPOSITORY)).setTag("public-repository");
   remoteStatus=text("",13,MUTED);remoteStatus.setTag("update-status");remoteStatus.setGravity(Gravity.CENTER);body.addView(remoteStatus);refreshRemoteStatus();
@@ -423,7 +423,7 @@ public class MainActivity extends Activity {
 
  private void finishRemoteDialog(AlertDialog dialog){remoteDialog=dialog;dialog.setOnDismissListener(value->{if(remoteDialog==dialog)remoteDialog=null;scheduleRemoteNotice();});dialog.show();styleDialog(dialog,false);}
  private void showAnnouncement(RemoteConfig.Announcement item){AlertDialog dialog=remoteDialog(item.title,item.body,item.publishedAt.isEmpty()?"":item.publishedAt.replace('T',' ').replace("Z"," UTC"),R.drawable.ic_notes);dialog.setButton(AlertDialog.BUTTON_POSITIVE,"我知道了",(d,w)->remote.read(item.id));finishRemoteDialog(dialog);}
- private void showUpdate(RemoteConfig config){remote.sessionShown.add("update:"+config.versionCode);AlertDialog dialog=remoteDialog(config.promptTitle.isEmpty()?"发现新版本 "+config.versionName:config.promptTitle,config.promptMessage.isEmpty()?(config.changelog.isEmpty()?"新版课表镜已发布，可前往下载。":config.changelog):config.promptMessage,"",R.drawable.ic_sync);dialog.setButton(AlertDialog.BUTTON_NEGATIVE,"取消",(d,w)->{});dialog.setButton(AlertDialog.BUTTON_POSITIVE,"立即更新",(d,w)->openRemoteLink(config.downloadUrl()));finishRemoteDialog(dialog);}
+ private void showUpdate(RemoteConfig config){remote.sessionShown.add("update:"+config.versionCode);AlertDialog dialog=remoteDialog(config.promptTitle.isEmpty()?"发现新版本 "+config.versionName:config.promptTitle,config.promptMessage.isEmpty()?(config.changelog.isEmpty()?"新版 Morrow 已发布，可前往下载。":config.changelog):config.promptMessage,"",R.drawable.ic_sync);dialog.setButton(AlertDialog.BUTTON_NEGATIVE,"取消",(d,w)->{});dialog.setButton(AlertDialog.BUTTON_POSITIVE,"立即更新",(d,w)->openRemoteLink(config.downloadUrl()));finishRemoteDialog(dialog);}
 
  private AlertDialog confirmClear(){Runnable destination="数据管理".equals(root.getTag())?this::dataManagement:this::home;if(busy){toast("请等待同步结束");return null;}AlertDialog dialog=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("清空当前课表？").setMessage("当前课表的课程、备注和单次调整会被清空。需要再次导入或手动添加课程。").setNegativeButton("保留课表",null).setPositiveButton("清空",(d,w)->{if(busy){toast("请等待同步结束");return;}school.logout();boolean cleared=true;try{schoolAccount.remove(Timetables.active(this));}catch(Exception e){cleared=false;}loginAccountPrefill=null;data="";notes="";adjustments="";getPreferences(0).edit().remove("courseAdjustments").remove("schoolImported").apply();displayChoices.clear();getPreferences(0).edit().remove("displayChoices").apply();save();destination.run();toast(cleared?"已退出并清空当前课表。":"课表已清空，但已保存的学校账号未能删除。");}).create();dialog.show();styleDialog(dialog,true);return dialog;}
  private void termPicker(){
@@ -476,7 +476,7 @@ public class MainActivity extends Activity {
   if(remaining>0){getWindow().getDecorView().postDelayed(()->checkWidgetPin(),remaining);return;}
   prefs.edit().remove("pendingCount").apply();widgetGuide();
  }
- private String widgetManualPath(){return isXiaomi()?"长按桌面空白处 → 小部件 → 全部应用 → 安卓小部件，找到“课表镜”，选择 2×2、4×2 或 4×4。":"长按桌面空白处，打开小组件列表，找到“课表镜”，选择 2×2、4×2 或 4×4。";}
+ private String widgetManualPath(){return isXiaomi()?"长按桌面空白处 → 小部件 → 全部应用 → 安卓小部件，找到“Morrow”，选择 2×2、4×2 或 4×4。":"长按桌面空白处，打开小组件列表，找到“Morrow”，选择 2×2、4×2 或 4×4。";}
  private void widgetManualGuide(){
   if(widgetDialog!=null)widgetDialog.dismiss();
   widgetDialog=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("手动添加小组件").setMessage(widgetManualPath()+"\n\n手动添加无需授予创建桌面快捷方式权限。").setPositiveButton("知道了",null).show();styleDialog(widgetDialog,false);
@@ -489,7 +489,7 @@ public class MainActivity extends Activity {
   toast("权限管理（或其他权限）→ 创建桌面快捷方式；返回后可再次添加");
   // No public shortcut-permission settings action; use the supported application details page.
   try{startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:"+getPackageName())));}
-  catch(ActivityNotFoundException|SecurityException e){toast("无法打开应用详情，请在系统设置中找到课表镜；也可以手动添加小组件");}
+  catch(ActivityNotFoundException|SecurityException e){toast("无法打开应用详情，请在系统设置中找到 Morrow；也可以手动添加小组件");}
  }
  private void openPermissionSettings(){
   LinearLayout body=secondary("权限管理","管理应用所需权限和系统设置",this::menu);

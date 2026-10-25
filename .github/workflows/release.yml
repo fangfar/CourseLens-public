@@ -63,7 +63,7 @@ jobs:
       - name: Save verified artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: courselens-release-${{ github.sha }}
+          name: morrow-release-${{ github.sha }}
           path: app/build/release/*
           if-no-files-found: error
           retention-days: 30
@@ -73,7 +73,7 @@ jobs:
         run: |
           gh release create "$RELEASE_TAG" app/build/release/* \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --draft --title "CourseLens $RELEASE_TAG" --generate-notes
+            --draft --title "Morrow $RELEASE_TAG" --generate-notes
       - name: Remove temporary signing key
         if: always()
         run: rm -f "$RUNNER_TEMP/courselens.keystore"
@@ -81,7 +81,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: courselens-release-lint-${{ github.sha }}
+          name: morrow-release-lint-${{ github.sha }}
           path: app/build/reports/lint-results-release.*
           if-no-files-found: ignore
           retention-days: 7

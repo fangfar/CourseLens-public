@@ -68,7 +68,7 @@ def main():
     check_apk(badging, certificates, name, code, fingerprint)
     output = ROOT / "app/build/release"
     output.mkdir(parents=True, exist_ok=True)
-    filename = f"CourseLens-{name}-vc{code}.apk"
+    filename = f"Morrow-{name}-vc{code}.apk"
     shutil.copyfile(args.apk, output / filename)
     digest = hashlib.sha256((output / filename).read_bytes()).hexdigest()
     (output / "SHA256SUMS").write_text(f"{digest}  {filename}\n", encoding="utf-8")

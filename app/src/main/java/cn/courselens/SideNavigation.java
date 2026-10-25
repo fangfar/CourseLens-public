@@ -30,7 +30,7 @@ final class SideNavigation extends FrameLayout {
   super(activity);this.activity=activity;this.content=content;this.surface=surface;this.ink=ink;ui=new SecondaryUi(activity);setTag("side-navigation");setBackgroundColor(card);
   panel=new LinearLayout(activity);panel.setOrientation(LinearLayout.VERTICAL);panel.setBackgroundColor(card);panel.setPadding(ui.dp(16),ui.dp(20),ui.dp(8),ui.dp(16));panel.setTag("side-navigation-panel");panel.setVisibility(GONE);if(Build.VERSION.SDK_INT>=28)panel.setAccessibilityPaneTitle("导航菜单");addView(panel,new LayoutParams(0,-1,Gravity.LEFT));
   panel.setOnApplyWindowInsetsListener((view,insets)->{view.setPadding(ui.dp(16),insets.getSystemWindowInsetTop()+ui.dp(20),ui.dp(8),insets.getSystemWindowInsetBottom()+ui.dp(16));return insets;});
-  TextView title=ui.text("CourseLens",28,ink);title.setPadding(ui.dp(8),ui.dp(24),0,ui.dp(36));panel.addView(title);
+  TextView title=ui.text("Morrow",28,ink);title.setPadding(ui.dp(8),ui.dp(24),0,ui.dp(36));panel.addView(title);
   ScrollView scroll=new ScrollView(activity);panel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout items=new LinearLayout(activity);items.setOrientation(LinearLayout.VERTICAL);scroll.addView(items);
   TextView label=ui.text("选项卡",13,ink);label.setAlpha(.6f);label.setPadding(ui.dp(12),0,0,ui.dp(12));items.addView(label);
   String[] names={"课表","任务","快递"},tags={"drawer-timetable","drawer-tasks","drawer-parcels"};int[] icons={R.drawable.ic_calendar,R.drawable.ic_tasks,R.drawable.ic_parcel};
