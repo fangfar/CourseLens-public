@@ -5,6 +5,12 @@
     <integer name="popup_sheet_exit">280</integer>
     <integer name="popup_dialog_enter">260</integer>
     <integer name="popup_dialog_exit">200</integer>
+    <style name="MotionSurfaceDialog" parent="SecondaryDialog">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
     <style name="CenterPopupMotion">
         <item name="android:windowEnterAnimation">@anim/popup_dialog_enter</item>
         <item name="android:windowExitAnimation">@anim/popup_dialog_exit</item>

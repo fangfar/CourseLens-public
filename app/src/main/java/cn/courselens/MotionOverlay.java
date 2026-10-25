@@ -9,17 +9,17 @@ import androidx.core.view.*;
 /** One progress drives a surface and its scrim, including direct manipulation and IME offsets. */
 class MotionOverlay extends FrameLayout {
  private View panel,shade;private boolean menu,closing,dragging,bottomOrigin;private float travelOverride=-1,downX,downY,downProgress,imeOffset,backStart=1;private int imeTop,panelPaddingBottom,safeTop;
- private VelocityTracker velocity;private ViewTreeObserver.OnPreDrawListener pending;
+ boolean imeAnimating;private VelocityTracker velocity;private ViewTreeObserver.OnPreDrawListener pending;
  private Runnable dismiss=()->{};final Motion.Progress motion=new Motion.Progress(0f,this::renderMotion);
  MotionOverlay(Context context){super(context);setClickable(true);}
  void bindMotion(View panel,View shade,boolean menu,Runnable dismiss){
   this.panel=panel;this.shade=shade;this.menu=menu;this.dismiss=dismiss;panelPaddingBottom=panel.getPaddingBottom();
   ViewCompat.setOnApplyWindowInsetsListener(this,(v,insets)->{androidx.core.graphics.Insets ime=insets.getInsets(WindowInsetsCompat.Type.ime()),bars=insets.getInsets(WindowInsetsCompat.Type.systemBars());safeTop=bars.top;setPadding(bars.left,0,bars.right,ime.bottom);panel.setPadding(panel.getPaddingLeft(),panel.getPaddingTop(),panel.getPaddingRight(),panelPaddingBottom+(ime.bottom>0?0:bars.bottom));return insets;});
   ViewCompat.setWindowInsetsAnimationCallback(this,new WindowInsetsAnimationCompat.Callback(WindowInsetsAnimationCompat.Callback.DISPATCH_MODE_CONTINUE_ON_SUBTREE){
-   @Override public void onPrepare(WindowInsetsAnimationCompat a){int[] at=new int[2];panel.getLocationOnScreen(at);imeTop=at[1];}
+   @Override public void onPrepare(WindowInsetsAnimationCompat a){if((a.getTypeMask()&WindowInsetsCompat.Type.ime())!=0)imeAnimating=true;int[] at=new int[2];panel.getLocationOnScreen(at);imeTop=at[1];}
    @Override public WindowInsetsAnimationCompat.BoundsCompat onStart(WindowInsetsAnimationCompat a,WindowInsetsAnimationCompat.BoundsCompat bounds){int[] at=new int[2];panel.getLocationOnScreen(at);imeOffset=imeTop-at[1];renderMotion(motion.value);return bounds;}
    @Override public WindowInsetsCompat onProgress(WindowInsetsCompat insets,java.util.List<WindowInsetsAnimationCompat> running){for(WindowInsetsAnimationCompat a:running)if((a.getTypeMask()&WindowInsetsCompat.Type.ime())!=0){float fraction=a.getInterpolatedFraction();panel.setTranslationY(baseTranslation()+imeOffset*(1-fraction));}return insets;}
-   @Override public void onEnd(WindowInsetsAnimationCompat a){imeOffset=0;renderMotion(motion.value);}
+   @Override public void onEnd(WindowInsetsAnimationCompat a){if((a.getTypeMask()&WindowInsetsCompat.Type.ime())!=0)imeAnimating=false;imeOffset=0;renderMotion(motion.value);}
   });renderMotion(0);
  }
  int safeTop(){return safeTop;}
