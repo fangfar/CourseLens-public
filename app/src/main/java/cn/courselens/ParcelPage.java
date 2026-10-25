@@ -91,11 +91,11 @@ final class ParcelPage extends LinearLayout {
   if(section==1){body=settingGroup(settings,"提醒");
   Switch reminders=toggle(body,"快递提醒",prefs.getBoolean("reminders",false));reminders.setOnCheckedChangeListener((v,enabled)->{prefs.edit().putBoolean("reminders",enabled).apply();if(!enabled)ParcelNotifications.cancelAll(activity);if(enabled&&Build.VERSION.SDK_INT>=33&&activity.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED)activity.requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},502);ParcelWorker.schedule(activity);});
   boolean notifications=androidx.core.app.NotificationManagerCompat.from(activity).areNotificationsEnabled();
-  button(body,"系统通知 · "+(notifications?"已开启":"未开启"),()->{try{activity.startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,activity.getPackageName()));}catch(ActivityNotFoundException e){message("请在系统设置中调整课表镜的通知权限和快递提醒频道");}});
+  button(body,"系统通知 · "+(notifications?"已开启":"未开启"),()->{try{activity.startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,activity.getPackageName()));}catch(ActivityNotFoundException e){message("请在系统设置中调整 Morrow 的通知权限和快递提醒频道");}});
   }
   if(section==2){body=settingGroup(settings,"小组件");
   Switch widget=toggle(body,"桌面小组件显示取件码与地址",prefs.getBoolean("widgetCodes",false));widget.setOnCheckedChangeListener((v,enabled)->{prefs.edit().putBoolean("widgetCodes",enabled).apply();ParcelRepository.IO.execute(()->ParcelWidget.updateAll(activity));});body.addView(text("开启后，桌面可见的人也能看到取件码。默认只显示待取数量。",13,muted));
-  button(body,"添加快递小组件",()->{android.appwidget.AppWidgetManager manager=android.appwidget.AppWidgetManager.getInstance(activity);if(manager.isRequestPinAppWidgetSupported()){boolean accepted=manager.requestPinAppWidget(new ComponentName(activity,ParcelWidget.class),null,null);message(accepted?"已向桌面请求添加，请在系统面板中确认":"桌面未接受请求，请长按桌面手动添加快递中心组件");}else message("请长按桌面 → 小组件 → 课表镜 → 快递中心");});
+  button(body,"添加快递小组件",()->{android.appwidget.AppWidgetManager manager=android.appwidget.AppWidgetManager.getInstance(activity);if(manager.isRequestPinAppWidgetSupported()){boolean accepted=manager.requestPinAppWidget(new ComponentName(activity,ParcelWidget.class),null,null);message(accepted?"已向桌面请求添加，请在系统面板中确认":"桌面未接受请求，请长按桌面手动添加快递中心组件");}else message("请长按桌面 → 小组件 → Morrow → 快递中心");});
   }
  }
 

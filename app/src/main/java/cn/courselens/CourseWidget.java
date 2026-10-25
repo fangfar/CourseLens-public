@@ -60,7 +60,7 @@ public class CourseWidget extends AppWidgetProvider {
     if(schedule.tomorrow!=null){Course tomorrow=schedule.tomorrow;String hint="明天第一节 "+times.starts[tomorrow.start-1]+" · "+SchoolParser.clean(tomorrow.name)+(large&&!tomorrow.room.isEmpty()?" · "+SchoolParser.clean(tomorrow.room):"");views.setViewVisibility(R.id.widget_tomorrow,android.view.View.VISIBLE);views.setTextViewText(R.id.widget_tomorrow,hint);views.setTextViewTextSize(R.id.widget_tomorrow,android.util.TypedValue.COMPLEX_UNIT_SP,compact?9:12);views.setInt(R.id.widget_tomorrow,"setMaxLines",large?2:1);views.setOnClickPendingIntent(R.id.widget_tomorrow,open(context,id,5,tomorrow,term,now.toLocalDate().plusDays(1)));}
    }
   }catch(RuntimeException e){
-   views.setTextViewText(R.id.widget_header,"课表镜");views.setViewVisibility(CONTENT[0],android.view.View.VISIBLE);for(int slot=1;slot<4;slot++)views.setViewVisibility(CONTENT[slot],android.view.View.GONE);
+   views.setTextViewText(R.id.widget_header,"Morrow");views.setViewVisibility(CONTENT[0],android.view.View.VISIBLE);for(int slot=1;slot<4;slot++)views.setViewVisibility(CONTENT[slot],android.view.View.GONE);
    course(context,views,id,0,null,term,now,"请检查课表设置",compact,false,ClassTimes.DEFAULT,palette);
   }
 
