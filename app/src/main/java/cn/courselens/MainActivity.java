@@ -36,6 +36,7 @@ public class MainActivity extends Activity {
  private FrameLayout windowContent;private AppNavigation bottomNavigation;private SideNavigation sideNavigation;
  private LinearLayout settingsPage;private int settingsScrollY;private boolean settingsFromParcel,settingsFromParcelActivity;
  private ScrollView timetableScroll;private int timetableScrollY;
+ private float backPageX,backPageAlpha=1f;
  private final PageMotion pageMotion=new PageMotion();private Object systemBack;private boolean backRegistered;
  private ViewPager pager;private TextView weekLabel;private FrameLayout daysBar; private LinearLayout root;private FrameLayout stage;private boolean returningPage,skipPageMotion;private int week=6;private String data="",notes="",term="2026-08-31";
  private SchoolClient school=new SchoolClient();private final ExecutorService worker=Executors.newSingleThreadExecutor();private boolean busy=false,showingDetail=false;private int screen=0;private Runnable pageBack;private CourseChoiceSheet choiceSheet;private NavigationOverlay navigationOverlay,exitingOverlay;
@@ -94,9 +95,9 @@ public class MainActivity extends Activity {
   else {MotionBack.unregister(getWindow(),systemBack);systemBack=null;}
   backRegistered=needed;
  }
- private void startBackMotion(){if(pageMotion.isRunning())pageMotion.beginBack();else if(navigationOverlay!=null)navigationOverlay.beginBack();else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.beginBack();else root.animate().cancel();}
- private void progressBackMotion(float progress){if(exitingOverlay!=null&&navigationOverlay==null)return;if(pageMotion.isRunning())pageMotion.backProgress(progress);else if(navigationOverlay!=null)navigationOverlay.backProgress(progress);else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.backProgress(progress);else if(pageBack!=null&&!busy){root.setTranslationX(dp(24)*progress);root.setAlpha(1-.08f*progress);}}
- private void cancelBackMotion(){if(pageMotion.isRunning())pageMotion.cancelBack();else if(navigationOverlay!=null)navigationOverlay.cancelBack();else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.cancelBack();else{root.animate().translationX(0).alpha(1).setDuration(Motion.PAGE_OUT).setInterpolator(Motion.ENTER).start();}}
+ private void startBackMotion(){if(pageMotion.isRunning())pageMotion.beginBack();else if(navigationOverlay!=null)navigationOverlay.beginBack();else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.beginBack();else{root.animate().cancel();backPageX=root.getTranslationX();backPageAlpha=root.getAlpha();}}
+ private void progressBackMotion(float progress){if(exitingOverlay!=null&&navigationOverlay==null)return;if(pageMotion.isRunning())pageMotion.backProgress(progress);else if(navigationOverlay!=null)navigationOverlay.backProgress(progress);else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.backProgress(progress);else if(pageBack!=null&&!busy){root.setTranslationX(backPageX+dp(24)*progress);root.setAlpha(backPageAlpha*(1-.08f*progress));}}
+ private void cancelBackMotion(){if(pageMotion.isRunning())pageMotion.cancelBack();else if(navigationOverlay!=null)navigationOverlay.cancelBack();else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.cancelBack();else if(root.getTranslationX()!=0||root.getAlpha()!=1){root.animate().translationX(0).alpha(1).setDuration(Motion.PAGE_OUT).setInterpolator(Motion.ENTER).start();}}
  private void focusOutline(View view){secondaryUi.focusOutline(view);}
 
  private void selectPrimaryPage(int selected){

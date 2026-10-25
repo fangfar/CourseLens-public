@@ -59,4 +59,10 @@ public class MotionSystemTest {
   }
  }
 
+ @Test public void restartingAStablePageBackGestureKeepsItsCurrentVisualOffset(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"menu");((PageMotion)org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion")).cancel();View root=org.robolectric.util.ReflectionHelpers.getField(a,"root");root.setTranslationX(7);root.setAlpha(.95f);org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"startBackMotion");org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"progressBackMotion",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,0f));assertEquals(7,root.getTranslationX(),0);assertEquals(.95f,root.getAlpha(),0);
+  }
+ }
+
 }
