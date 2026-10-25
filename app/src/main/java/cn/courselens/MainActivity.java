@@ -359,7 +359,7 @@ public class MainActivity extends Activity {
   LinearLayout body=secondary("数据管理","各项数据独立删除，执行前会再次确认。",this::menu);
   option(settingsGroup(body,"课表"),R.drawable.ic_calendar,"清空当前课表","清空课程、备注和单次调整，退出学校账号",()->confirmClear()).setTag("clear-timetable");
   LinearLayout tasks=settingsGroup(body,"任务");
-  option(tasks,R.drawable.ic_tasks,"删除历史","查看并恢复已删除的任务",()->{prepareTasks();taskPage.history();}).setTag("task-deletion-history");
+  option(tasks,R.drawable.ic_tasks,"任务恢复","恢复已删除或本机标记完成的任务",()->{prepareTasks();taskPage.history();}).setTag("task-deletion-history");
   option(tasks,R.drawable.ic_tasks,"删除全部任务数据","删除手动任务、所有学习通缓存和删除历史，退出学习通账号",()->{prepareTasks();taskPage.clearData();}).setTag("clear-tasks");
   option(settingsGroup(body,"快递"),R.drawable.ic_parcel,"删除全部快递数据","删除快递记录和设置，关闭后台识别、提醒与查询",()->{prepareParcels();parcelPage.clearData();}).setTag("clear-parcels");
  }

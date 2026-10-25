@@ -35,6 +35,29 @@ public class DataManagementTest {
  @After public void closeDatabase()throws Exception {
   parcelsIdle();ParcelDatabase.get(RuntimeEnvironment.getApplication()).close();setStaticField(ParcelDatabase.class,"instance",null);
  }
+ @Test public void deletedManualTaskCanBeRestoredFromHistoryAndDeletedAgain()throws Exception {
+  ChaoxingClient.Result fixture=new ChaoxingClient.Result();ChaoxingClient.Work work=new ChaoxingClient.Work("合成课程","合成可恢复任务","未完成","");work.courseKey="local";work.workKey="local:restore-regression";fixture.items.add(work);
+  ChaoxingCache cache=new ChaoxingCache(RuntimeEnvironment.getApplication(),"");cache.save(fixture);
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();callInstanceMethod(activity,"prepareTasks");TaskPage page=getField(activity,"taskPage");tasksIdle(page);
+   callInstanceMethod(page,"delete",ClassParameter.from(ChaoxingClient.Work.class,work));tasksIdle(page);
+   assertEquals(1,cache.load().deleted.size());page.history();View decor=activity.findViewById(android.R.id.content);View restore=decor.findViewWithTag("task-restore");assertNotNull(restore);restore.performClick();tasksIdle(page);
+   assertTrue(cache.load().deleted.isEmpty());assertEquals(1,cache.load().items.size());assertFalse(cache.load().items.get(0).completed());
+   callInstanceMethod(page,"delete",ClassParameter.from(ChaoxingClient.Work.class,work));tasksIdle(page);page.findViewWithTag("task-undo").performClick();tasksIdle(page);assertTrue(cache.load().deleted.isEmpty());assertEquals(1,cache.load().items.size());
+  }
+ }
+ @Test public void taskMenuOffersDeletionHistoryWithoutAnAccount()throws Exception {
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();callInstanceMethod(activity,"prepareTasks");TaskPage page=getField(activity,"taskPage");tasksIdle(page);page.settings();View action=activity.findViewById(android.R.id.content).findViewWithTag("task-deletion-history");assertNotNull("Task dropdown must expose deletion history",action);action.performClick();shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(600));assertNotNull(activity.findViewById(android.R.id.content).findViewWithTag("task-history"));
+  }
+ }
+ @Test public void locallyCompletedTaskCanBeReopenedWithoutExposingRemoteSubmissions()throws Exception {
+  ChaoxingClient.Result fixture=new ChaoxingClient.Result();ChaoxingClient.Work work=new ChaoxingClient.Work("合成课程","此前点击圆圈的手动任务","已完成","");work.courseKey="local";work.workKey="local:completed-restore";fixture.items.add(work);ChaoxingCache cache=new ChaoxingCache(RuntimeEnvironment.getApplication(),"");cache.save(fixture);
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();callInstanceMethod(activity,"prepareTasks");TaskPage page=getField(activity,"taskPage");tasksIdle(page);ChaoxingClient.Result remote=new ChaoxingClient.Result();remote.items.add(new ChaoxingClient.Work("合成平台课程","平台已提交记录","已提交",""));setField(page,"snapshot",remote);
+   page.history();View decor=activity.findViewById(android.R.id.content);View reopen=decor.findViewWithTag("task-reopen");assertNotNull("Previously hidden local completion must be recoverable",reopen);reopen.performClick();tasksIdle(page);assertFalse(cache.load().items.get(0).completed());assertTrue(cache.load().deleted.isEmpty());page.history();assertNull(decor.findViewWithTag("task-reopen"));
+  }
+ }
  @Test public void deletionActionsAreCentralizedAndCancellationKeepsData()throws Exception {
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity activity=controller.get();activity.getPreferences(0).edit().putString("courses","synthetic-timetable").commit();
@@ -46,7 +69,7 @@ public class DataManagementTest {
     data.findViewWithTag(tag).performClick();AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(dialog.isShowing());dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertSame(data,getField(activity,"root"));
    }
    assertEquals("synthetic-timetable",activity.getPreferences(0).getString("courses",""));
-   TaskPage tasks=getField(activity,"taskPage");tasks.settings();assertNull(((View)getField(activity,"root")).findViewWithTag("task-deletion-history"));activity.onBackPressed();
+   TaskPage tasks=getField(activity,"taskPage");tasks.settings();assertNotNull(((View)getField(activity,"root")).findViewWithTag("task-deletion-history"));activity.onBackPressed();
    ParcelPage parcels=getField(activity,"parcelPage");parcels.settings();AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNull(menu.getWindow().getDecorView().findViewWithTag("parcel-setting-4"));menu.dismiss();
    activity.onBackPressed();assertSame(general,getField(activity,"root"));
    general.findViewWithTag("data-management").performClick();controller.recreate();assertEquals("数据管理",((View)getField(controller.get(),"root")).getTag());controller.get().onBackPressed();assertEquals("设置",((View)getField(controller.get(),"root")).getTag());
