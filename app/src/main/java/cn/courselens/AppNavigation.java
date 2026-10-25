@@ -13,7 +13,7 @@ final class AppNavigation extends LinearLayout {
   super(context);this.ink=ink;setTag("bottom-navigation");setOrientation(VERTICAL);setBackgroundColor(surface);
   LinearLayout items=new LinearLayout(context);items.setPadding(dp(36),dp(4),dp(36),dp(4));addView(items,new LayoutParams(-1,-2));
   String[] labels={"课表","任务","快递"},tags={"nav-timetable","nav-tasks","nav-parcels"};
-  for(int i=0;i<tabs.length;i++){int index=i;ImageButton tab=new ImageButton(context);tab.setTag(tags[i]);tab.setContentDescription(labels[i]);tab.setTooltipText(labels[i]);tab.setMinimumHeight(dp(48));tab.setPadding(dp(8),dp(10),dp(8),dp(10));tab.setScaleType(ImageView.ScaleType.CENTER);tab.setBackground(null);tab.setOnClickListener(v->onSelected.accept(index));LayoutParams size=new LayoutParams(0,-2,1);size.setMargins(dp(8),0,dp(8),0);items.addView(tab,size);tabs[i]=tab;}
+  for(int i=0;i<tabs.length;i++){int index=i;ImageButton tab=new ImageButton(context);tab.setTag(tags[i]);tab.setContentDescription(labels[i]);tab.setTooltipText(labels[i]);tab.setMinimumHeight(dp(48));tab.setPadding(dp(8),dp(10),dp(8),dp(10));tab.setScaleType(ImageView.ScaleType.CENTER);tab.setBackground(null);Motion.press(tab);tab.setOnClickListener(v->onSelected.accept(index));LayoutParams size=new LayoutParams(0,-2,1);size.setMargins(dp(8),0,dp(8),0);items.addView(tab,size);tabs[i]=tab;}
   select(selected,muted);
  }
  private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}

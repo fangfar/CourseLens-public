@@ -6,7 +6,7 @@ import android.widget.FrameLayout;
 /** The outgoing page stays visible until its successor settles; reverse starts at the current frame. */
 final class PageMotion {
  private FrameLayout stage;private View outgoing,incoming;private ViewTreeObserver.OnPreDrawListener pending;
- private int oldAccessibility,newAccessibility;private float direction,distance,oldX,oldAlpha;private boolean reversing;
+ private int oldAccessibility,newAccessibility;private float direction,distance,oldX,oldAlpha,backStart;private boolean reversing;
  private final Motion.Progress motion=new Motion.Progress(0,this::render);
  boolean isRunning(){return incoming!=null;}
  void start(FrameLayout container,View previous,View next,boolean backwards,float distance){
@@ -15,6 +15,9 @@ final class PageMotion {
   pending=()->{removePending();if(incoming==null)return true;motion.to(1,backwards?Motion.PAGE_OUT:Motion.PAGE_IN,false,()->finish(null));return true;};next.getViewTreeObserver().addOnPreDrawListener(pending);
  }
  private void render(float p){if(incoming==null)return;outgoing.setAlpha(oldAlpha*(1-.12f*p));outgoing.setTranslationX(oldX-direction*distance*.25f*p);incoming.setAlpha(p);incoming.setTranslationX(direction*distance*(1-p));}
+ void beginBack(){removePending();backStart=motion.value;motion.stop();}
+ void backProgress(float progress){motion.set(backStart*(1-progress));}
+ void cancelBack(){motion.to(1,Motion.PAGE_IN,false,()->finish(null));}
  void reverse(Runnable end){if(incoming==null){end.run();return;}if(reversing)return;reversing=true;removePending();motion.to(0,Motion.PAGE_OUT,false,()->finish(end));}
  void cancel(){removePending();motion.stop();finish(null);}
  private void removePending(){if(pending!=null&&incoming!=null){if(incoming.getViewTreeObserver().isAlive())incoming.getViewTreeObserver().removeOnPreDrawListener(pending);pending=null;}}

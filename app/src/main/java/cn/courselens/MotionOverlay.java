@@ -8,7 +8,7 @@ import androidx.core.view.*;
 
 /** One progress drives a surface and its scrim, including direct manipulation and IME offsets. */
 class MotionOverlay extends FrameLayout {
- private View panel,shade;private boolean menu,closing,dragging;private float travelOverride=-1,downX,downY,downProgress,imeOffset,backStart=1;private int imeTop,panelPaddingBottom,safeTop;
+ private View panel,shade;private boolean menu,closing,dragging,bottomOrigin;private float travelOverride=-1,downX,downY,downProgress,imeOffset,backStart=1;private int imeTop,panelPaddingBottom,safeTop;
  private VelocityTracker velocity;private ViewTreeObserver.OnPreDrawListener pending;
  private Runnable dismiss=()->{};final Motion.Progress motion=new Motion.Progress(0f,this::renderMotion);
  MotionOverlay(Context context){super(context);setClickable(true);}
@@ -23,13 +23,18 @@ class MotionOverlay extends FrameLayout {
   });renderMotion(0);
  }
  int safeTop(){return safeTop;}
+ void placeMenu(int height,int preferredTop,int anchorHeight){
+  if(panel==null)return;FrameLayout.LayoutParams size=(FrameLayout.LayoutParams)panel.getLayoutParams();int gap=Math.round(12*getResources().getDisplayMetrics().density),topLimit=safeTop+gap;
+  panel.measure(MeasureSpec.makeMeasureSpec(size.width,MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));int natural=panel.getMeasuredHeight(),below=Math.max(0,height-preferredTop-gap),above=Math.max(0,preferredTop-anchorHeight-topLimit);
+  bottomOrigin=natural>below&&above>below;size.topMargin=Math.min(Math.max(topLimit,bottomOrigin?preferredTop-anchorHeight-natural:preferredTop),Math.max(topLimit,height-gap*4));size.height=Math.min(natural,Math.max(1,height-size.topMargin-gap));panel.setPivotY(bottomOrigin?size.height:0);
+ }
  void travel(float pixels){travelOverride=pixels;renderMotion(motion.value);}
  private float distance(){return menu?getResources().getDisplayMetrics().density*6:travelOverride>=0?travelOverride:Math.max(1,panel.getHeight());}
- private float baseTranslation(){return (menu?-1:1)*distance()*(1-motion.value);}
+ private float baseTranslation(){return (menu&&!bottomOrigin?-1:1)*distance()*(1-motion.value);}
  private void renderMotion(float progress){if(panel==null)return;panel.setTranslationY(baseTranslation()+imeOffset);panel.setAlpha(menu||travelOverride>=0?progress:1f);panel.setScaleX(menu?.96f+.04f*progress:1f);panel.setScaleY(menu?.96f+.04f*progress:1f);shade.setAlpha(progress);}
  void showMotion(){
   removePending();closing=false;
-  pending=()->{removePending();if(!closing&&isAttachedToWindow()){panel.setPivotX(panel.getWidth());panel.setPivotY(0);motion.to(1,menu?Motion.MENU_IN:Motion.SHEET_IN,false,()->{});}return true;};getViewTreeObserver().addOnPreDrawListener(pending);requestApplyInsets();
+  pending=()->{removePending();if(!closing&&isAttachedToWindow()){panel.setPivotX(panel.getWidth());panel.setPivotY(bottomOrigin?panel.getHeight():0);motion.to(1,menu?Motion.MENU_IN:Motion.SHEET_IN,false,()->{});}return true;};getViewTreeObserver().addOnPreDrawListener(pending);requestApplyInsets();
  }
  void hideMotion(boolean animate,Runnable end){closing=true;removePending();if(animate&&isAttachedToWindow())motion.to(0,menu?Motion.MENU_OUT:Motion.SHEET_OUT,false,end);else{motion.set(0);end.run();}}
  void cancelMotion(){removePending();motion.stop();recycleVelocity();}

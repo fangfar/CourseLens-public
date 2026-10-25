@@ -47,4 +47,16 @@ public class MotionSystemTest {
   int[] end={0};Motion.Progress progress=new Motion.Progress(0,p->{});progress.to(1,Motion.SHEET_IN,false,()->end[0]++);assertEquals(1,progress.value,0);assertFalse(progress.running());assertEquals(1,end[0]);
  }
 
+ @Test public void menuNearBottomOpensAboveItsAnchorWithoutClipping(){
+  try(ActivityController<Activity> controller=Robolectric.buildActivity(Activity.class).setup()){
+   Activity activity=controller.get();MotionOverlay overlay=new MotionOverlay(activity);View shade=new View(activity);TextView panel=new TextView(activity);panel.setMinHeight(180);overlay.addView(shade);FrameLayout.LayoutParams size=new FrameLayout.LayoutParams(184,-2,Gravity.TOP|Gravity.END);overlay.addView(panel,size);overlay.bindMotion(panel,shade,true,()->{});overlay.placeMenu(844,800,48);overlay.measure(View.MeasureSpec.makeMeasureSpec(390,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(844,View.MeasureSpec.EXACTLY));overlay.layout(0,0,390,844);assertTrue(panel.getBottom()<=752);assertTrue(panel.getTop()>=12);assertEquals(panel.getHeight(),panel.getPivotY(),0);
+  }
+ }
+
+ @Test public void predictiveBackDuringEntryCancelsFromTheCurrentFrame(){
+  try(ActivityController<Activity> controller=Robolectric.buildActivity(Activity.class).setup()){
+   Activity a=controller.get();FrameLayout stage=new FrameLayout(a);View previous=new View(a),next=new View(a);stage.addView(previous);stage.addView(next);a.setContentView(stage);layout(stage);PageMotion motion=new PageMotion();motion.start(stage,previous,next,false,24);((ViewTreeObserver.OnPreDrawListener)org.robolectric.util.ReflectionHelpers.getField(motion,"pending")).onPreDraw();Motion.Progress p=org.robolectric.util.ReflectionHelpers.getField(motion,"motion");seek(p,90);float start=p.value;motion.beginBack();motion.backProgress(0);assertEquals(start,p.value,0);motion.backProgress(.4f);assertEquals(start*.6f,p.value,.001f);assertTrue(previous.getAlpha()>0);motion.cancelBack();finish(p);assertFalse(motion.isRunning());assertEquals(0,next.getTranslationX(),0);assertEquals(1,next.getAlpha(),0);
+  }
+ }
+
 }

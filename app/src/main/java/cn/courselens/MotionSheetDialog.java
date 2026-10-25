@@ -10,7 +10,7 @@ final class MotionSheetDialog extends AlertDialog {
  private int panelHeight=-2;Runnable cancelRequest;
  MotionSheetDialog(Activity activity,View panel,boolean menu,int top){
   super(activity,R.style.SecondaryDialog);this.panel=panel;this.menu=menu;
-  overlay=new MotionOverlay(activity){@Override protected void onMeasure(int width,int height){FrameLayout.LayoutParams size=(FrameLayout.LayoutParams)panel.getLayoutParams();int available=MeasureSpec.getSize(height)-getPaddingBottom();if(!menu)size.height=panelHeight<0?-2:Math.min(panelHeight,Math.max(1,available-Math.max(dp(24),safeTop())));super.onMeasure(width,height);}};
+  overlay=new MotionOverlay(activity){@Override protected void onMeasure(int width,int height){FrameLayout.LayoutParams size=(FrameLayout.LayoutParams)panel.getLayoutParams();int available=MeasureSpec.getSize(height)-getPaddingBottom();if(menu)placeMenu(available,top,dp(48));else size.height=panelHeight<0?-2:Math.min(panelHeight,Math.max(1,available-Math.max(dp(24),safeTop())));super.onMeasure(width,height);}};
   View shade=new View(activity);shade.setBackgroundColor(menu?android.graphics.Color.TRANSPARENT:0x26000000);shade.setOnClickListener(v->cancel());overlay.addView(shade,new FrameLayout.LayoutParams(-1,-1));
   FrameLayout.LayoutParams size=new FrameLayout.LayoutParams(menu?Math.min(dp(184),activity.getResources().getDisplayMetrics().widthPixels-dp(24)):-1,-2,menu?Gravity.TOP|Gravity.END:Gravity.BOTTOM);if(menu){size.rightMargin=dp(16);size.topMargin=Math.max(dp(12),Math.min(top,activity.getResources().getDisplayMetrics().heightPixels-dp(80)));}overlay.addView(panel,size);panel.setClickable(true);overlay.bindMotion(panel,shade,menu,this::cancel);setView(overlay,0,0,0,0);getWindow().setWindowAnimations(0);
  }
