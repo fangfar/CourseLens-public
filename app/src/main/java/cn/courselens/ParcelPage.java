@@ -229,10 +229,13 @@ final class ParcelPage extends LinearLayout {
  private void readFeedback(String value){if(importError!=null&&currentSheet!=null&&currentSheet.isShowing()&&currentSheet.getWindow().getDecorView().findViewWithTag("parcel-import-feedback")==importError){importError.setText(value);importError.setVisibility(VISIBLE);}else message(value);}
  private void ocr(android.net.Uri uri){
   String epoch=ParcelNotificationListener.settings(activity).getString("epoch","");if(importInput==null||!importInput.isShown())importSheet();readFeedback("正在本机读取截图…");
-  ParcelOcr.read(activity.getApplicationContext(),uri,(value,error)->activity.runOnUiThread(()->{if(closed||!epoch.equals(ParcelNotificationListener.settings(activity).getString("epoch","")))return;if(error!=null)readFeedback(error);else{if(importInput!=null&&importInput.isShown())importInput.setText(value);recognize(value,"截图 OCR");}}));
+  ParcelOcr.read(activity.getApplicationContext(),uri,(value,found,error)->activity.runOnUiThread(()->{if(closed||!epoch.equals(ParcelNotificationListener.settings(activity).getString("epoch","")))return;if(error!=null)readFeedback(error);else{if(importInput!=null&&importInput.isShown())importInput.setText(value);ingestCandidates(found,"截图 OCR");}}));
  }
  private void recognize(String input,String source){
-  List<ParcelRules.Candidate> found=ParcelRules.extract(input);if(found.isEmpty()){readFeedback("未找到明确的取件码，可检查上方文字或手动添加");return;}
+  ingestCandidates(ParcelRules.extract(input),source);
+ }
+ private void ingestCandidates(List<ParcelRules.Candidate> found,String source){
+  if(found.isEmpty()){readFeedback("未找到明确的取件码，可检查上方文字或手动添加");return;}
   String epoch=ParcelNotificationListener.settings(activity).getString("epoch","");ParcelRepository.IO.execute(()->{int added=0;try{if(!epoch.equals(ParcelNotificationListener.settings(activity).getString("epoch","")))return;for(ParcelRules.Candidate c:found)if(new ParcelRepository(activity).ingest(ParcelNotificationListener.record(c,source,true)))added++;int count=added;activity.runOnUiThread(()->{if(closed)return;if(currentSheet!=null)currentSheet.dismiss();message(count==0?"识别结果已存在，未重复添加":"已读取 "+count+" 条，请展开记录核对后保存");load();});}catch(RuntimeException e){activity.runOnUiThread(()->{if(!closed)message("识别结果保存失败，请重试");});}});
  }
  private String trackingStateLabel(String state){switch(state){case "IN_TRANSIT":return "运输中";case "READY":return "到达取件点";case "DELIVERED":return "物流显示已签收";default:return "状态未知";}}
