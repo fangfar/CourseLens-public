@@ -1,8 +1,8 @@
 # 协作规则
 
-本仓库统一管理 CourseLens 源码、测试和发布。修改模块、执行设备测试或发布前，读取 `DEVELOPMENT.md` 对应章节。
+本仓库统一管理 Morrow 源码、测试和发布。修改模块、执行设备测试或发布前，读取 `DEVELOPMENT.md` 对应章节。
 
-- 正式基线为公开 `fangfar/CourseLens-public` 的最新 `origin/main`；独立修改使用 `codex/` 分支和 PR。
+- 正式基线为公开 `fangfar/Morrow` 的最新 `origin/main`；独立修改使用 `codex/` 分支和 PR。
 - 日常修复、推送和打包默认不含预研功能；学习通基础作业功能在正式开发线维护；未开放的平台对接、新界面和未来社交仍在独立 worktree 的 `codex/task-page-navigation` 分支开发。操作前读取 `DEVELOPMENT.md` 的“正式与预研隔离”；未经明确授权不推送预研分支、不将其合入正式版本。
 - 修改及推送前执行 `git status --short --branch`、`git fetch origin`、`git branch -vv`，核对开放 PR 和基线提交；同步失败如实报告。
 - 保留现有功能、包名、数据格式、正式签名及用户未提交修改。分叉先比较；无分叉才使用 `pull --ff-only`，不用强制覆盖、`reset --hard` 或 `clean` 处理差异。

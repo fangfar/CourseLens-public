@@ -16,8 +16,8 @@
     "promptTitle": "",
     "promptMessage": "",
     "changelog": "新增学校课表刷新入口，完善任务管理与自动刷新设置。\n修复任务刷新期间操作不可用的问题，优化返回当前周入口及界面图标。\n完善启动检查更新和更新设置。",
-    "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.7.4/CourseLens-2.7.4-vc16.apk",
+    "apkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.4/CourseLens-2.7.4-vc16.apk",
     "diskUrl": "https://pan.baidu.com/s/5Q7q-93RIXFczWfL1i3cvQg"
   },
-  "repositoryUrl": "https://github.com/fangfar/CourseLens-public"
+  "repositoryUrl": "https://github.com/fangfar/Morrow"
 }

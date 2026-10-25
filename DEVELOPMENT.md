@@ -166,7 +166,7 @@ COURSELENS_KEY_PASSWORD
 
 当前源码仅请求 `https://morrow.xvyan.cn/remote/config.json`，不再尝试 GitHub Pages 或 Raw 备用接口。连接、HTTP 或配置校验失败时保留有效缓存，并沿用检查失败提示；请求仍不跟随 HTTP 重定向。
 
-已发布的旧客户端地址固化在 APK 内：2.7.3 起首选 `https://courselens.xvyan.cn/remote/config.json`，2.7.2 首选 `https://update.xvyan.cn/remote/config.json`，并保留其原有备用请求行为，无法由此次源码修改替换。保持 `schemaVersion: 1` 和 `remote/config.json`；线上配置的 `repositoryUrl` 暂保留 `https://github.com/fangfar/CourseLens-public`，兼容旧客户端的精确仓库校验。仓库已更名为 `fangfar/Morrow`，旧域名服务和旧版升级路径需在发布前单独核验。
+仓库入口及配置中的 `repositoryUrl` 统一为 `https://github.com/fangfar/Morrow`，APK 下载链接使用新仓库路径，已发布资产的文件名保持实际名称。保持 `schemaVersion: 1` 和 `remote/config.json`。新版 App 的精确仓库校验与新配置必须配套部署；旧缓存中的仓库地址不再接受。已发布旧客户端的接口和仓库校验固化在 APK 内，无法由此次源码修改替换；旧版升级路径需在发布前单独核验。
 
 公告 ID 唯一；修改同一 ID 不会重新提醒，需要新公告时用新 ID。配置最多 64 KiB / 20 条公告，链接为 HTTPS，版本以实际 versionCode 判断；检查失败保留有效缓存，不冒充“已是最新版”。线上配置校验与 App 的 `remoteOnly` 专项分别验证。
 

@@ -9,7 +9,7 @@ import org.json.*;
 
 final class RemoteConfig {
  static final int MAX_BYTES=64*1024;
- static final String REPOSITORY="https://github.com/fangfar/CourseLens-public";
+ static final String REPOSITORY="https://github.com/fangfar/Morrow";
  final List<Announcement> announcements;final long versionCode;final boolean forcePrompt;final String versionName,changelog,promptTitle,promptMessage,apkUrl,diskUrl,repositoryUrl;
  static final class Announcement {
   final String id,title,body,publishedAt;final boolean enabled;
