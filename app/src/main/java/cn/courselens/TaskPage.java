@@ -145,15 +145,15 @@ final class TaskPage extends LinearLayout {
   return measuring;
  }
  private void addDeadlineHero(LinearLayout list){
-  java.time.LocalDateTime now=java.time.LocalDateTime.now();ChaoxingClient.Work nearest=null;java.time.LocalDateTime earliest=null;
-  for(ChaoxingClient.Work work:allTasks()){if(work.completed()||!work.local()&&!ChaoxingCache.visible(snapshot,work))continue;java.time.LocalDateTime due=TaskDeadline.parse(work.deadline);if(due!=null&&(earliest==null||due.isBefore(earliest))){earliest=due;nearest=work;}}
-  if(nearest==null)return;ChaoxingClient.Work work=nearest;
+  java.time.LocalDateTime now=java.time.LocalDateTime.now();ChaoxingClient.Work nearest=null;String firstDeadline=null;
+  for(ChaoxingClient.Work work:allTasks()){if(work.completed()||!work.local()&&!ChaoxingCache.visible(snapshot,work))continue;String deadline=TaskDeadline.display(work.deadline);if(!deadline.equals("截止时间未知")&&!deadline.equals("未提供截止时间")&&(firstDeadline==null||deadline.compareTo(firstDeadline)<0)){firstDeadline=deadline;nearest=work;}}
+  if(nearest==null)return;ChaoxingClient.Work work=nearest;java.time.LocalDateTime earliest=TaskDeadline.parse(work.deadline);
   LinearLayout hero=new LinearLayout(getContext());hero.setOrientation(VERTICAL);hero.setPadding(ui.dp(18),ui.dp(18),ui.dp(18),ui.dp(18));hero.setBackground(ui.bg(ui.CARD,24));hero.setTag("task-deadline-hero");
   TextView label=ui.text("最近截止 · "+work.course,12,ui.MUTED);hero.addView(label);
   TextView title=ui.text(work.title,22,ui.INK);title.setTypeface(Typeface.create("serif",Typeface.BOLD));title.setPadding(0,ui.dp(12),0,ui.dp(8));hero.addView(title);
-  hero.addView(ui.text(work.deadline+" 截止",13,ui.MUTED));TextView remaining=ui.text(TaskDeadline.countdown(earliest,now),30,ui.INK);remaining.setPadding(0,ui.dp(16),0,ui.dp(12));hero.addView(remaining);
+  hero.addView(ui.text(TaskDeadline.display(work.deadline)+" 截止",13,ui.MUTED));if(earliest!=null){TextView remaining=ui.text(TaskDeadline.countdown(earliest,now),30,ui.INK);remaining.setPadding(0,ui.dp(16),0,ui.dp(12));hero.addView(remaining);
   ProgressBar bar=new ProgressBar(getContext(),null,android.R.attr.progressBarStyleHorizontal);bar.setMax(100);long left=java.time.Duration.between(now,earliest).getSeconds();bar.setProgress((int)Math.max(0,Math.min(100,100-left*100/(7*86400))));bar.setProgressTintList(android.content.res.ColorStateList.valueOf(ui.INK));bar.setContentDescription("七天窗口内的时间流逝进度");hero.addView(bar,new LayoutParams(-1,ui.dp(6)));
-  TextView note=ui.text("按 7 天窗口计 · 时间流逝进度",11,ui.MUTED);note.setPadding(0,ui.dp(8),0,0);hero.addView(note);hero.setOnClickListener(v->taskActions(work));ui.focusOutline(hero);LayoutParams size=new LayoutParams(-1,-2);size.topMargin=ui.dp(16);size.bottomMargin=ui.dp(4);list.addView(hero,size);
+  TextView note=ui.text("按 7 天窗口计 · 时间流逝进度",11,ui.MUTED);note.setPadding(0,ui.dp(8),0,0);hero.addView(note);}hero.setOnClickListener(v->taskActions(work));ui.focusOutline(hero);LayoutParams size=new LayoutParams(-1,-2);size.topMargin=ui.dp(16);size.bottomMargin=ui.dp(4);list.addView(hero,size);
  }
  private void restoreCompleted(ChaoxingClient.Work work){
   if(busy||closed)return;saveChange(next->{ChaoxingClient.Work current=ChaoxingCache.find(next.items,work);if(current==null)throw new IllegalStateException("Task changed");ChaoxingClient.Work changed=new ChaoxingClient.Work(current.course,current.title,"未完成",current.url);changed.courseKey=current.courseKey;changed.workKey=current.workKey;changed.deadline=current.deadline;changed.deadlineEdited=current.deadlineEdited;changed.originalTitle=current.originalTitle.isEmpty()?current.title:current.originalTitle;changed.edited=!current.local();next.items.set(next.items.indexOf(current),changed);},"任务已恢复为待办。",work.local());
