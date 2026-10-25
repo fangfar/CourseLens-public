@@ -36,7 +36,7 @@ public class MainActivity extends Activity {
  private FrameLayout windowContent;private AppNavigation bottomNavigation;private SideNavigation sideNavigation;
  private LinearLayout settingsPage;private int settingsScrollY;private boolean settingsFromParcel,settingsFromParcelActivity;
  private ScrollView timetableScroll;private int timetableScrollY;
- private float backPageX,backPageAlpha=1f;
+ private float backPageX;
  private final PageMotion pageMotion=new PageMotion();private Object systemBack;private boolean backRegistered;
  private ViewPager pager;private TextView weekLabel;private FrameLayout daysBar; private LinearLayout root;private FrameLayout stage;private boolean returningPage,skipPageMotion;private int week=6;private String data="",notes="",term="2026-08-31";
  private SchoolClient school=new SchoolClient();private final ExecutorService worker=Executors.newSingleThreadExecutor();private boolean busy=false,showingDetail=false;private int screen=0;private Runnable pageBack;private CourseChoiceSheet choiceSheet;private NavigationOverlay navigationOverlay,exitingOverlay;
@@ -84,7 +84,7 @@ public class MainActivity extends Activity {
   LinearLayout incoming=root;stage.addView(incoming,new FrameLayout.LayoutParams(-1,-1));
   if(incoming==parcelPage)parcelPage.resume();
   if(!animate)return;
-  pageMotion.start(stage,previous,incoming,backwards,dp(24));
+  pageMotion.start(stage,previous,incoming,backwards,stage.getWidth());
  }
  private void backPage(){Runnable back=pageBack;if(back==null)return;returningPage=true;try{back.run();}finally{returningPage=false;}}
  private void updateSystemBack(){
@@ -95,9 +95,9 @@ public class MainActivity extends Activity {
   else {MotionBack.unregister(getWindow(),systemBack);systemBack=null;}
   backRegistered=needed;
  }
- private void startBackMotion(){if(exitingOverlay!=null&&exitingOverlay.isAttachedToWindow())return;if(pageMotion.isRunning())pageMotion.beginBack();else if(navigationOverlay!=null)navigationOverlay.beginBack();else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.beginBack();else{root.animate().cancel();backPageX=root.getTranslationX();backPageAlpha=root.getAlpha();}}
- private void progressBackMotion(float progress){if(exitingOverlay!=null&&exitingOverlay.isAttachedToWindow())return;if(pageMotion.isRunning())pageMotion.backProgress(progress);else if(navigationOverlay!=null)navigationOverlay.backProgress(progress);else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.backProgress(progress);else if(pageBack!=null&&!busy){root.setTranslationX(backPageX+dp(24)*progress);root.setAlpha(backPageAlpha*(1-.08f*progress));}}
- private void cancelBackMotion(){if(exitingOverlay!=null&&exitingOverlay.isAttachedToWindow())return;if(pageMotion.isRunning())pageMotion.cancelBack();else if(navigationOverlay!=null)navigationOverlay.cancelBack();else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.cancelBack();else if(root.getTranslationX()!=0||root.getAlpha()!=1){root.animate().translationX(0).alpha(1).setDuration(Motion.PAGE_OUT).setInterpolator(Motion.ENTER).start();}}
+ private void startBackMotion(){if(pageMotion.isReturning()||exitingOverlay!=null&&exitingOverlay.isAttachedToWindow())return;if(pageMotion.isRunning())pageMotion.beginBack();else if(navigationOverlay!=null)navigationOverlay.beginBack();else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.beginBack();else{root.animate().cancel();backPageX=root.getTranslationX();}}
+ private void progressBackMotion(float progress){if(pageMotion.isReturning()||exitingOverlay!=null&&exitingOverlay.isAttachedToWindow())return;if(pageMotion.isRunning())pageMotion.backProgress(progress);else if(navigationOverlay!=null)navigationOverlay.backProgress(progress);else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.backProgress(progress);else if(pageBack!=null&&!busy){root.setTranslationX(backPageX+dp(24)*progress);root.setAlpha(1);}}
+ private void cancelBackMotion(){if(pageMotion.isReturning()||exitingOverlay!=null&&exitingOverlay.isAttachedToWindow())return;if(pageMotion.isRunning())pageMotion.cancelBack();else if(navigationOverlay!=null)navigationOverlay.cancelBack();else if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE)choiceSheet.cancelBack();else if(root.getTranslationX()!=0||root.getAlpha()!=1){root.animate().translationX(0).alpha(1).setDuration(Motion.PAGE_OUT).setInterpolator(Motion.ENTER).start();}}
  private void focusOutline(View view){secondaryUi.focusOutline(view);}
 
  private void selectPrimaryPage(int selected){
@@ -810,7 +810,7 @@ public class MainActivity extends Activity {
    home();toast("课程安排已更新，请查看最新课表");
   }catch(RuntimeException e){home();toast("请检查课表及开学日期设置");}
  }
-  @Override public void onBackPressed(){if(sideNavigation!=null&&sideNavigation.close(true))return;if(pageMotion.isRunning()){pageMotion.reverse(()->{skipPageMotion=true;try{onBackPressed();}finally{skipPageMotion=false;}});return;}if(exitingOverlay!=null&&exitingOverlay.isAttachedToWindow())return;if(navigationOverlay!=null){navigationOverlay.requestClose();return;}if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE){choiceSheet.close(true);return;}if(busy){toast("正在同步，请稍候");return;}if(pageBack!=null){cancelBackMotion();backPage();return;}if(tasksVisible||parcelsVisible){home();return;}super.onBackPressed();}
+  @Override public void onBackPressed(){if(sideNavigation!=null&&sideNavigation.close(true))return;if(pageMotion.isRunning()){if(pageMotion.isReturning())return;pageMotion.reverse(()->{skipPageMotion=true;try{onBackPressed();}finally{skipPageMotion=false;}});return;}if(exitingOverlay!=null&&exitingOverlay.isAttachedToWindow())return;if(navigationOverlay!=null){navigationOverlay.requestClose();return;}if(choiceSheet!=null&&choiceSheet.getVisibility()==View.VISIBLE){choiceSheet.close(true);return;}if(busy){toast("正在同步，请稍候");return;}if(pageBack!=null){cancelBackMotion();backPage();return;}if(tasksVisible||parcelsVisible){home();return;}super.onBackPressed();}
  @Override protected void onDestroy(){if(sideNavigation!=null)sideNavigation.close(false);if(taskPage!=null)taskPage.close();if(parcelPage!=null)parcelPage.close();remoteResumed=false;if(remote!=null)remote.unlisten(remoteListener);if(remoteDialog!=null)remoteDialog.dismiss();remoteHandler.removeCallbacksAndMessages(null);if(getWindow().getDecorView().getViewTreeObserver().isAlive())getWindow().getDecorView().getViewTreeObserver().removeOnScrollChangedListener(remoteScroll);if(unsavedDialog!=null)unsavedDialog.dismiss();if(widgetDialog!=null)widgetDialog.dismiss();screen++;pageMotion.cancel();while(navigationOverlay!=null)navigationOverlay.close(false);if(Build.VERSION.SDK_INT>=33&&backRegistered)MotionBack.unregister(getWindow(),systemBack);if(stage!=null)for(int i=0;i<stage.getChildCount();i++)stage.getChildAt(i).animate().cancel();worker.shutdownNow();homePage=null;if(password!=null)password.getText().clear();super.onDestroy();}
  // Retain one Activity-owned home only; data/term/notes/choices changes replace it.
  private class HomePage {

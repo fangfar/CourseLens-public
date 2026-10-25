@@ -53,6 +53,22 @@ public class MotionSystemTest {
    child.close(false);assertEquals(1,parent.panel.getAlpha(),0);assertSame(parent,org.robolectric.util.ReflectionHelpers.getField(a,"navigationOverlay"));parent.close(false);
   }
  }
+ @Test public void settingsPagesStayOpaqueAndReturnAboveTheirParent(){
+  try(ActivityController<Activity> controller=Robolectric.buildActivity(Activity.class).setup()){
+   for(boolean backwards:new boolean[]{false,true}){
+    Activity a=controller.get();FrameLayout stage=new FrameLayout(a);View previous=new View(a),next=new View(a);stage.addView(previous);stage.addView(next);a.setContentView(stage);layout(stage);PageMotion motion=new PageMotion();motion.start(stage,previous,next,backwards,390);motion.beginBack();Motion.Progress p=org.robolectric.util.ReflectionHelpers.getField(motion,"motion");
+    assertSame(backwards?previous:next,stage.getChildAt(1));assertEquals(backwards,motion.isReturning());
+    for(float progress:new float[]{0,.25f,.5f,.75f,1}){p.set(progress);assertEquals(1,previous.getAlpha(),0);assertEquals(1,next.getAlpha(),0);if(backwards){assertEquals(390*progress,previous.getTranslationX(),.001f);assertEquals(-390*.08f*(1-progress),next.getTranslationX(),.001f);}else assertEquals(390*(1-progress),next.getTranslationX(),.001f);}
+    motion.cancelBack();finish(p);assertEquals(1,stage.getChildCount());assertSame(next,stage.getChildAt(0));assertEquals(0,next.getTranslationX(),0);assertFalse(motion.isReturning());
+   }
+  }
+ }
+ @Test public void anotherBackGestureCannotFreezeAReturningSettingsPage(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();FrameLayout stage=new FrameLayout(a);View previous=new View(a),next=new View(a);stage.addView(previous);stage.addView(next);layout(stage);PageMotion motion=org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion");motion.start(stage,previous,next,true,390);((ViewTreeObserver.OnPreDrawListener)org.robolectric.util.ReflectionHelpers.getField(motion,"pending")).onPreDraw();Motion.Progress p=org.robolectric.util.ReflectionHelpers.getField(motion,"motion");seek(p,70);float progress=p.value;
+   org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"startBackMotion");org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"progressBackMotion",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,.5f));org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"cancelBackMotion");a.onBackPressed();assertTrue(p.running());assertEquals(progress,p.value,0);finish(p);assertFalse(motion.isRunning());
+  }
+ }
  @Test public void disabledSystemAnimationsCommitOnceWithoutAnAnimator(){
   org.robolectric.util.ReflectionHelpers.callStaticMethod(android.animation.ValueAnimator.class,"setDurationScale",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,0f));
   int[] end={0};Motion.Progress progress=new Motion.Progress(0,p->{});progress.to(1,Motion.SHEET_IN,false,()->end[0]++);assertEquals(1,progress.value,0);assertFalse(progress.running());assertEquals(1,end[0]);
@@ -72,7 +88,7 @@ public class MotionSystemTest {
 
  @Test public void restartingAStablePageBackGestureKeepsItsCurrentVisualOffset(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
-   MainActivity a=controller.get();org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"menu");((PageMotion)org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion")).cancel();View root=org.robolectric.util.ReflectionHelpers.getField(a,"root");root.setTranslationX(7);root.setAlpha(.95f);org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"startBackMotion");org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"progressBackMotion",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,0f));assertEquals(7,root.getTranslationX(),0);assertEquals(.95f,root.getAlpha(),0);
+   MainActivity a=controller.get();org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"menu");((PageMotion)org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion")).cancel();View root=org.robolectric.util.ReflectionHelpers.getField(a,"root");root.setTranslationX(7);root.setAlpha(1);org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"startBackMotion");org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"progressBackMotion",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,0f));assertEquals(7,root.getTranslationX(),0);assertEquals(1,root.getAlpha(),0);
   }
  }
 
