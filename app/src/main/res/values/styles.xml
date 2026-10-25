@@ -33,7 +33,9 @@
         <item name="android:textColorPrimary">@color/app_ink</item>
         <item name="android:textColorSecondary">@color/app_muted</item>
         <item name="android:windowBackground">@drawable/dialog_surface</item>
-        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.16</item>
+        <item name="android:windowAnimationStyle">@style/CenterPopupMotion</item>
         <item name="android:windowElevation">0dp</item>
     </style>
     <style name="TaskTimePickerTheme" parent="SecondaryDialog">

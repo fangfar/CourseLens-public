@@ -1,48 +1,25 @@
 package cn.courselens;
 
-import android.animation.*;
 import android.view.*;
-import android.view.animation.PathInterpolator;
 import android.widget.FrameLayout;
 
-// One owner for pending layout, animation, input blocking and cancellation cleanup.
+/** The outgoing page stays visible until its successor settles; reverse starts at the current frame. */
 final class PageMotion {
- private static final PathInterpolator EASING=new PathInterpolator(.4f,0f,.2f,1f);
- private FrameLayout stage;
- private View outgoing,incoming;
- private ViewTreeObserver.OnPreDrawListener pending;
- private ValueAnimator animator;
+ private FrameLayout stage;private View outgoing,incoming;private ViewTreeObserver.OnPreDrawListener pending;
+ private int oldAccessibility,newAccessibility;private float direction,distance,oldX,oldAlpha;private boolean reversing;
+ private final Motion.Progress motion=new Motion.Progress(0,this::render);
  boolean isRunning(){return incoming!=null;}
  void start(FrameLayout container,View previous,View next,boolean backwards,float distance){
-  cancel();stage=container;outgoing=previous;incoming=next;
-  stage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
-  previous.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
-  float direction=backwards?-1f:1f;
-  next.setAlpha(0f);next.setTranslationX(direction*distance);
-  pending=()->{
-   next.getViewTreeObserver().removeOnPreDrawListener(pending);pending=null;
-   if(!ValueAnimator.areAnimatorsEnabled()){finish();return true;}
-   animator=ValueAnimator.ofFloat(0f,1f);animator.setDuration(280);animator.setInterpolator(EASING);
-   previous.setLayerType(View.LAYER_TYPE_HARDWARE,null);next.setLayerType(View.LAYER_TYPE_HARDWARE,null);
-   animator.addUpdateListener(value->{
-    float progress=(float)value.getAnimatedValue();
-    previous.setAlpha(Math.max(0f,1f-progress/.55f));next.setAlpha(Math.max(0f,(progress-.18f)/.82f));
-    previous.setTranslationX(-direction*distance*progress);next.setTranslationX(direction*distance*(1f-progress));
-   });
-   animator.addListener(new AnimatorListenerAdapter(){@Override public void onAnimationEnd(Animator animation){finish();}});
-   animator.start();return true;
-  };
-  next.getViewTreeObserver().addOnPreDrawListener(pending);
+  cancel();stage=container;outgoing=previous;incoming=next;this.distance=distance;direction=backwards?-1:1;oldX=previous.getTranslationX();oldAlpha=previous.getAlpha();oldAccessibility=previous.getImportantForAccessibility();newAccessibility=next.getImportantForAccessibility();
+  stage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);previous.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);motion.set(0);
+  pending=()->{removePending();if(incoming==null)return true;motion.to(1,backwards?Motion.PAGE_OUT:Motion.PAGE_IN,false,()->finish(null));return true;};next.getViewTreeObserver().addOnPreDrawListener(pending);
  }
- void cancel(){
-  if(pending!=null&&incoming!=null){if(incoming.getViewTreeObserver().isAlive())incoming.getViewTreeObserver().removeOnPreDrawListener(pending);pending=null;}
-  if(animator!=null)animator.cancel();
-  finish();
- }
- private void finish(){
-  if(incoming==null)return;
-  for(View view:new View[]{outgoing,incoming}){view.setAlpha(1f);view.setTranslationX(0f);view.setScaleX(1f);view.setScaleY(1f);view.setLayerType(View.LAYER_TYPE_NONE,null);}
-  stage.removeView(outgoing);stage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
-  outgoing=null;incoming=null;animator=null;
+ private void render(float p){if(incoming==null)return;outgoing.setAlpha(oldAlpha*(1-.12f*p));outgoing.setTranslationX(oldX-direction*distance*.25f*p);incoming.setAlpha(p);incoming.setTranslationX(direction*distance*(1-p));}
+ void reverse(Runnable end){if(incoming==null){end.run();return;}if(reversing)return;reversing=true;removePending();motion.to(0,Motion.PAGE_OUT,false,()->finish(end));}
+ void cancel(){removePending();motion.stop();finish(null);}
+ private void removePending(){if(pending!=null&&incoming!=null){if(incoming.getViewTreeObserver().isAlive())incoming.getViewTreeObserver().removeOnPreDrawListener(pending);pending=null;}}
+ private void finish(Runnable end){
+  if(incoming==null)return;View previous=outgoing,next=incoming;for(View view:new View[]{previous,next}){view.setAlpha(1);view.setTranslationX(0);view.setScaleX(1);view.setScaleY(1);}
+  previous.setImportantForAccessibility(oldAccessibility);next.setImportantForAccessibility(newAccessibility);stage.removeView(previous);stage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);outgoing=null;incoming=null;reversing=false;if(end!=null)end.run();
  }
 }
