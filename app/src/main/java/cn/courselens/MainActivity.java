@@ -128,7 +128,7 @@ public class MainActivity extends Activity {
   if(width>0&&height>0){taskPage.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));taskPage.layout(0,0,width,height);}
  }
  boolean taskRefreshActive(){return remoteResumed&&navigationOverlay==null&&(sideNavigation==null||!sideNavigation.isOpen());}
- private void tasks(){tasksVisible=true;parcelsVisible=false;pageBackwards=false;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,taskPage);root.setBackgroundColor(SURFACE);}
+ private void tasks(){tasksVisible=true;parcelsVisible=false;pageBackwards=returningPage;if(taskPage==null)taskPage=new TaskPage(this,taskState);taskPage.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);base(false,taskPage);root.setBackgroundColor(SURFACE);}
  private void parcels(){
   tasksVisible=false;parcelsVisible=true;
   if(parcelPage==null)parcelPage=new ParcelPage(this,parcelState,this::openSideMenu);

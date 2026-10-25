@@ -69,6 +69,16 @@ public class MotionSystemTest {
    org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"startBackMotion");org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"progressBackMotion",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,.5f));org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"cancelBackMotion");a.onBackPressed();assertTrue(p.running());assertEquals(progress,p.value,0);finish(p);assertFalse(motion.isRunning());
   }
  }
+ @Test public void settingsReturnsToEveryPrimaryPageInTheBackDirection(){
+  for(String destination:new String[]{"home","tasks","parcels"}){
+   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()){
+    MainActivity a=controller.get();org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,destination);PageMotion motion=org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion");motion.cancel();layout(a.findViewById(android.R.id.content));View parent=org.robolectric.util.ReflectionHelpers.getField(a,"root");
+    a.openSideMenu();SideNavigation drawer=org.robolectric.util.ReflectionHelpers.getField(a,"sideNavigation");Motion.Progress drawerMotion=org.robolectric.util.ReflectionHelpers.getField(drawer,"motion");drawerMotion.set(1);drawer.findViewWithTag("drawer-settings").performClick();finish(drawerMotion);layout(a.findViewById(android.R.id.content));View settings=org.robolectric.util.ReflectionHelpers.getField(a,"root");a.onBackPressed();
+    assertTrue(destination,motion.isReturning());assertSame(parent,org.robolectric.util.ReflectionHelpers.getField(a,"root"));assertTrue(destination,parent.getTranslationX()<0);assertSame(settings,((FrameLayout)parent.getParent()).getChildAt(1));
+    motion.cancel();assertEquals(0,parent.getTranslationX(),0);assertNull(settings.getParent());
+   }
+  }
+ }
  @Test public void drawerSettingsUsesOneMotionAndKeepsTheSelectedPageOnRepeatedBack(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity a=controller.get();layout(a.findViewById(android.R.id.content));a.openSideMenu();SideNavigation drawer=org.robolectric.util.ReflectionHelpers.getField(a,"sideNavigation");Motion.Progress p=org.robolectric.util.ReflectionHelpers.getField(drawer,"motion");p.set(1);View foreground=org.robolectric.util.ReflectionHelpers.getField(drawer,"foreground");float opened=foreground.getTranslationX();assertTrue(opened>0);
