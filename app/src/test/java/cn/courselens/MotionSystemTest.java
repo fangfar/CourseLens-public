@@ -42,6 +42,17 @@ public class MotionSystemTest {
    Activity activity=controller.get();FrameLayout stage=new FrameLayout(activity);View old=new View(activity),next=new View(activity);stage.addView(old);stage.addView(next);activity.setContentView(stage);layout(stage);PageMotion motion=new PageMotion();motion.start(stage,old,next,false,24);ViewTreeObserver.OnPreDrawListener pending=org.robolectric.util.ReflectionHelpers.getField(motion,"pending");assertNotNull(pending);pending.onPreDraw();Motion.Progress p=org.robolectric.util.ReflectionHelpers.getField(motion,"motion");seek(p,90);float x=next.getTranslationX();int[] end={0};motion.reverse(()->end[0]++);assertEquals(x,next.getTranslationX(),0);motion.reverse(()->end[0]+=10);finish(p);assertFalse(motion.isRunning());assertEquals(1,end[0]);assertEquals(1,stage.getChildCount());assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO,stage.getImportantForAccessibility());
   }
  }
+ @Test public void nestedSheetRestoresItsParentContinuouslyAndCancellationKeepsTheChild(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();MainActivity.NavigationOverlay parent=a.new NavigationOverlay(false,"父面板");layout(parent);parent.motion.set(1);
+   MainActivity.NavigationOverlay child=a.new NavigationOverlay(false,"子面板");layout(child);child.motion.set(1);
+   assertEquals(View.VISIBLE,parent.getVisibility());assertEquals(0,parent.panel.getAlpha(),0);
+   child.beginBack();child.backProgress(.4f);assertEquals(.4f,parent.panel.getAlpha(),.001f);assertEquals(1,parent.shade.getAlpha(),0);assertEquals(0,child.shade.getAlpha(),0);
+   float position=child.panel.getTranslationY();child.beginBack();child.backProgress(0);assertEquals(position,child.panel.getTranslationY(),0);
+   child.cancelBack();finish(child.motion);assertEquals(0,parent.panel.getAlpha(),0);assertTrue(child.open);
+   child.close(false);assertEquals(1,parent.panel.getAlpha(),0);assertSame(parent,org.robolectric.util.ReflectionHelpers.getField(a,"navigationOverlay"));parent.close(false);
+  }
+ }
  @Test public void disabledSystemAnimationsCommitOnceWithoutAnAnimator(){
   org.robolectric.util.ReflectionHelpers.callStaticMethod(android.animation.ValueAnimator.class,"setDurationScale",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,0f));
   int[] end={0};Motion.Progress progress=new Motion.Progress(0,p->{});progress.to(1,Motion.SHEET_IN,false,()->end[0]++);assertEquals(1,progress.value,0);assertFalse(progress.running());assertEquals(1,end[0]);
