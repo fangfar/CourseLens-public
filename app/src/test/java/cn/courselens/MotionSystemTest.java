@@ -73,7 +73,7 @@ public class MotionSystemTest {
   for(String destination:new String[]{"home","tasks","parcels"}){
    try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()){
     MainActivity a=controller.get();org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,destination);PageMotion motion=org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion");motion.cancel();layout(a.findViewById(android.R.id.content));View parent=org.robolectric.util.ReflectionHelpers.getField(a,"root");
-    org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"menu");motion.cancel();layout(a.findViewById(android.R.id.content));View settings=org.robolectric.util.ReflectionHelpers.getField(a,"root");a.onBackPressed();
+    a.openSideMenu();SideNavigation drawer=org.robolectric.util.ReflectionHelpers.getField(a,"sideNavigation");Motion.Progress drawerMotion=org.robolectric.util.ReflectionHelpers.getField(drawer,"motion");drawerMotion.set(1);drawer.findViewWithTag("drawer-settings").performClick();finish(drawerMotion);layout(a.findViewById(android.R.id.content));View settings=org.robolectric.util.ReflectionHelpers.getField(a,"root");a.onBackPressed();
     assertTrue(destination,motion.isReturning());assertSame(parent,org.robolectric.util.ReflectionHelpers.getField(a,"root"));assertTrue(destination,parent.getTranslationX()<0);assertSame(settings,((FrameLayout)parent.getParent()).getChildAt(1));
     motion.cancel();assertEquals(0,parent.getTranslationX(),0);assertNull(settings.getParent());
    }
