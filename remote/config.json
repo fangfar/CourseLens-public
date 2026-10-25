@@ -10,14 +10,14 @@
     }
   ],
   "android": {
-    "versionCode": 16,
-    "versionName": "2.7.4",
+    "versionCode": 17,
+    "versionName": "2.7.5",
     "forcePrompt": false,
     "promptTitle": "",
     "promptMessage": "",
-    "changelog": "新增学校课表刷新入口，完善任务管理与自动刷新设置。\n修复任务刷新期间操作不可用的问题，优化返回当前周入口及界面图标。\n完善启动检查更新和更新设置。",
-    "apkUrl": "https://github.com/fangfar/CourseLens-public/releases/download/v2.7.4/CourseLens-2.7.4-vc16.apk",
+    "changelog": "软件更名为 Morrow，更新接口与仓库地址切换为新地址。\n完善任务课程分组、截止时间卡片、编辑与恢复功能。\n新增快递中心，支持手动记录、分享/截图识别、通知识别及桌面小组件；优化外观、设置与返回交互。",
+    "apkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.5/Morrow-2.7.5-vc17.apk",
     "diskUrl": "https://pan.baidu.com/s/5Q7q-93RIXFczWfL1i3cvQg"
   },
-  "repositoryUrl": "https://github.com/fangfar/CourseLens-public"
+  "repositoryUrl": "https://github.com/fangfar/Morrow"
 }
