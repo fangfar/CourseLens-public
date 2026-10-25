@@ -67,7 +67,7 @@ public class MainActivity extends Activity {
   while(navigationOverlay!=null)navigationOverlay.close(true);
   if(root==settingsPage&&settingsPage!=null)settingsScrollY=((ScrollView)settingsPage.getChildAt(1)).getScrollY();
   if(timetableScroll!=null){timetableScrollY=timetableScroll.getScrollY();timetableScroll=null;}
-  if(choiceSheet!=null){choiceSheet.close(false);choiceSheet=null;}
+  if(choiceSheet!=null){choiceSheet.close(false);if(choiceSheet.getParent() instanceof ViewGroup)((ViewGroup)choiceSheet.getParent()).removeView(choiceSheet);choiceSheet=null;}
   LinearLayout previous=root;boolean backwards=secondary?returningPage:pageBackwards;
   pageBack=null;updateSystemBack();showingDetail=false;screen++;pager=null;
   if(previous==parcelPage&&retained!=parcelPage)parcelPage.pause();
@@ -579,7 +579,7 @@ public class MainActivity extends Activity {
     ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(root.getWindowToken(),0);home();toast(cancel?"本次课程已停课":"本次课程已调课");
    }catch(Exception e){error.setText("未保存："+e.getMessage());}
   });submit.setTag("save-adjustment");if(cancel){body.removeView(submit);LinearLayout.LayoutParams footer=new LinearLayout.LayoutParams(-2,-2);footer.gravity=Gravity.CENTER_HORIZONTAL;footer.setMargins(dp(20),dp(8),dp(20),dp(16));root.addView(submit,footer);}else saveHeader(body,submit);
-  if(!cancel){choiceSheet=new CourseChoiceSheet();((FrameLayout)root.getParent()).addView(choiceSheet,new FrameLayout.LayoutParams(-1,-1));}
+  if(!cancel){choiceSheet=new CourseChoiceSheet();windowContent.addView(choiceSheet,new FrameLayout.LayoutParams(-1,-1));}
  }
  private void adjustmentManager(){
   LinearLayout body=secondary("课程调整","调整仅保存在本机。恢复后按原课表显示；原课程或开学日期变化的记录不生效。",this::timetableSettings);List<CourseAdjustment> rows;
@@ -640,7 +640,7 @@ public class MainActivity extends Activity {
    bindMotion(panel,shade,false,()->close(true));
   }
   @Override protected void onMeasure(int widthSpec,int heightSpec){
-   FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)panel.getLayoutParams();lp.width=Math.max(1,MeasureSpec.getSize(widthSpec));lp.height=Math.max(1,MeasureSpec.getSize(heightSpec)/2);super.onMeasure(widthSpec,heightSpec);
+   FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)panel.getLayoutParams();lp.width=Math.max(1,MeasureSpec.getSize(widthSpec));lp.height=Math.max(1,(MeasureSpec.getSize(heightSpec)-getPaddingBottom())/2);super.onMeasure(widthSpec,heightSpec);
   }
   void open(Spinner choice,String label,String[] values){
    if(open&&selected==choice)return;int token=++generation;open=true;selected=choice;motion.stop();title.setText("选择"+label);hint.setText("当前："+values[choice.getSelectedItemPosition()]+" · 点选后返回");
@@ -711,7 +711,7 @@ public class MainActivity extends Activity {
     String updated=String.join("\n",rows);Course.parse(updated);data=updated;save();((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(name.getWindowToken(),0);home();toast(initial==null?"课程已添加":"课程已更新");
    }catch(Exception e){error.setText("课程未保存："+e.getMessage());}
   });
-  saveButton.setTag("save-course");saveHeader(body,saveButton);choiceSheet=new CourseChoiceSheet();((FrameLayout)root.getParent()).addView(choiceSheet,new FrameLayout.LayoutParams(-1,-1));
+  saveButton.setTag("save-course");saveHeader(body,saveButton);choiceSheet=new CourseChoiceSheet();windowContent.addView(choiceSheet,new FrameLayout.LayoutParams(-1,-1));
  }
  private void acceptImport(String value,SchoolClient client,String source){acceptImport(value,client,source,"");}
  private void acceptImport(String value,SchoolClient client,String source,String suffix){
@@ -762,7 +762,7 @@ public class MainActivity extends Activity {
  }
  private void newTimetable(){
   if(busy){toast("请等待同步结束");return;}Runnable back=this::home;LinearLayout body=secondary("新增课表","每份课表独立保存，新增后仍可切回已有课表。",back);LinearLayout card=panel(body);EditText name=courseField(card,"课表名称","","例如：大二上学期","timetable-name");Spinner source=courseChoice(card,"创建方式",new String[]{"手动创建","宿迁学院导入","徐州工程学院导入"},0,"timetable-source");TextView error=text("",13,DANGER);error.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);card.addView(error);
-  Button create=action(body,"创建课表",()->{try{int selected=source.getSelectedItemPosition();String id=selected==2?"xzit":"squ";Timetables.add(this,name.getText().toString(),id,selected==2?ClassTimes.XZIT:ClassTimes.DEFAULT,term);reloadTimetable(back);if(selected>0)login();}catch(Exception e){error.setText(e.getMessage());}});create.setTag("create-timetable");saveHeader(body,create);choiceSheet=new CourseChoiceSheet();((FrameLayout)root.getParent()).addView(choiceSheet,new FrameLayout.LayoutParams(-1,-1));
+  Button create=action(body,"创建课表",()->{try{int selected=source.getSelectedItemPosition();String id=selected==2?"xzit":"squ";Timetables.add(this,name.getText().toString(),id,selected==2?ClassTimes.XZIT:ClassTimes.DEFAULT,term);reloadTimetable(back);if(selected>0)login();}catch(Exception e){error.setText(e.getMessage());}});create.setTag("create-timetable");saveHeader(body,create);choiceSheet=new CourseChoiceSheet();windowContent.addView(choiceSheet,new FrameLayout.LayoutParams(-1,-1));
  }
  private void renameTimetable(String id){
   if(busy){toast("请等待同步结束");return;}Runnable back=()->{home();timetablePicker();};
