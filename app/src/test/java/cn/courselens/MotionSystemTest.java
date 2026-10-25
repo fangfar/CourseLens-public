@@ -25,9 +25,9 @@ public class MotionSystemTest {
   progress.to(0,Motion.SHEET_OUT,false,()->commits[0]+=10);assertEquals(interrupted,progress.value,0);finish(progress);assertEquals(0,drawn[0],0);assertEquals(10,commits[0]);
   progress.to(1,Motion.SHEET_IN,true,()->commits[0]++);finish(progress);assertEquals(1,drawn[0],0);assertEquals(11,commits[0]);
  }
- @Test public void courseDetailKeepsItsOriginalTravelAndCancelledBackRestoresProgress(){
+ @Test public void courseDetailKeepsHalfHeightAndSlidesAnOpaquePanel(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()){
-   MainActivity activity=controller.get();layout(activity.findViewById(android.R.id.content));MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"课程详情");layout(sheet);sheet.motion.set(0);assertEquals(48*activity.getResources().getDisplayMetrics().density,sheet.panel.getTranslationY(),.01f);sheet.motion.set(.4f);float y=sheet.panel.getTranslationY();sheet.beginBack();sheet.backProgress(0);assertEquals(y,sheet.panel.getTranslationY(),.01f);sheet.cancelBack();finish(sheet.motion);assertEquals("progress before close",1f,sheet.motion.value,0);sheet.close(false);assertNull(sheet.getParent());assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO,((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getImportantForAccessibility());
+   MainActivity activity=controller.get();layout(activity.findViewById(android.R.id.content));MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"课程详情");layout(sheet);sheet.motion.set(0);assertEquals(sheet.getHeight()/2,sheet.panel.getHeight());assertEquals(sheet.panel.getHeight(),sheet.panel.getTranslationY(),.01f);sheet.motion.set(.4f);assertEquals(1,sheet.panel.getAlpha(),0);float y=sheet.panel.getTranslationY();sheet.beginBack();sheet.backProgress(0);assertEquals(y,sheet.panel.getTranslationY(),.01f);sheet.cancelBack();finish(sheet.motion);assertEquals("progress before close",1f,sheet.motion.value,0);sheet.close(false);assertNull(sheet.getParent());assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO,((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getImportantForAccessibility());
   }
  }
  @Test public void sheetDragFollowsFingerAndCancelReboundsWithoutChangingContent(){

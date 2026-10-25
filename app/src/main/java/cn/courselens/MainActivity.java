@@ -182,7 +182,7 @@ public class MainActivity extends Activity {
    if(!corner){LinearLayout bar=new LinearLayout(MainActivity.this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(16),0,dp(8),0);TextView heading=text(title,18,INK);heading.setTag("navigation-title");heading.setTypeface(null,Typeface.BOLD);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));TextView close=icon(R.drawable.ic_more,title+"操作",()->{});close.setTag("sheet-action-button");close.setVisibility(View.GONE);bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));panel.addView(bar);}
    ScrollView scroll=new ScrollView(MainActivity.this);panel.addView(scroll,new LinearLayout.LayoutParams(-1,corner?-2:0,corner?0:1));body=new LinearLayout(MainActivity.this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(corner?dp(4):dp(16),corner?dp(4):dp(8),corner?dp(4):dp(16),corner?dp(4):dp(8));scroll.addView(body);
    navigationOverlay=this;updateOverlayAppearance();root=panel;pageBack=null;showingDetail=corner&&underneathDetail;windowContent.addView(this,new FrameLayout.LayoutParams(-1,-1));updateSystemBack();requestFocus();if(Build.VERSION.SDK_INT>=28)setAccessibilityPaneTitle(title);
-   bindMotion(panel,shade,corner,this::requestClose);if(previous!=null&&!corner)above(previous);if("课程详情".equals(title))travel(dp(48));showMotion();
+   bindMotion(panel,shade,corner,this::requestClose);if(previous!=null&&!corner)above(previous);showMotion();
   }
   // Keep readable text; long sheets scroll instead of shrinking their contents.
   @Override protected void onMeasure(int widthSpec,int heightSpec){
