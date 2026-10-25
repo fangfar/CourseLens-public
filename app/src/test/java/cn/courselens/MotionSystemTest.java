@@ -25,9 +25,9 @@ public class MotionSystemTest {
   progress.to(0,Motion.SHEET_OUT,false,()->commits[0]+=10);assertEquals(interrupted,progress.value,0);finish(progress);assertEquals(0,drawn[0],0);assertEquals(10,commits[0]);
   progress.to(1,Motion.SHEET_IN,true,()->commits[0]++);finish(progress);assertEquals(1,drawn[0],0);assertEquals(11,commits[0]);
  }
- @Test public void courseDetailKeepsItsOriginalTravelAndCancelledBackRestoresProgress(){
+ @Test public void courseDetailKeepsHalfHeightAndSlidesAnOpaquePanel(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup().visible()){
-   MainActivity activity=controller.get();layout(activity.findViewById(android.R.id.content));MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"课程详情");layout(sheet);sheet.motion.set(0);assertEquals(48*activity.getResources().getDisplayMetrics().density,sheet.panel.getTranslationY(),.01f);sheet.motion.set(.4f);float y=sheet.panel.getTranslationY();sheet.beginBack();sheet.backProgress(0);assertEquals(y,sheet.panel.getTranslationY(),.01f);sheet.cancelBack();finish(sheet.motion);assertEquals("progress before close",1f,sheet.motion.value,0);sheet.close(false);assertNull(sheet.getParent());assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO,((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getImportantForAccessibility());
+   MainActivity activity=controller.get();layout(activity.findViewById(android.R.id.content));MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"课程详情");layout(sheet);sheet.motion.set(0);assertEquals(sheet.getHeight()/2,sheet.panel.getHeight());assertEquals(sheet.panel.getHeight(),sheet.panel.getTranslationY(),.01f);sheet.motion.set(.4f);assertEquals(1,sheet.panel.getAlpha(),0);float y=sheet.panel.getTranslationY();sheet.beginBack();sheet.backProgress(0);assertEquals(y,sheet.panel.getTranslationY(),.01f);sheet.cancelBack();finish(sheet.motion);assertEquals("progress before close",1f,sheet.motion.value,0);sheet.close(false);assertNull(sheet.getParent());assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO,((View)org.robolectric.util.ReflectionHelpers.getField(activity,"root")).getImportantForAccessibility());
   }
  }
  @Test public void sheetDragFollowsFingerAndCancelReboundsWithoutChangingContent(){
@@ -40,6 +40,41 @@ public class MotionSystemTest {
  @Test public void pageReversePreservesTheVisibleFrameAndReleasesInputOnce(){
   try(ActivityController<Activity> controller=Robolectric.buildActivity(Activity.class).setup().visible()){
    Activity activity=controller.get();FrameLayout stage=new FrameLayout(activity);View old=new View(activity),next=new View(activity);stage.addView(old);stage.addView(next);activity.setContentView(stage);layout(stage);PageMotion motion=new PageMotion();motion.start(stage,old,next,false,24);ViewTreeObserver.OnPreDrawListener pending=org.robolectric.util.ReflectionHelpers.getField(motion,"pending");assertNotNull(pending);pending.onPreDraw();Motion.Progress p=org.robolectric.util.ReflectionHelpers.getField(motion,"motion");seek(p,90);float x=next.getTranslationX();int[] end={0};motion.reverse(()->end[0]++);assertEquals(x,next.getTranslationX(),0);motion.reverse(()->end[0]+=10);finish(p);assertFalse(motion.isRunning());assertEquals(1,end[0]);assertEquals(1,stage.getChildCount());assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO,stage.getImportantForAccessibility());
+  }
+ }
+ @Test public void nestedSheetKeepsItsParentStableWhileReturningAndCancelling(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();MainActivity.NavigationOverlay parent=a.new NavigationOverlay(false,"父面板");layout(parent);parent.motion.set(1);
+   MainActivity.NavigationOverlay child=a.new NavigationOverlay(false,"子面板");layout(child);child.motion.set(1);
+   assertEquals(View.VISIBLE,parent.getVisibility());assertEquals(1,parent.panel.getAlpha(),0);
+   child.beginBack();child.backProgress(.4f);assertEquals(1,parent.panel.getAlpha(),0);assertTrue(child.panel.getTranslationY()>0);assertEquals(0,parent.panel.getTranslationY(),0);assertEquals(1,parent.shade.getAlpha(),0);assertEquals(0,child.shade.getAlpha(),0);
+   float position=child.panel.getTranslationY();child.beginBack();child.backProgress(0);assertEquals(position,child.panel.getTranslationY(),0);
+   child.cancelBack();finish(child.motion);assertEquals(1,parent.panel.getAlpha(),0);assertTrue(child.open);
+   child.close(false);assertEquals(1,parent.panel.getAlpha(),0);assertSame(parent,org.robolectric.util.ReflectionHelpers.getField(a,"navigationOverlay"));parent.close(false);
+  }
+ }
+ @Test public void settingsPagesStayOpaqueAndReturnAboveTheirParent(){
+  try(ActivityController<Activity> controller=Robolectric.buildActivity(Activity.class).setup()){
+   for(boolean backwards:new boolean[]{false,true}){
+    Activity a=controller.get();FrameLayout stage=new FrameLayout(a);View previous=new View(a),next=new View(a);stage.addView(previous);stage.addView(next);a.setContentView(stage);layout(stage);PageMotion motion=new PageMotion();motion.start(stage,previous,next,backwards,390);motion.beginBack();Motion.Progress p=org.robolectric.util.ReflectionHelpers.getField(motion,"motion");
+    assertSame(backwards?previous:next,stage.getChildAt(1));assertEquals(backwards,motion.isReturning());
+    for(float progress:new float[]{0,.25f,.5f,.75f,1}){p.set(progress);assertEquals(1,previous.getAlpha(),0);assertEquals(1,next.getAlpha(),0);if(backwards){assertEquals(390*progress,previous.getTranslationX(),.001f);assertEquals(-390*.08f*(1-progress),next.getTranslationX(),.001f);}else assertEquals(390*(1-progress),next.getTranslationX(),.001f);}
+    motion.cancelBack();finish(p);assertEquals(1,stage.getChildCount());assertSame(next,stage.getChildAt(0));assertEquals(0,next.getTranslationX(),0);assertFalse(motion.isReturning());
+   }
+  }
+ }
+ @Test public void anotherBackGestureCannotFreezeAReturningSettingsPage(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();FrameLayout stage=new FrameLayout(a);View previous=new View(a),next=new View(a);stage.addView(previous);stage.addView(next);layout(stage);PageMotion motion=org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion");motion.start(stage,previous,next,true,390);((ViewTreeObserver.OnPreDrawListener)org.robolectric.util.ReflectionHelpers.getField(motion,"pending")).onPreDraw();Motion.Progress p=org.robolectric.util.ReflectionHelpers.getField(motion,"motion");seek(p,70);float progress=p.value;
+   org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"startBackMotion");org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"progressBackMotion",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,.5f));org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"cancelBackMotion");a.onBackPressed();assertTrue(p.running());assertEquals(progress,p.value,0);finish(p);assertFalse(motion.isRunning());
+  }
+ }
+ @Test public void drawerSettingsUsesOneMotionAndKeepsTheSelectedPageOnRepeatedBack(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();layout(a.findViewById(android.R.id.content));a.openSideMenu();SideNavigation drawer=org.robolectric.util.ReflectionHelpers.getField(a,"sideNavigation");Motion.Progress p=org.robolectric.util.ReflectionHelpers.getField(drawer,"motion");p.set(1);View foreground=org.robolectric.util.ReflectionHelpers.getField(drawer,"foreground");float opened=foreground.getTranslationX();assertTrue(opened>0);
+   drawer.findViewWithTag("drawer-settings").performClick();View settings=org.robolectric.util.ReflectionHelpers.getField(a,"root");assertEquals("设置",settings.getTag());assertFalse(((PageMotion)org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion")).isRunning());assertEquals(0,settings.getTranslationX(),0);assertTrue(drawer.isRouting());assertEquals(Motion.PAGE_IN,((android.animation.ValueAnimator)org.robolectric.util.ReflectionHelpers.getField(p,"animator")).getDuration());
+   seek(p,80);assertTrue(foreground.getTranslationX()>0&&foreground.getTranslationX()<opened);assertEquals(0,settings.getTranslationX(),0);drawer.findViewWithTag("drawer-settings").performClick();a.onBackPressed();assertSame(settings,org.robolectric.util.ReflectionHelpers.getField(a,"root"));
+   finish(p);assertFalse(drawer.isRouting());assertFalse(drawer.isOpen());assertEquals(0,foreground.getTranslationX(),0);layout(a.findViewById(android.R.id.content));org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"about");assertTrue(((PageMotion)org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion")).isRunning());
   }
  }
  @Test public void disabledSystemAnimationsCommitOnceWithoutAnAnimator(){
@@ -61,7 +96,7 @@ public class MotionSystemTest {
 
  @Test public void restartingAStablePageBackGestureKeepsItsCurrentVisualOffset(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
-   MainActivity a=controller.get();org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"menu");((PageMotion)org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion")).cancel();View root=org.robolectric.util.ReflectionHelpers.getField(a,"root");root.setTranslationX(7);root.setAlpha(.95f);org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"startBackMotion");org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"progressBackMotion",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,0f));assertEquals(7,root.getTranslationX(),0);assertEquals(.95f,root.getAlpha(),0);
+   MainActivity a=controller.get();org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"menu");((PageMotion)org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion")).cancel();View root=org.robolectric.util.ReflectionHelpers.getField(a,"root");root.setTranslationX(7);root.setAlpha(1);org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"startBackMotion");org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"progressBackMotion",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,0f));assertEquals(7,root.getTranslationX(),0);assertEquals(1,root.getAlpha(),0);
   }
  }
 

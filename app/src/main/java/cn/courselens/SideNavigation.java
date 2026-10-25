@@ -58,8 +58,7 @@ final class SideNavigation extends FrameLayout {
   if(routing)return true;
   if(!open)return isOpen();open=false;animateTo(0f,animate);return true;
  }
- // Route in the same frame so the page transition overlaps the drawer rebound; later taps are
- // ignored until the drawer finishes closing, preventing a second launch while it retracts.
+ // Replace content inside the translated foreground; the drawer owns the only route motion.
  private void choose(Runnable action){
   if(routing)return;
   if(!isOpen()&&progress<=0f){action.run();return;}
@@ -67,7 +66,7 @@ final class SideNavigation extends FrameLayout {
  }
  private void animateTo(float target,boolean animate){
   if(!animate){motion.set(target);if(target==0)closed();return;}
-  float pixels=Math.abs(target-progress)*drawerWidth;int duration=releaseVelocity==0?340:Math.max(180,Math.min(380,Math.round(pixels/Math.abs(releaseVelocity)*1000)));releaseVelocity=0;
+  float pixels=Math.abs(target-progress)*drawerWidth;int duration=routing?Motion.PAGE_IN:releaseVelocity==0?340:Math.max(180,Math.min(380,Math.round(pixels/Math.abs(releaseVelocity)*1000)));releaseVelocity=0;
   motion.to(target,duration,true,()->{if(target==0)closed();});
  }
  private void render(float value){progress=value;foreground.setTranslationX(drawerWidth*value);foreground.setClipToOutline(value>0);foreground.invalidateOutline();shade.setAlpha(.18f*value);panel.setAlpha(.65f+.35f*value);panel.setTranslationX(-ui.dp(12)*(1-value));}
