@@ -66,7 +66,7 @@ jobs:
               text(android, 'promptMessage', 12000, True)
           link(android, 'apkUrl')
           link(android, 'diskUrl')
-          assert link(config, 'repositoryUrl') in ('', 'https://github.com/fangfar/Morrow')
+          assert link(config, 'repositoryUrl') in ('', 'https://github.com/fangfar/CourseLens-public')
           print('Valid configuration')
           PY
       - name: Validate website

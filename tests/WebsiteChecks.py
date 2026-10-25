@@ -28,8 +28,8 @@ class SiteParser(HTMLParser):
 
 
 html = (ROOT / 'index.html').read_text(encoding='utf-8')
-assert html.count('data-download href="https://github.com/fangfar/Morrow/releases/latest"') == 3
-assert html.count('href="https://github.com/fangfar/Morrow"') == 2
+assert html.count('data-download href="https://github.com/fangfar/CourseLens-public/releases/latest"') == 3
+assert html.count('href="https://github.com/fangfar/CourseLens-public"') == 2
 page = SiteParser()
 page.feed(html)
 page.close()

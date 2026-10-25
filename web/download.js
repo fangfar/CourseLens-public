@@ -34,7 +34,7 @@
       const url = new URL(config.android.apkUrl);
       if (url.protocol !== 'https:' || url.hostname !== 'github.com' || url.port
           || url.username || url.password || url.search || url.hash
-          || !url.pathname.startsWith('/fangfar/Morrow/releases/download/')
+          || !url.pathname.startsWith('/fangfar/CourseLens-public/releases/download/')
           || !url.pathname.endsWith('.apk')) throw new Error('Invalid APK URL');
       window.location.assign(url.href);
       status.textContent = '已请求下载最新正式版。若未开始，可重试或手动下载。';
