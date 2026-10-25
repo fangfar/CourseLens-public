@@ -61,6 +61,18 @@ public class TaskPageDesignTest {
    }
   }
  }
+ @Test public void deadlineHeroAcceptsMonthDayWithoutInventingCountdown()throws Exception{
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   TaskPage page=new TaskPage(controller.get(),null);
+   try{
+    ExecutorService worker=getField(page,"worker");worker.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();
+    ChaoxingClient.Result data=new ChaoxingClient.Result();ChaoxingClient.Work later=new ChaoxingClient.Work("合成课程","较晚的月日任务","未完成","");later.deadline="11-02 12:00";ChaoxingClient.Work earlier=new ChaoxingClient.Work("合成课程","较早的月日任务","未完成","");earlier.deadline="10-29 10:25";data.items.add(later);data.items.add(earlier);setField(page,"snapshot",data);
+    LinearLayout list=new LinearLayout(controller.get());callInstanceMethod(page,"addDeadlineHero",ClassParameter.from(LinearLayout.class,list));LinearLayout hero=list.findViewWithTag("task-deadline-hero");assertNotNull(hero);assertEquals(earlier.title,((TextView)hero.getChildAt(1)).getText().toString());assertEquals("10-29 10:25 截止",((TextView)hero.getChildAt(2)).getText().toString());for(int i=0;i<hero.getChildCount();i++){assertFalse(hero.getChildAt(i) instanceof ProgressBar);if(hero.getChildAt(i) instanceof TextView)assertFalse(((TextView)hero.getChildAt(i)).getText().toString().contains("还剩"));}
+    ChaoxingClient.Work full=new ChaoxingClient.Work("合成课程","完整日期任务","未完成","");full.deadline="2026-12-01 12:00";data.items.add(full);list.removeAllViews();callInstanceMethod(page,"addDeadlineHero",ClassParameter.from(LinearLayout.class,list));hero=list.findViewWithTag("task-deadline-hero");assertEquals(earlier.title,((TextView)hero.getChildAt(1)).getText().toString());data.items.clear();data.items.add(full);list.removeAllViews();callInstanceMethod(page,"addDeadlineHero",ClassParameter.from(LinearLayout.class,list));hero=list.findViewWithTag("task-deadline-hero");assertEquals("12-01 12:00 截止",((TextView)hero.getChildAt(2)).getText().toString());assertTrue(hero.getChildAt(4) instanceof ProgressBar);
+    data.items.clear();ChaoxingClient.Work invalid=new ChaoxingClient.Work("合成课程","无有效时间","未完成","");invalid.deadline="02-30 12:00";data.items.add(invalid);list.removeAllViews();callInstanceMethod(page,"addDeadlineHero",ClassParameter.from(LinearLayout.class,list));assertNull(list.findViewWithTag("task-deadline-hero"));
+   }finally{page.close();}
+  }
+ }
  @Test public void expansionIsExclusiveAcrossCoursesAndDeleteCanBeCancelled()throws Exception{
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    TaskPage page=new TaskPage(controller.get(),null);
