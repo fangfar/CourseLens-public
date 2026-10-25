@@ -70,18 +70,23 @@ final class TaskPage extends LinearLayout {
   @Override protected void onMeasure(int width,int height){float needed=getPaddingLeft()+getPaddingRight();for(int i=0;i<getChildCount();i++){TextView text=(TextView)getChildAt(i);LayoutParams size=(LayoutParams)text.getLayoutParams();needed+=Math.max(text.getMinimumWidth(),text.getPaint().measureText(text.getText().toString())+text.getCompoundPaddingLeft()+text.getCompoundPaddingRight())+size.rightMargin+(i>0?ui.dp(8):0);}boolean wrap=needed>MeasureSpec.getSize(width);setOrientation(wrap?VERTICAL:HORIZONTAL);for(int i=1;i<getChildCount();i++){LayoutParams size=(LayoutParams)getChildAt(i).getLayoutParams();size.leftMargin=wrap?0:ui.dp(8);size.topMargin=wrap?ui.dp(4):0;}super.onMeasure(width,height);}
  }
  private final class TaskRow extends LinearLayout {
-  final ChaoxingClient.Work work;View content,actions,divider;
+  final ChaoxingClient.Work work;View content,actions,divider;boolean open;
+  final Motion.Progress expansion=new Motion.Progress(0,p->{if(actions==null)return;actions.setAlpha(p);actions.setVisibility(p==0?GONE:VISIBLE);requestLayout();});
   TaskRow(ChaoxingClient.Work work){super(TaskPage.this.getContext());this.work=work;setOrientation(VERTICAL);}
-  void expanded(boolean open){View heading=(View)content.getParent();LayoutParams spacing=(LayoutParams)heading.getLayoutParams();spacing.bottomMargin=ui.dp(open?0:12);heading.setLayoutParams(spacing);actions.setVisibility(open?VISIBLE:GONE);content.setContentDescription(work.title+(open?"，点击收起操作":"，点击展开编辑与删除"));if(android.os.Build.VERSION.SDK_INT>=30)content.setStateDescription(open?"已展开":"已收起");}
+  void expanded(boolean open){expanded(open,false);}
+  void expanded(boolean open,boolean animate){this.open=open;content.setContentDescription(work.title+(open?"，点击收起操作":"，点击展开编辑与删除"));if(android.os.Build.VERSION.SDK_INT>=30)content.setStateDescription(open?"已展开":"已收起");if(animate)expansion.to(open?1:0,open?Motion.EXPAND:Motion.COLLAPSE,false,()->{});else expansion.set(open?1:0);}
+  @Override protected void onMeasure(int width,int height){
+   if(actions!=null){LayoutParams size=(LayoutParams)actions.getLayoutParams();int natural=0;if(expansion.value>0){actions.measure(MeasureSpec.makeMeasureSpec(Math.max(0,MeasureSpec.getSize(width)-getPaddingLeft()-getPaddingRight()),MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));natural=actions.getMeasuredHeight();}size.height=Math.round(natural*expansion.value);((LayoutParams)((View)content.getParent()).getLayoutParams()).bottomMargin=Math.round(ui.dp(12)*(1-expansion.value));}super.onMeasure(width,height);
+  }
+  @Override protected void onDetachedFromWindow(){expansion.set(open?1:0);super.onDetachedFromWindow();}
  }
  private android.transition.Transition taskTransition(boolean opening){
   return new android.transition.TransitionSet().setOrdering(android.transition.TransitionSet.ORDERING_TOGETHER).addTransition(new android.transition.ChangeBounds()).addTransition(new android.transition.Fade()).setDuration(opening?Motion.EXPAND:Motion.COLLAPSE).setInterpolator(Motion.ENTER);
  }
  private void toggleTask(TaskRow row){
   boolean open=expandedRow!=row;
-  if(android.animation.ValueAnimator.areAnimatorsEnabled()&&lists[0].isLaidOut())android.transition.TransitionManager.beginDelayedTransition(lists[0],taskTransition(open));
-  if(expandedRow!=null)expandedRow.expanded(false);
-  expandedTask=open?row.work:null;expandedRow=open?row:null;row.expanded(open);
+  if(expandedRow!=null&&expandedRow!=row)expandedRow.expanded(false,true);
+  expandedTask=open?row.work:null;expandedRow=open?row:null;row.expanded(open,true);
  }
  private void restoreExpanded(LinearLayout list){
   expandedRow=null;for(int i=0;i<list.getChildCount();i++)if(list.getChildAt(i) instanceof LinearLayout){LinearLayout group=(LinearLayout)list.getChildAt(i);for(int j=0;j<group.getChildCount();j++)if(group.getChildAt(j) instanceof TaskRow){TaskRow row=(TaskRow)group.getChildAt(j);boolean open=expandedTask!=null&&ChaoxingCache.find(Collections.singletonList(row.work),expandedTask)!=null;row.expanded(open);if(open)expandedRow=row;}}
