@@ -97,14 +97,14 @@ public class AppNavigationTest {
    assertFalse(motion.isRunning());assertEquals(1,stage.getChildCount());assertSame(home,stage.getChildAt(0));assertTrue(content.findViewWithTag("nav-timetable").isSelected());
   }
  }
- @Test public void parcelTabKeepsItsPageAndFilterWhenSwitchingTabs()throws Exception {
+ @Test public void parcelTabKeepsItsPageAndScrollWhenSwitchingTabs()throws Exception {
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);
    android.widget.FrameLayout stage=org.robolectric.util.ReflectionHelpers.getField(activity,"stage");
    content.findViewWithTag("nav-parcels").performClick();drainParcelWork();View parcel=stage.getChildAt(0);assertEquals("parcel-center",parcel.getTag());
-   parcel.findViewWithTag("parcel-filter-1").performClick();drainParcelWork();assertEquals(1,(int)org.robolectric.util.ReflectionHelpers.getField(parcel,"filter"));assertTrue(parcel.findViewWithTag("parcel-filter-1").isSelected());
+   android.widget.ScrollView scroll=parcel.findViewWithTag("parcel-scroll");assertNotNull(scroll);int y=scroll.getScrollY();assertNull(parcel.findViewWithTag("parcel-filter-pager"));
    content.findViewWithTag("nav-timetable").performClick();content.findViewWithTag("nav-parcels").performClick();drainParcelWork();
-   assertSame(parcel,stage.getChildAt(0));assertEquals(1,(int)org.robolectric.util.ReflectionHelpers.getField(parcel,"filter"));assertTrue(parcel.findViewWithTag("parcel-filter-1").isSelected());assertTrue(content.findViewWithTag("nav-parcels").isSelected());
+   assertSame(parcel,stage.getChildAt(0));assertSame(scroll,parcel.findViewWithTag("parcel-scroll"));assertEquals(y,scroll.getScrollY());assertTrue(content.findViewWithTag("nav-parcels").isSelected());
   }
  }
  @Test public void openTabIntentsSwitchInstantlyAndRepeatedIntentKeepsThePage(){

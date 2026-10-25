@@ -6,7 +6,6 @@ import android.graphics.Canvas;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.*;
-import androidx.viewpager.widget.ViewPager;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.*;
@@ -20,7 +19,7 @@ import static org.robolectric.Shadows.shadowOf;
 @Config(sdk=34)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class ParcelPageDesignTest {
- @Test public void groupedPickupAndEditor()throws Exception{checkPage("w380dp-h800dp-notnight",1f,"pickup");}
+ @Test public void singleListAndEditor()throws Exception{checkPage("w380dp-h800dp-notnight",1f,"pickup");}
  @Test public void narrowMediumText()throws Exception{checkPage("w320dp-h640dp-notnight",1.25f,"narrow-medium");}
  @Test public void narrowDarkLargeText()throws Exception{checkPage("w320dp-h640dp-night",2f,"dark-large");}
  @Test public void landscapeLayout()throws Exception{checkPage("w800dp-h380dp-land-notnight",1f,"landscape");}
@@ -42,19 +41,32 @@ public class ParcelPageDesignTest {
    }
   }
  }
- @Test public void repeatedPickupKeepsUndoableOriginalState()throws Exception{
+ @Test public void repeatedPickupKeepsUndoableOriginalState()throws Exception{checkPickupUndo(ParcelRecord.READY);}
+ @Test public void trackingOnlyPickupCanCompleteAndUndo()throws Exception{checkPickupUndo(ParcelRecord.TRANSIT);}
+ private void checkPickupUndo(int initial)throws Exception{
   try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
    ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();
-   ParcelRecord record=new ParcelRecord();record.code="6-2-2088";record.station="合成防重复取件驿站";record.remindAt=System.currentTimeMillis()+3600000;
+   ParcelRecord record=new ParcelRecord();record.state=initial;record.code=initial==ParcelRecord.READY?"6-2-2088":"";record.trackingNumber="CL00000000002";record.station="合成防重复取件驿站";record.remindAt=System.currentTimeMillis()+3600000;
    long id=ParcelRepository.IO.submit(()->new ParcelRepository(activity).save(record)).get();
    java.lang.reflect.Method complete=ParcelPage.class.getDeclaredMethod("complete",long.class);complete.setAccessible(true);complete.invoke(page,id);complete.invoke(page,id);
    ParcelRepository.IO.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();
    assertEquals(ParcelRecord.DONE,(int)ParcelRepository.IO.submit(()->ParcelDatabase.get(activity).parcels().get(id).state).get());
    findText(page,"撤销").performClick();ParcelRepository.IO.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();
-   ParcelRecord restored=ParcelRepository.IO.submit(()->ParcelDatabase.get(activity).parcels().get(id)).get();assertEquals(ParcelRecord.READY,restored.state);assertEquals(record.remindAt,restored.remindAt);
+   ParcelRecord restored=ParcelRepository.IO.submit(()->ParcelDatabase.get(activity).parcels().get(id)).get();assertEquals(initial,restored.state);assertEquals(record.remindAt,restored.remindAt);
    ParcelRepository.IO.submit(()->new ParcelRepository(activity).delete(id)).get();
   }
  }
+ @Test public void readTextRequiresConfirmationBeforeCompletion()throws Exception{
+  try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
+   ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();drain();
+   page.findViewWithTag("parcel-read-info").performClick();AlertDialog read=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();((EditText)read.getWindow().getDecorView().findViewWithTag("parcel-import-text")).setText("包裹已到达合成读取驿站，取件码：7-8-4567");read.getWindow().getDecorView().findViewWithTag("parcel-read-text").performClick();drain();
+   ParcelRecord record=ParcelRepository.IO.submit(()->ParcelDatabase.get(activity).parcels().all().stream().filter(p->p.code.equals("7-8-4567")).findFirst().orElse(null)).get();assertNotNull(record);assertFalse(record.confirmed);assertNotNull(page.findViewWithTag("parcel-record-"+record.id));assertNull(page.findViewWithTag("parcel-complete-"+record.id));
+   page.findViewWithTag("parcel-content-"+record.id).performClick();findText(page.findViewWithTag("parcel-inline-actions-"+record.id),"核对并确认").performClick();AlertDialog editor=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();editor.getWindow().getDecorView().findViewWithTag("parcel-editor-save").performClick();drain();
+   assertTrue(page.findViewWithTag("parcel-complete-"+record.id) instanceof Button);page.findViewWithTag("parcel-complete-"+record.id).performClick();drain();assertNull(page.findViewWithTag("parcel-record-"+record.id));assertEquals(ParcelRecord.DONE,(int)ParcelRepository.IO.submit(()->ParcelDatabase.get(activity).parcels().get(record.id).state).get());
+   findText(page,"撤销").performClick();drain();assertNotNull(page.findViewWithTag("parcel-record-"+record.id));ParcelRepository.IO.submit(()->new ParcelRepository(activity).delete(record.id)).get();
+  }
+ }
+ private void drain()throws Exception{for(int i=0;i<3;i++){ParcelRepository.IO.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));}}
  private void checkPage(String qualifiers,float font,String image)throws Exception{
   RuntimeEnvironment.setQualifiers(qualifiers);RuntimeEnvironment.setFontScale(font);
   try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
@@ -66,19 +78,20 @@ public class ParcelPageDesignTest {
    ParcelRecord done=new ParcelRecord();done.id=104;done.state=ParcelRecord.DONE;done.code="2-5-1010";done.station="合成西门驿站";done.carrier="圆通快递";done.updatedAt=System.currentTimeMillis();
    java.lang.reflect.Method render=ParcelPage.class.getDeclaredMethod("render",List.class);render.setAccessible(true);render.invoke(page,Arrays.asList(ready,pending,transit,done));
    View root=activity.findViewById(android.R.id.content);layout(root,activity);
-   assertEquals("待取件 2",((TextView)root.findViewWithTag("parcel-filter-0")).getText().toString());
-   View pickup=root.findViewWithTag("parcel-record-101");assertNotNull(findText(pickup,"合成东门驿站"));assertNotNull(findText(pickup,"已取件"));assertFalse(hasText(pickup,"规则评分"));
-   View confirmation=root.findViewWithTag("parcel-record-102");assertNotNull(findText(confirmation,"确认无误"));assertTrue(confirmation.getTop()<pickup.getTop());assertEquals(1,((TextView)findText(confirmation,"确认无误")).getLineCount());assertEquals(1,((TextView)findText(pickup,"已取件")).getLineCount());
-   assertNotNull(findText(root,"身份码"));assertNotNull(findText(root,"已到达合成转运中心"));assertNull(findText(root,"去配置"));assertFalse(hasText(root,"查询物流"));
+   assertNull(root.findViewWithTag("parcel-filter-pager"));assertNull(root.findViewWithTag("parcel-filter-0"));
+   View pickup=root.findViewWithTag("parcel-record-101"),confirmation=root.findViewWithTag("parcel-record-102"),shipping=root.findViewWithTag("parcel-record-103");assertNotNull(pickup);assertNotNull(confirmation);assertNotNull(shipping);assertNull(root.findViewWithTag("parcel-record-104"));
+   assertNull(root.findViewWithTag("parcel-complete-102"));assertTrue(root.findViewWithTag("parcel-complete-103") instanceof Button);assertFalse(hasCheckBox(root));
+   View firstActions=root.findViewWithTag("parcel-inline-actions-101"),secondActions=root.findViewWithTag("parcel-inline-actions-102");assertEquals(View.GONE,firstActions.getVisibility());root.findViewWithTag("parcel-content-101").performClick();assertEquals(View.VISIBLE,firstActions.getVisibility());root.findViewWithTag("parcel-content-102").performClick();assertEquals(View.GONE,firstActions.getVisibility());assertEquals(View.VISIBLE,secondActions.getVisibility());root.findViewWithTag("parcel-content-102").performClick();assertEquals(View.GONE,secondActions.getVisibility());
+   assertNotNull(findText(root,"身份码"));assertNotNull(root.findViewWithTag("parcel-manual-add"));assertNotNull(root.findViewWithTag("parcel-read-info"));assertFalse(hasText(root,"查询物流"));
    ViewGroup identity=root.findViewWithTag("parcel-identity");
    for(int i=0;i<3;i++){TextView entry=root.findViewWithTag("parcel-identity-"+i);assertEquals("identity labels should not wrap",1,entry.getLineCount());assertContained(identity,entry);assertTrue("identity touch target",entry.getHeight()>=Math.round(48*activity.getResources().getDisplayMetrics().density));assertTrue("identity text must not be vertically clipped",entry.getLayout().getHeight()+entry.getCompoundPaddingTop()+entry.getCompoundPaddingBottom()<=entry.getHeight());}
    android.graphics.drawable.Drawable addBackground=root.findViewWithTag("quick-menu-button").getBackground();
    assertTrue("add button should keep the shared light-circle icon style",addBackground instanceof android.graphics.drawable.GradientDrawable&&((android.graphics.drawable.GradientDrawable)addBackground).getColor().getDefaultColor()==activity.getColor(R.color.app_card));
-   snapshot(root,image);
-   root.findViewWithTag("parcel-filter-1").performClick();assertEquals(1,((ViewPager)root.findViewWithTag("parcel-filter-pager")).getCurrentItem());
-   View shipping=root.findViewWithTag("parcel-record-103");assertNull(findText(shipping,"查询物流"));shipping.performClick();assertNotNull(findText(shipping,"收起物流记录"));shipping.performClick();assertNotNull(findText(shipping,"展开物流记录"));layout(root,activity);snapshot(root,image+"-transit");
-   Bundle state=new Bundle();page.saveState(state);assertEquals(1,state.getInt("filter"));assertEquals(3,state.getIntArray("filterScrollY").length);
-   root.findViewWithTag("parcel-filter-2").performClick();layout(root,activity);assertNotNull(root.findViewWithTag("parcel-record-104"));snapshot(root,image+"-done");root.findViewWithTag("quick-menu-button").performClick();AlertDialog add=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();add.getWindow().getDecorView().findViewWithTag("parcel-add").performClick();
+   layout(root,activity);snapshot(root,image);root.findViewWithTag("parcel-content-101").performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));layout(root,activity);ScrollView parcelScroll=root.findViewWithTag("parcel-scroll");if(font>1f)parcelScroll.scrollTo(0,((View)pickup.getParent()).getTop());snapshot(root,image+"-expanded");
+   Bundle state=new Bundle();page.saveState(state);assertTrue(state.containsKey("scrollY"));assertFalse(state.containsKey("filter"));
+   root.findViewWithTag("parcel-read-info").performClick();AlertDialog read=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(read.getWindow().getDecorView().findViewWithTag("parcel-import-text"));assertNull(read.getWindow().getDecorView().findViewWithTag("parcel-settings-menu"));read.getWindow().getDecorView().findViewWithTag("parcel-read-text").performClick();assertEquals(View.VISIBLE,read.getWindow().getDecorView().findViewWithTag("parcel-import-feedback").getVisibility());
+   read.getWindow().getDecorView().findViewWithTag("parcel-notification-settings").performClick();AlertDialog settings=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(findText(settings.getWindow().getDecorView(),"后台通知识别"));assertNull(settings.getWindow().getDecorView().findViewWithTag("parcel-settings-menu"));
+   root.findViewWithTag("parcel-manual-add").performClick();
    AlertDialog editor=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(editor.getWindow().getDecorView().findViewWithTag("parcel-editor-code"));assertFalse(hasSpinner(editor.getWindow().getDecorView()));
    layoutDialog(editor,activity);
    View footer=editor.getWindow().getDecorView().findViewWithTag("parcel-editor-actions");assertNotNull(footer);assertFalse(footer.getParent() instanceof ScrollView);assertTrue(footer.getHeight()>0);if(((LinearLayout)footer).getOrientation()==LinearLayout.HORIZONTAL)assertEquals("footer buttons must align",findText(footer,"取消").getTop(),findText(footer,"保存").getTop());
@@ -86,7 +99,7 @@ public class ParcelPageDesignTest {
    layoutDialog(editor,activity);View validation=findText(editor.getWindow().getDecorView(),"请填写取件码或运单号");assertTrue(validation.getHeight()>0);assertTrue(validation.getBottom()<=footer.getTop());snapshot(editor.getWindow().getDecorView(),image+"-editor");
    java.lang.reflect.Field tracking=ParcelPage.class.getDeclaredField("trackingField");tracking.setAccessible(true);((EditText)tracking.get(page)).setText("CL12345678901");editor.getWindow().getDecorView().findViewWithTag("parcel-editor-save").performClick();
    ParcelRepository.IO.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();
-   ParcelRecord saved=ParcelRepository.IO.submit(()->ParcelDatabase.get(activity).parcels().all().stream().filter(p->p.trackingNumber.equals("CL12345678901")).findFirst().orElse(null)).get();assertNotNull(saved);assertEquals(ParcelRecord.TRANSIT,saved.state);assertEquals(1,((ViewPager)root.findViewWithTag("parcel-filter-pager")).getCurrentItem());
+   ParcelRecord saved=ParcelRepository.IO.submit(()->ParcelDatabase.get(activity).parcels().all().stream().filter(p->p.trackingNumber.equals("CL12345678901")).findFirst().orElse(null)).get();assertNotNull(saved);assertEquals(ParcelRecord.TRANSIT,saved.state);assertNull(root.findViewWithTag("parcel-filter-pager"));
    ParcelRepository.IO.submit(()->new ParcelRepository(activity).delete(saved.id)).get();
   }
   ParcelRepository.IO.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();
@@ -96,6 +109,7 @@ public class ParcelPageDesignTest {
  private void assertContained(ViewGroup parent,View child){assertNotNull(child);android.graphics.Rect bounds=new android.graphics.Rect(0,0,child.getWidth(),child.getHeight());parent.offsetDescendantRectToMyCoords(child,bounds);assertTrue("child must have height",bounds.height()>0);assertTrue("child must fit parent: "+bounds+" in "+parent.getWidth()+"x"+parent.getHeight(),bounds.left>=0&&bounds.top>=0&&bounds.right<=parent.getWidth()&&bounds.bottom<=parent.getHeight());}
  private View findText(View view,String text){if(view instanceof TextView&&((TextView)view).getText().toString().equals(text))return view;if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++){View found=findText(((ViewGroup)view).getChildAt(i),text);if(found!=null)return found;}return null;}
  private boolean hasText(View view,String text){if(view instanceof TextView&&((TextView)view).getText().toString().contains(text))return true;if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++)if(hasText(((ViewGroup)view).getChildAt(i),text))return true;return false;}
+ private boolean hasCheckBox(View view){if(view instanceof CheckBox)return true;if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++)if(hasCheckBox(((ViewGroup)view).getChildAt(i)))return true;return false;}
  private boolean hasSpinner(View view){if(view instanceof Spinner)return true;if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++)if(hasSpinner(((ViewGroup)view).getChildAt(i)))return true;return false;}
  private void snapshot(View root,String name)throws Exception{String directory=System.getProperty("courselens.parcelPreviewDir");if(directory==null)return;java.io.File folder=new java.io.File(directory);folder.mkdirs();Bitmap bitmap=Bitmap.createBitmap(root.getWidth(),root.getHeight(),Bitmap.Config.ARGB_8888);root.draw(new Canvas(bitmap));try(java.io.FileOutputStream out=new java.io.FileOutputStream(new java.io.File(folder,name+".png"))){bitmap.compress(Bitmap.CompressFormat.PNG,100,out);}bitmap.recycle();}
 }

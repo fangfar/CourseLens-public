@@ -57,10 +57,10 @@ Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用
 ## 快递中心
 
 - 入口在底部导航的「快递」，也可由 Android 文字 / 图片分享打开。三个底栏入口在主界面与快递页共用 `AppNavigation`，选中使用实心图标；返回课表 / 任务时复用主 Activity、保留原页面和相应选中项，并清除其上的快递页，避免返回键循环。独立 `ParcelActivity` 使用现有 `SecondaryUi`、原生 View 和半高滚动表单，头部菜单与添加按钮共用全应用 `SecondaryUi` 圆形图标样式，浅色沿用原色板，深色资源仅作用于快递模块。没有迁移课表、学习通缓存或账号数据，也没有改包名、版本号或正式签名。
-- 快递页采用带数量的分段胶囊，可点击或左右滑动切换，各分类保留滚动位置。待取件顶部提供淘宝 / 菜鸟 / 拼多多官方身份码入口，宽度或字号不足以单行放下时入口改为纵向排列，空状态操作行同样处理；按驿站分组，取件码点按复制并标记敏感。候选信息以虚线卡置顶，码与地址完整时可一键确认；运输卡展示本机已有物流记录与可展开时间线，不提供在线查询或代理配置。表单不再手选状态：填写取件码归为待取件，仅运单号归为运输中，已取件记录编辑后保留完成状态；物流签收仍不代替本人取件。取件和单条删除提供 5 秒撤销，恢复删除保留原内容及 14 天去重摘要；全部清空仍需确认。快递设置按识别、提醒、小组件分组，全部数据删除位于总设置 → 数据管理。
+- 快递页使用单一未取件列表，不按状态或驿站分类，不左右翻页。点击条目内容内联展开编辑、删除、复制取件码、提醒及已有物流记录，同一时间只展开一条；展开后的「已取件」按钮标记完成，完成后从列表隐藏并提供 5 秒撤销，既有已取件记录继续保存在本机。未核对的识别结果在同一列表提示核对，确认前不能标记完成。顶部保留淘宝 / 菜鸟 / 拼多多官方身份码入口；「手动添加」直接打开表单，「读取信息」提供粘贴文字、选择截图及直达通知读取设置。截图读取结果回填文本，失败时保留文字和面板内反馈，便于修正或手动添加。填写取件码或运单号即可保存，沿用原有状态字段及去重规则；不提供在线物流查询。全部数据删除仍在总设置 → 数据管理。
 
 - `ParcelDatabase` 是独立 Room schema 1 数据库 `parcels.db`，schema 保存在 `app/schemas/`。Java 使用 annotationProcessor，无 Compose / Hilt / Kotlin 插件；Room 2.6.1、WorkManager 2.9.1 保持现有 SDK 34 / JDK 17 构建兼容。升级 schema 时添加保留数据的 migration，不使用 destructive fallback。取件码和运单号分别保存；同运单或同地址同码去重，同码不同驿站保留。完成记录不因通知复活。运输中记录收到同运单取件通知时补全原记录，低评分信息需确认。单条删除保留最长 14 天的 SHA-256 去重摘要，删除全部会清除记录、摘要和设置，并执行 Room 的 WAL checkpoint / VACUUM。
-- `ParcelRules` 是本地版本化规则，评分是规则强度而非统计概率。只提取明确取件语境，排除验证码和动态身份码。只有单码、明确地址的高评分通知可以直接进入待取件；其他结果在「待确认」中人工核对，截图 / 分享一律确认。多码文本不自动配地址或运单，避免串件。没有保存通知全文或图片，没有短信、无障碍、相机或媒体库读取权限。截图使用文档选择器 / 分享授权和随包中文 ML Kit；只接收 content URI，限 10 MB / 8000 万输入像素并下采样处理，识别后释放图片和识别器。
+- `ParcelRules` 是本地版本化规则（当前 v2），评分是规则强度而非统计概率。只提取明确取件语境，排除验证码和动态身份码。只有单码、明确地址的高评分通知可以直接进入待取件；其他结果在快递列表中标记为待核对，由用户人工核对，截图 / 分享一律确认。通知 / 粘贴多码文本不自动配地址或运单，避免串件；截图按 ML Kit 文本行坐标关联标签、码值和附近取件点，同一标签含多码时仍留空地址待补。截图局部区域排除身份码 / 验证码，不因整屏其他位置出现无关安全词而丢弃有效取件码。没有保存通知全文或图片，没有短信、无障碍、相机或媒体库读取权限。截图使用文档选择器 / 分享授权和随包中文 ML Kit；只接收 content URI，限 10 MB / 8000 万输入像素并下采样处理，识别后释放图片和识别器。
 - 通知识别默认关闭，需 App 内同意和系统通知访问两步授权。默认来源为菜鸟、淘宝、拼多多，可单独选微信、QQ、默认短信应用的**通知**；不访问短信数据库。`ParcelNotificationListener` 由系统绑定权限保护，不扫描历史通知、不启动前台服务保活。关闭或清空数据会使排队中的旧识别结果失效。通知显示权限和读取通知访问相互独立。Android 15 及以上的敏感通知过滤、侧载应用受限设置、工作资料隔离和厂商限制都可能导致通知正文不可见；提供手动 / 分享入口，不绕过系统限制。
 - `ParcelIdentity` 只打开包限定的官方路由，捕获跳转失败后打开应用首页或提示用户手动查找。深链成功发出 Intent 不证明已到身份码页面。拼多多入口通过 `tab=ID_CODE&entry_source=11` 指定身份码页签，已在小米 14 / Android 16 的拼多多 8.3.0 验证；淘宝、菜鸟及其他版本仍需分别验收，不据此称为当前所有版本有效。页面不生成、读取、抓取或缓存官方动态令牌。
 - 在线物流查询与代理配置已移除。打开快递页时取消旧版 `parcel-tracking` 后台任务，并清除旧代理、后台查询开关与退避设置；旧版已排队的查询任务直接结束。保留 Room schema 1 和已有物流字段，只供本机记录展示与旧数据兼容，不再发出物流查询请求。
@@ -69,11 +69,11 @@ Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用
 
 ### 参考来源与许可边界
 
-2026-10-22 检查了以下固定提交的 LICENSE、Android 配置和对应源码；没有整体合并第三方应用，也没有复制其实现代码。所有本模块实现独立编写；参考不改变 CourseLens 本身的许可状态。
+2026-10-25 重新核查了下列固定来源。取件识别采用随包 ML Kit 中文 OCR 与 `shareven/parcel` 的 MIT 取件标签、地址规则局部适配，未整体合并第三方应用。已在源码标注来源，并在 `app/src/main/assets/licenses/shareven-parcel.txt` 保留上游版权和许可全文；第三方许可不改变 CourseLens 本身的许可状态。方案比较见 [取件识别调研](docs/parcel-recognition-research.md)。
 
 | 来源 | 核查文件与兼容性 | 使用方式 |
 | --- | --- | --- |
-| [shareven/parcel @ d7e4c97](https://github.com/shareven/parcel/tree/d7e4c974ffd1e4de2da9291df0d295856cd89818) | MIT；`util/SmsParser.kt`、`util/ThirdPartyEntry.kt`、`service/ParcelNotificationListenerService.kt`、`app/build.gradle.kts`；Kotlin / Compose，minSdk 29 / compileSdk 35 | 参考本地规则、分组和官方入口思路；不移植其短信权限、保活或完整 UI |
+| [shareven/parcel @ d7e4c97](https://github.com/shareven/parcel/tree/d7e4c974ffd1e4de2da9291df0d295856cd89818) | MIT；`util/SmsParser.kt`、`util/ThirdPartyEntry.kt`、`service/ParcelNotificationListenerService.kt`、`app/build.gradle.kts`；Kotlin / Compose，minSdk 29 / compileSdk 35 | 适配明确取件标签与地址前缀，保留 MIT 声明；不移植其短信权限、保活或完整 UI |
 | [pickup-code-app @ f5075d3](https://github.com/zixij644-elaborate/pickup-code-app/tree/f5075d3e4d2f4ffe4da259c699f472a790ec7013) | GPL-3.0；`extractor/CodeExtractor.kt`、`util/IdentityCodeLauncher.kt`、Gradle；Compose，minSdk 26 / compileSdk 35 | 仅参考确认流程、来源评分和包限定路由事实；未复制或翻译 GPL 实现 |
 | [ExpressOCR @ b1aad68](https://github.com/baso4/ExpressOCR/tree/b1aad68b51bf8dc4b2bdead655489a99691647c1) | MIT；`MainActivity.kt`、`CameraActivity.kt`、Gradle；CameraX / ML Kit，minSdk 26 / compileSdk 35 | 参考截图 → 本机 ML Kit 的流程；直接使用官方 SDK，自行处理大小限制和释放；不采用敏感日志、相机扫描 |
 | [KdAPI_Demo @ 603063c](https://github.com/APIGI/KdAPI_Demo/tree/603063c8a8e0a2acbf75f4de23def39f78982711) | 未找到 LICENSE；`2-Services/OrderService.cs`、README；.NET Core 3.1，不能直接作为 Android 库 | 仅核对服务端签名 / 查询职责，未移植代码、示例凭据或签名算法 |
@@ -88,7 +88,7 @@ python tests/run_checks.py
 adb -s SERIAL shell am instrument -w -e parcelOnly true cn.courselens.qa.test/cn.courselens.NativeChecks
 ```
 
-`ParcelRulesTest` 使用合成语料；`ParcelAndroidTest` 用 Robolectric 模拟 Android 13 / 14 / 15，检查 Room 去重、运输中补全、删除/完成防复活、权限开关、旧查询任务取消与提醒保留。Android 16 需 JDK 21，可使用 `-PparcelTestSdks=33,34,35,36`；默认 JDK 17 不运行 API 36，不把未运行版本算通过。`ParcelChecks` 仪器专项使用唯一临时数据库，测试包名必须为 QA；设备安装和备份仍按「设备验证」执行。CI 运行 JVM / Robolectric 检查并保留报告，不运行设备测试。
+`ParcelRulesTest` 使用合成语料及 OCR 行坐标，覆盖标签别名、换行、多码、复制按钮干扰、同屏身份码和电话 / 日期排除；`parcelOcrOnly` 真机专项调用随包中文模型，默认生成合成截图，可传 `parcelOcrImage` 指定 QA 私有 files 内的临时原图文件名、`parcelOcrExpectedCode` 指定预期码值。原图不入仓库、不输出私人 OCR 全文、不写快递数据库，检查后删除临时文件。`ParcelAndroidTest` 用 Robolectric 模拟 Android 13 / 14 / 15，检查 Room 去重、运输中补全、删除/完成防复活、权限开关、旧查询任务取消与提醒保留。Android 16 需 JDK 21，可使用 `-PparcelTestSdks=33,34,35,36`；默认 JDK 17 不运行 API 36，不把未运行版本算通过。`ParcelChecks` 仪器专项使用唯一临时数据库，测试包名必须为 QA；设备安装和备份仍按「设备验证」执行。CI 运行 JVM / Robolectric 检查并保留报告，不运行设备测试。
 
 每个可用 Android 13 / 14 / 15 / 16 及以上的 QA 设备还需检查：首次拒绝/允许通知、频道关闭、通知访问授权/撤销与重新绑定、后台识别关闭后无写入；不同来源/重复通知/敏感通知过滤；分享 grant、过大图片、截图 OCR 和多码确认；深色及 2 倍字体；Doze / 重启 / 强行停止后的提醒延迟和提醒开关；真实启动器固定请求、尺寸、取件后刷新和隐藏码值。无设备时只能交付构建及模拟结果，不能宣称这些端到端检查通过。64 位 ML Kit 原生库的 16 KiB ELF / APK 对齐检查也不能代替 Android 15+ 16 KiB 页设备运行。
 
