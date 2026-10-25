@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../web/download.js'), 'utf8');
-const apk = 'https://github.com/fangfar/CourseLens-public/releases/download/v99.0/CourseLens-99.0-vc99.apk';
+const apk = 'https://github.com/fangfar/Morrow/releases/download/v99.0/Morrow-99.0-vc99.apk';
 const config = { schemaVersion: 1, android: { apkUrl: apk } };
 
 function setup(fetch) {
