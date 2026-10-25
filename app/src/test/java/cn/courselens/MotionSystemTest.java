@@ -69,6 +69,14 @@ public class MotionSystemTest {
    org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"startBackMotion");org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"progressBackMotion",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,.5f));org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"cancelBackMotion");a.onBackPressed();assertTrue(p.running());assertEquals(progress,p.value,0);finish(p);assertFalse(motion.isRunning());
   }
  }
+ @Test public void drawerSettingsUsesOneMotionAndKeepsTheSelectedPageOnRepeatedBack(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();layout(a.findViewById(android.R.id.content));a.openSideMenu();SideNavigation drawer=org.robolectric.util.ReflectionHelpers.getField(a,"sideNavigation");Motion.Progress p=org.robolectric.util.ReflectionHelpers.getField(drawer,"motion");p.set(1);View foreground=org.robolectric.util.ReflectionHelpers.getField(drawer,"foreground");float opened=foreground.getTranslationX();assertTrue(opened>0);
+   drawer.findViewWithTag("drawer-settings").performClick();View settings=org.robolectric.util.ReflectionHelpers.getField(a,"root");assertEquals("设置",settings.getTag());assertFalse(((PageMotion)org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion")).isRunning());assertEquals(0,settings.getTranslationX(),0);assertTrue(drawer.isRouting());assertEquals(Motion.PAGE_IN,((android.animation.ValueAnimator)org.robolectric.util.ReflectionHelpers.getField(p,"animator")).getDuration());
+   seek(p,80);assertTrue(foreground.getTranslationX()>0&&foreground.getTranslationX()<opened);assertEquals(0,settings.getTranslationX(),0);drawer.findViewWithTag("drawer-settings").performClick();a.onBackPressed();assertSame(settings,org.robolectric.util.ReflectionHelpers.getField(a,"root"));
+   finish(p);assertFalse(drawer.isRouting());assertFalse(drawer.isOpen());assertEquals(0,foreground.getTranslationX(),0);layout(a.findViewById(android.R.id.content));org.robolectric.util.ReflectionHelpers.callInstanceMethod(a,"about");assertTrue(((PageMotion)org.robolectric.util.ReflectionHelpers.getField(a,"pageMotion")).isRunning());
+  }
+ }
  @Test public void disabledSystemAnimationsCommitOnceWithoutAnAnimator(){
   org.robolectric.util.ReflectionHelpers.callStaticMethod(android.animation.ValueAnimator.class,"setDurationScale",org.robolectric.util.ReflectionHelpers.ClassParameter.from(float.class,0f));
   int[] end={0};Motion.Progress progress=new Motion.Progress(0,p->{});progress.to(1,Motion.SHEET_IN,false,()->end[0]++);assertEquals(1,progress.value,0);assertFalse(progress.running());assertEquals(1,end[0]);

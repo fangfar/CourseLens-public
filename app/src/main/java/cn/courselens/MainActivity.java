@@ -77,7 +77,7 @@ public class MainActivity extends Activity {
   stage.removeAllViews();
   root=retained!=null?retained:new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setClickable(true);
   root.setBackgroundColor(SURFACE);
-  boolean animate=!skipPageMotion&&!switchingPrimaryTab&&previous!=null&&previous!=root&&previous.getWidth()>0&&android.animation.ValueAnimator.areAnimatorsEnabled();
+  boolean animate=!skipPageMotion&&!switchingPrimaryTab&&!sideNavigation.isRouting()&&previous!=null&&previous!=root&&previous.getWidth()>0&&android.animation.ValueAnimator.areAnimatorsEnabled();
   if(animate){
    stage.addView(previous,new FrameLayout.LayoutParams(-1,-1));
   }
