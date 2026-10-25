@@ -350,6 +350,7 @@ public class MainActivity extends Activity {
   option(timetable,R.drawable.ic_widget,"桌面小组件","",this::widgetAddPage).setTag("add-home-widget");
   option(timetable,R.drawable.ic_person,"学校账号","登录学校账号并同步当前课表",()->login(this::menu)).setTag("school-account");
   option(settingsGroup(body,""),R.drawable.ic_notes,"数据管理","管理课表、任务和快递的数据删除",this::dataManagement).setTag("data-management");
+  option(settingsGroup(body,""),R.drawable.ic_settings,"权限管理","查看和管理应用权限",this::openPermissionSettings).setTag("permission-settings");
   LinearLayout software=settingsGroup(body,"");
   remoteStatus=null;option(software,R.drawable.ic_info,"关于软件","",this::about).setTag("about-app");
   settingsPage=root;
@@ -489,6 +490,40 @@ public class MainActivity extends Activity {
   // No public shortcut-permission settings action; use the supported application details page.
   try{startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:"+getPackageName())));}
   catch(ActivityNotFoundException|SecurityException e){toast("无法打开应用详情，请在系统设置中找到课表镜；也可以手动添加小组件");}
+ }
+ private void openPermissionSettings(){
+  LinearLayout body=secondary("权限管理","管理应用所需权限和系统设置",this::menu);
+  LinearLayout system=settingsGroup(body,"系统权限");
+  option(system,R.drawable.ic_notifications,"通知","允许应用发送通知",this::openNotificationSettings).setTag("permission-notification");
+  option(system,R.drawable.ic_battery,"电池优化","允许后台运行，关闭省电限制",this::openBatteryOptimizationSettings).setTag("permission-battery");
+  option(system,R.drawable.ic_sync,"自启动","允许开机自动启动应用",this::openAutoStartSettings).setTag("permission-autostart");
+  option(system,R.drawable.ic_settings,"通知读取","允许读取其他应用的通知",this::openNotificationAccessSettings).setTag("permission-notification-access");
+ }
+ private void openNotificationSettings(){
+  try{
+   Intent intent=new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+   intent.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,getPackageName());
+   startActivity(intent);
+  }catch(ActivityNotFoundException|SecurityException e){toast("无法打开通知设置");}
+ }
+ private void openBatteryOptimizationSettings(){
+  try{
+   Intent intent=new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+   intent.setData(android.net.Uri.parse("package:"+getPackageName()));
+   startActivity(intent);
+  }catch(ActivityNotFoundException|SecurityException e){
+   try{startActivity(new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));}
+   catch(ActivityNotFoundException|SecurityException e2){toast("无法打开电池设置");}
+  }
+ }
+ private void openAutoStartSettings(){
+  toast("请在应用详情中找到「自启动管理」并开启");
+  try{startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.parse("package:"+getPackageName())));}
+  catch(ActivityNotFoundException|SecurityException e){toast("无法打开应用详情");}
+ }
+ private void openNotificationAccessSettings(){
+  try{startActivity(new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));}
+  catch(ActivityNotFoundException|SecurityException e){toast("无法打开通知访问设置");}
  }
  private void widgetGuide(){
   if(widgetDialog!=null)widgetDialog.dismiss();
