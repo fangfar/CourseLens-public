@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 
 /** Shared timings and a cancellable scalar: cancelling never commits an obsolete destination. */
 final class Motion {
- static final int PRESS=120,MENU_IN=220,MENU_OUT=180,DIALOG_IN=260,DIALOG_OUT=200,SHEET_IN=340,SHEET_OUT=280,PAGE_IN=320,PAGE_OUT=280,EXPAND=260,COLLAPSE=220;
+ static final int PRESS=120,MENU_IN=220,MENU_OUT=180,DIALOG_IN=260,DIALOG_OUT=200,SHEET_IN=340,SHEET_OUT=280,PAGE_IN=220,PAGE_OUT=180,EXPAND=260,COLLAPSE=220;
  static final PathInterpolator ENTER=new PathInterpolator(.2f,0f,0f,1f),EXIT=new PathInterpolator(.4f,0f,1f,1f);
  private Motion(){}
  static void press(View view){
