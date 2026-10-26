@@ -40,6 +40,7 @@ page.close()
 assert page.heading_count == 1, 'Site needs one primary heading'
 assert 'button' in page.downloads['full'] and 'secondary' not in page.downloads['full'], 'Full edition needs the highlighted download button'
 assert 'button' in page.downloads['lite'] and 'secondary' in page.downloads['lite'], 'Lite edition needs the secondary download button'
+assert html.index('data-download="full"') < html.index('data-download="lite"'), 'Full edition download must appear before lite'
 for link in page.links:
     uri = urlsplit(link)
     if uri.scheme or uri.netloc:
