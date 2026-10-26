@@ -59,11 +59,21 @@ Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用
 
 ## 快递中心
 
+### 可选图片识别插件
+
+- `ocr-plugin/` 是独立应用，正式包名 `cn.courselens.ocr`，QA 为 `cn.courselens.ocr.qa`。与主包使用相同签名配置，但独立安装、卸载和版本管理。主包不依赖 ML Kit、不包含 OCR 模型或原生库；通知、粘贴文字和手动录入无需插件。插件不声明网络权限，不上传截图。
+- 「读取信息」和「识别设置」提供插件入口。主包从 `https://morrow.xvyan.cn/remote/ocr-plugin.json` 读取 HTTPS 下载地址、字节数、SHA-256、插件版本和协议。未发布时 `enabled: false`；不使用占位 APK 地址。下载交给系统 DownloadManager，界面显示进度、等待网络和失败重试，离开页面后可继续下载，再次进入恢复进度。下载后复制到私有目录，校验大小、SHA-256、包名、主包签名和协议 1，再临时授权系统安装器读取该 APK；取消下载会清除任务和安装缓存。QA 不下载正式插件，需安装同签名 QA 产物。
+- Android 首次安装需用户允许 Morrow 安装应用，并在系统安装器确认；不静默安装。安装返回后重新检查插件并继续选择 / 识别图片，取消或拒绝授权可重试。插件只接受同签名且包名匹配的主包调用，读取单个临时 `content` URI，返回有长度和坐标边界的文本行，由主包沿用 `ParcelRules.extractImage` 提取快递信息；不传整张位图或保存截图。
+- `.\gradlew.bat --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug` 同时检查主包和插件。`python tests/OcrPluginChecks.py --host app/build/outputs/apk/debug/app-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk` 检查同签名、包名、模型隔离和插件无网络权限。正式发布工作流额外生成插件 APK 和 `ocr-plugin.json` 至草稿产物；公开插件后才把已验证的描述文件通过 PR 更新到 `remote/ocr-plugin.json`。下载地址可使用经审核的 HTTPS 国内对象存储，内容必须与校验值一致。准备产物不代表上传、公开发布或下载链路验收。
+- QA 下载测试可额外使用 `-PqaOcrManifest=http://127.0.0.1:8765/ocr-plugin.json`，通过 `adb -s SERIAL reverse tcp:8765 tcp:8765` 连接仅监听电脑回环地址的临时文件服务。描述文件必须指向 `cn.courselens.ocr.qa` 同签名插件；正式包拒绝 QA 插件及 HTTP 地址。只有 debug 网络配置放行精确 `127.0.0.1`，不放行局域网域名，也不部署 QA 下载配置到官网。安装 QA 主包和测试包后，可运行 `adb -s SERIAL shell am instrument -w -e ocrDownloadOnly true cn.courselens.qa.test/cn.courselens.NativeChecks` 启动下载专项；系统安装授权与确认仍需在手机界面完成，专项不打开业务页面或写入快递数据库。测试完删除 ADB 转发并停止服务，使用此测试包继续下载前需重新建立测试源。
+- 发布前验收：未安装入口、下载失败 / 取消 / 网络恢复、进后台 / 进程重建后恢复、损坏及异签名文件拒绝、拒绝安装权限、取消安装、安装成功后识别、卸载回退、图片分享、协议不兼容、深色 / 大字体。设备测试使用合成截图和隔离 QA 数据。
+
+
 - 入口在底部导航的「快递」，也可由 Android 文字 / 图片分享打开。三个底栏入口在主界面与快递页共用 `AppNavigation`，选中使用实心图标；返回课表 / 任务时复用主 Activity、保留原页面和相应选中项，并清除其上的快递页，避免返回键循环。独立 `ParcelActivity` 使用现有 `SecondaryUi`、原生 View 和半高滚动表单，头部菜单与添加按钮共用全应用 `SecondaryUi` 圆形图标样式，浅色沿用原色板，深色资源仅作用于快递模块。没有迁移课表、学习通缓存或账号数据，也没有改包名、版本号或正式签名。
 - 快递页使用单一快递列表，不按状态或驿站分类，不左右翻页。点击条目内容内联展开编辑、删除、复制取件码、提醒及已有物流记录，同一时间只展开一条；展开后的「已取件」按钮标记完成，完成后保留在同一列表末尾，地址与取件码使用灰色、取件码加删除线，不另显示完成状态文字；提供 5 秒撤销和展开后的「恢复未取件」，恢复不自动重启旧提醒；既有已取件记录同样可见。未核对的识别结果在同一列表提示核对，确认前不能标记完成。顶部保留淘宝 / 菜鸟 / 拼多多官方身份码入口；「手动添加」直接打开表单，「读取信息」提供粘贴文字、选择截图及直达通知读取设置。截图读取结果回填文本，失败时保留文字和面板内反馈，便于修正或手动添加。填写取件码或运单号即可保存，沿用原有状态字段及去重规则；不提供在线物流查询。全部数据删除仍在总设置 → 数据管理。
 
 - `ParcelDatabase` 是独立 Room schema 1 数据库 `parcels.db`，schema 保存在 `app/schemas/`。Java 使用 annotationProcessor，无 Compose / Hilt / Kotlin 插件；Room 2.6.1、WorkManager 2.9.1 保持现有 SDK 34 / JDK 17 构建兼容。升级 schema 时添加保留数据的 migration，不使用 destructive fallback。取件码和运单号分别保存；同运单或同地址同码去重，同码不同驿站保留。完成记录不因通知复活。运输中记录收到同运单取件通知时补全原记录，低评分信息需确认。单条删除保留最长 14 天的 SHA-256 去重摘要，删除全部会清除记录、摘要和设置，并执行 Room 的 WAL checkpoint / VACUUM。
-- `ParcelRules` 是本地版本化规则（当前 v2），评分是规则强度而非统计概率。只提取明确取件语境，排除验证码和动态身份码。只有单码、明确地址的高评分通知可以直接进入待取件；其他结果在快递列表中标记为待核对，由用户人工核对，截图 / 分享一律确认。通知 / 粘贴多码文本不自动配地址或运单，避免串件；截图按 ML Kit 文本行坐标关联标签、码值和附近取件点，同一标签含多码时仍留空地址待补。截图局部区域排除身份码 / 验证码，不因整屏其他位置出现无关安全词而丢弃有效取件码。没有保存通知全文或图片，没有短信、无障碍、相机或媒体库读取权限。截图使用文档选择器 / 分享授权和随包中文 ML Kit；只接收 content URI，限 10 MB / 8000 万输入像素并下采样处理，识别后释放图片和识别器。
+- `ParcelRules` 是本地版本化规则（当前 v2），评分是规则强度而非统计概率。只提取明确取件语境，排除验证码和动态身份码。只有单码、明确地址的高评分通知可以直接进入待取件；其他结果在快递列表中标记为待核对，由用户人工核对，截图 / 分享一律确认。通知 / 粘贴多码文本不自动配地址或运单，避免串件；截图按 ML Kit 文本行坐标关联标签、码值和附近取件点，同一标签含多码时仍留空地址待补。截图局部区域排除身份码 / 验证码，不因整屏其他位置出现无关安全词而丢弃有效取件码。没有保存通知全文或图片，没有短信、无障碍、相机或媒体库读取权限。截图使用文档选择器 / 分享授权和独立可选插件内的中文 ML Kit；只接收 content URI，限 10 MB / 8000 万输入像素并下采样处理，识别后释放图片和识别器。
 - 通知识别默认关闭，需 App 内同意和系统通知访问两步授权。默认来源为菜鸟、淘宝、拼多多，可单独选微信、QQ、默认短信应用的**通知**；不访问短信数据库。`ParcelNotificationListener` 由系统绑定权限保护，不扫描历史通知、不启动前台服务保活。关闭或清空数据会使排队中的旧识别结果失效。通知显示权限和读取通知访问相互独立。Android 15 及以上的敏感通知过滤、侧载应用受限设置、工作资料隔离和厂商限制都可能导致通知正文不可见；提供手动 / 分享入口，不绕过系统限制。
 - `ParcelIdentity` 只打开包限定的官方路由，捕获跳转失败后打开应用首页或提示用户手动查找。深链成功发出 Intent 不证明已到身份码页面。拼多多入口通过 `tab=ID_CODE&entry_source=11` 指定身份码页签，已在小米 14 / Android 16 的拼多多 8.3.0 验证；淘宝、菜鸟及其他版本仍需分别验收，不据此称为当前所有版本有效。页面不生成、读取、抓取或缓存官方动态令牌。
 - 在线物流查询与代理配置已移除。打开快递页时取消旧版 `parcel-tracking` 后台任务，并清除旧代理、后台查询开关与退避设置；旧版已排队的查询任务直接结束。保留 Room schema 1 和已有物流字段，只供本机记录展示与旧数据兼容，不再发出物流查询请求。
@@ -72,7 +82,7 @@ Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用
 
 ### 参考来源与许可边界
 
-2026-10-25 重新核查了下列固定来源。取件识别采用随包 ML Kit 中文 OCR 与 `shareven/parcel` 的 MIT 取件标签、地址规则局部适配，未整体合并第三方应用。已在源码标注来源，并在 `app/src/main/assets/licenses/shareven-parcel.txt` 保留上游版权和许可全文；第三方许可不改变 CourseLens 本身的许可状态。方案比较见 [取件识别调研](docs/parcel-recognition-research.md)。
+2026-10-25 重新核查了下列固定来源。取件识别采用可选插件内的 ML Kit 中文 OCR 与 `shareven/parcel` 的 MIT 取件标签、地址规则局部适配，未整体合并第三方应用。已在源码标注来源，并在 `app/src/main/assets/licenses/shareven-parcel.txt` 保留上游版权和许可全文；第三方许可不改变 CourseLens 本身的许可状态。方案比较见 [取件识别调研](docs/parcel-recognition-research.md)。
 
 | 来源 | 核查文件与兼容性 | 使用方式 |
 | --- | --- | --- |
@@ -91,7 +101,7 @@ python tests/run_checks.py
 adb -s SERIAL shell am instrument -w -e parcelOnly true cn.courselens.qa.test/cn.courselens.NativeChecks
 ```
 
-`ParcelRulesTest` 使用合成语料及 OCR 行坐标，覆盖标签别名、换行、多码、复制按钮干扰、同屏身份码和电话 / 日期排除；`parcelOcrOnly` 真机专项调用随包中文模型，默认生成合成截图，可传 `parcelOcrImage` 指定 QA 私有 files 内的临时原图文件名、`parcelOcrExpectedCode` 指定预期码值。原图不入仓库、不输出私人 OCR 全文、不写快递数据库，检查后删除临时文件。`ParcelAndroidTest` 用 Robolectric 模拟 Android 13 / 14 / 15，检查 Room 去重、运输中补全、删除/完成防复活、权限开关、旧查询任务取消与提醒保留。Android 16 需 JDK 21，可使用 `-PparcelTestSdks=33,34,35,36`；默认 JDK 17 不运行 API 36，不把未运行版本算通过。`ParcelChecks` 仪器专项使用唯一临时数据库，测试包名必须为 QA；设备安装和备份仍按「设备验证」执行。CI 运行 JVM / Robolectric 检查并保留报告，不运行设备测试。
+`ParcelRulesTest` 使用合成语料及 OCR 行坐标，覆盖标签别名、换行、多码、复制按钮干扰、同屏身份码和电话 / 日期排除；主包的 `parcelOcrOnly` 仪器专项验证插件结果协议与人工确认边界，不再调用识别模型。真实中文识别模型由独立 QA 插件专项验证：`adb -s SERIAL shell am instrument -w cn.courselens.ocr.qa.test/cn.courselens.ocr.OcrChecks`，只生成合成图片、不写快递数据库；该项不能代替主包下载 / 安装 / 回传的端到端验收。`ParcelAndroidTest` 用 Robolectric 模拟 Android 13 / 14 / 15，检查 Room 去重、运输中补全、删除/完成防复活、权限开关、旧查询任务取消与提醒保留。Android 16 需 JDK 21，可使用 `-PparcelTestSdks=33,34,35,36`；默认 JDK 17 不运行 API 36，不把未运行版本算通过。`ParcelChecks` 仪器专项使用唯一临时数据库，测试包名必须为 QA；设备安装和备份仍按「设备验证」执行。CI 运行 JVM / Robolectric 检查并保留报告，不运行设备测试。
 
 每个可用 Android 13 / 14 / 15 / 16 及以上的 QA 设备还需检查：首次拒绝/允许通知、频道关闭、通知访问授权/撤销与重新绑定、后台识别关闭后无写入；不同来源/重复通知/敏感通知过滤；分享 grant、过大图片、截图 OCR 和多码确认；深色及 2 倍字体；Doze / 重启 / 强行停止后的提醒延迟和提醒开关；真实启动器固定请求、尺寸、取件后刷新和隐藏码值。无设备时只能交付构建及模拟结果，不能宣称这些端到端检查通过。64 位 ML Kit 原生库的 16 KiB ELF / APK 对齐检查也不能代替 Android 15+ 16 KiB 页设备运行。
 

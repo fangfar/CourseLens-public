@@ -21,6 +21,8 @@ with tempfile.TemporaryDirectory() as folder:
     for name in ("settings.gradle", "build.gradle", "signing-certificate.sha256"):
         shutil.copy2(root / name, fixture / name)
     shutil.copy2(root / "app/build.gradle", fixture / "app/build.gradle")
+    (fixture / "ocr-plugin").mkdir()
+    shutil.copy2(root / "ocr-plugin/build.gradle", fixture / "ocr-plugin/build.gradle")
     if (root / "local.properties").exists():
         shutil.copy2(root / "local.properties", fixture / "local.properties")
     wrapper = root / ("gradlew.bat" if os.name == "nt" else "gradlew")
