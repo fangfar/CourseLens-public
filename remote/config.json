@@ -10,15 +10,15 @@
     }
   ],
   "android": {
-    "versionCode": 17,
-    "versionName": "2.7.5",
+    "versionCode": 18,
+    "versionName": "2.7.6",
     "forcePrompt": false,
     "promptTitle": "",
     "promptMessage": "",
-    "changelog": "软件更名为 Morrow，更新接口与仓库地址切换为新地址。\n完善任务课程分组、截止时间卡片、编辑与恢复功能。\n新增快递中心，支持手动记录、分享/截图识别、通知识别及桌面小组件；优化外观、设置与返回交互。",
-    "apkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.5/Morrow-2.7.5-vc17.apk",
-    "liteApkUrl": "",
-    "fullApkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.5/Morrow-2.7.5-vc17.apk",
+    "changelog": "精简课表、任务、快递与设置界面，统一字体、按钮和色板。\n优化空状态、添加入口和设置分组，提高课表文字与导航图标对比度。\n更新官网和使用说明；提供完整版、轻量版及可选图片识别插件。",
+    "apkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.6/Morrow-2.7.6-full-vc18.apk",
+    "liteApkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.6/Morrow-2.7.6-lite-vc18.apk",
+    "fullApkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.6/Morrow-2.7.6-full-vc18.apk",
     "diskUrl": "https://pan.baidu.com/s/5Q7q-93RIXFczWfL1i3cvQg"
   },
   "repositoryUrl": "https://github.com/fangfar/Morrow"
