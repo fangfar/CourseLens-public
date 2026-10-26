@@ -26,7 +26,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, pathlib, datetime, urllib.parse
-          raw = pathlib.Path('remote/**').read_bytes()
+          raw = pathlib.Path('remote/config.json').read_bytes()
           assert len(raw) <= 65536, 'Configuration exceeds 64 KiB'
           config = json.loads(raw)
           def text(obj, key, maximum, empty=False):
