@@ -29,8 +29,8 @@ public class CourseWidget extends AppWidgetProvider {
   Palette palette=new Palette(context);
   views.setInt(R.id.widget_surface,"setBackgroundResource",palette.surfaceBackground);
   views.setTextColor(R.id.widget_date,palette.ink);views.setTextColor(R.id.widget_header,palette.header);views.setInt(R.id.widget_sync_icon,"setColorFilter",palette.header);
-  views.setTextColor(R.id.widget_empty_status,palette.emptyStatus);views.setTextColor(R.id.widget_empty_title,palette.ink);views.setTextColor(R.id.widget_empty_description,palette.tomorrow);views.setTextColor(R.id.widget_tomorrow,palette.tomorrow);
-  views.setInt(R.id.widget_empty_status,"setBackgroundResource",palette.statusBackground);
+  views.setTextColor(R.id.widget_empty_title,palette.ink);views.setTextColor(R.id.widget_tomorrow,palette.tomorrow);
+
   views.setViewVisibility(R.id.widget_empty_panel,android.view.View.GONE);views.setViewVisibility(R.id.widget_tomorrow,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_one,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_two,android.view.View.GONE);
   if(android.os.Build.VERSION.SDK_INT>=31)views.setInt(R.id.widget_date,"setGravity",android.view.Gravity.START);
   if(android.os.Build.VERSION.SDK_INT>=31){views.setViewLayoutWidth(R.id.widget_surface,compact?Math.min(width,height):width,android.util.TypedValue.COMPLEX_UNIT_DIP);views.setViewLayoutHeight(R.id.widget_surface,compact?Math.min(width,height):height,android.util.TypedValue.COMPLEX_UNIT_DIP);views.setViewLayoutHeight(R.id.widget_heading,compact?32:44,android.util.TypedValue.COMPLEX_UNIT_DIP);}
@@ -45,17 +45,17 @@ public class CourseWidget extends AppWidgetProvider {
    for(int slot=0;slot<4;slot++){
     Course c=slot<limit&&slot<schedule.remaining.size()?schedule.remaining.get(slot):null;
     views.setViewVisibility(CONTENT[slot],c!=null?android.view.View.VISIBLE:android.view.View.GONE);
-    course(context,views,id,slot,c,term,now,"偷得浮生半日闲",compact,slot==upcoming,times,palette);
+    course(context,views,id,slot,c,term,now,"暂无课程",compact,slot==upcoming,times,palette);
    }
    int missing=schedule.remainingCount==0?0:limit-Math.min(limit,schedule.remainingCount);views.setViewVisibility(R.id.widget_space_one,(missing&1)!=0?android.view.View.VISIBLE:android.view.View.GONE);views.setViewVisibility(R.id.widget_space_two,(missing&2)!=0?android.view.View.VISIBLE:android.view.View.GONE);
    if(schedule.remainingCount==0){
     boolean finished=schedule.todayCount>0;views.setViewVisibility(R.id.widget_empty_panel,android.view.View.VISIBLE);
     views.setInt(R.id.widget_empty_panel,"setBackgroundResource",compact?0:palette.freeBackground);
-    views.setTextViewText(R.id.widget_empty_status,finished?"今日课毕":"今日无课");views.setTextViewText(R.id.widget_empty_title,finished?"偷得浮生半日闲":"偷得浮生一日闲");
-    views.setTextViewText(R.id.widget_empty_description,finished?"今天的课程已经全部结束":"今天没有课程安排");views.setTextViewTextSize(R.id.widget_empty_title,android.util.TypedValue.COMPLEX_UNIT_SP,compact?14:large?22:20);views.setTextViewTextSize(R.id.widget_empty_description,android.util.TypedValue.COMPLEX_UNIT_SP,compact?10:large?12:11);
-    if(android.os.Build.VERSION.SDK_INT>=31)views.setInt(R.id.widget_date,"setGravity",compact?android.view.Gravity.CENTER:android.view.Gravity.START);views.setTextViewTextSize(R.id.widget_empty_status,android.util.TypedValue.COMPLEX_UNIT_SP,large?11:9);views.setInt(R.id.widget_empty_description,"setMaxLines",compact?1:2);
-    int inset=Math.round((compact?2:6)*density),badgeInset=Math.round((large?5:2)*density);views.setViewPadding(R.id.widget_empty_panel,inset,inset,inset,inset);views.setViewPadding(R.id.widget_empty_status,badgeInset,badgeInset,badgeInset,badgeInset);
-    if(android.os.Build.VERSION.SDK_INT>=31){views.setInt(R.id.widget_empty_title,"setGravity",compact||large?android.view.Gravity.CENTER:android.view.Gravity.START);views.setInt(R.id.widget_empty_description,"setGravity",compact||large?android.view.Gravity.CENTER:android.view.Gravity.START);views.setInt(R.id.widget_empty_panel,"setGravity",(compact||large?android.view.Gravity.CENTER:android.view.Gravity.START|android.view.Gravity.CENTER_VERTICAL));}
+    views.setTextViewText(R.id.widget_header,"课表");views.setTextViewText(R.id.widget_empty_title,finished?"今日课程已结束":"今日无课");
+    views.setTextViewTextSize(R.id.widget_empty_title,android.util.TypedValue.COMPLEX_UNIT_SP,compact?14:large?22:20);
+    if(android.os.Build.VERSION.SDK_INT>=31)views.setInt(R.id.widget_date,"setGravity",compact?android.view.Gravity.CENTER:android.view.Gravity.START);
+    int inset=Math.round((compact?2:6)*density);views.setViewPadding(R.id.widget_empty_panel,inset,inset,inset,inset);
+    if(android.os.Build.VERSION.SDK_INT>=31){views.setInt(R.id.widget_empty_title,"setGravity",compact||large?android.view.Gravity.CENTER:android.view.Gravity.START);views.setInt(R.id.widget_empty_panel,"setGravity",(compact||large?android.view.Gravity.CENTER:android.view.Gravity.START|android.view.Gravity.CENTER_VERTICAL));}
     views.setOnClickPendingIntent(R.id.widget_empty_panel,open(context,id,4,null,term,now.toLocalDate()));
     if(schedule.tomorrow!=null){Course tomorrow=schedule.tomorrow;String hint="明天第一节 "+times.starts[tomorrow.start-1]+" · "+SchoolParser.clean(tomorrow.name)+(large&&!tomorrow.room.isEmpty()?" · "+SchoolParser.clean(tomorrow.room):"");views.setViewVisibility(R.id.widget_tomorrow,android.view.View.VISIBLE);views.setTextViewText(R.id.widget_tomorrow,hint);views.setTextViewTextSize(R.id.widget_tomorrow,android.util.TypedValue.COMPLEX_UNIT_SP,compact?9:12);views.setInt(R.id.widget_tomorrow,"setMaxLines",large?2:1);views.setOnClickPendingIntent(R.id.widget_tomorrow,open(context,id,5,tomorrow,term,now.toLocalDate().plusDays(1)));}
    }
@@ -87,11 +87,11 @@ public class CourseWidget extends AppWidgetProvider {
   views.setOnClickPendingIntent(content,open(context,id,slot,next,term,now.toLocalDate()));
  }
  private static final class Palette {
-  final int ink,header,muted,tomorrow,nextStatus,waitStatus,emptyStatus,surfaceBackground,courseBackground,nextBackground,statusBackground,waitingBackground,freeBackground;
+  final int ink,header,muted,tomorrow,nextStatus,waitStatus,surfaceBackground,courseBackground,nextBackground,statusBackground,waitingBackground,freeBackground;
   Palette(Context context){
    boolean dark=Appearance.dark(context);Context themed=Appearance.wrap(context);
    ink=themed.getColor(R.color.widget_ink);header=themed.getColor(R.color.widget_header);muted=themed.getColor(R.color.widget_muted);tomorrow=themed.getColor(R.color.widget_tomorrow);
-   nextStatus=themed.getColor(R.color.widget_status_next);waitStatus=themed.getColor(R.color.widget_status_waiting);emptyStatus=themed.getColor(R.color.widget_empty_status);
+   nextStatus=themed.getColor(R.color.widget_status_next);waitStatus=themed.getColor(R.color.widget_status_waiting);
    surfaceBackground=dark?R.drawable.widget_background_dark:R.drawable.widget_background;courseBackground=dark?R.drawable.widget_course_background_dark:R.drawable.widget_course_background;
    nextBackground=dark?R.drawable.widget_next_background_dark:R.drawable.widget_next_background;statusBackground=dark?R.drawable.widget_status_background_dark:R.drawable.widget_status_background;
    waitingBackground=dark?R.drawable.widget_waiting_background_dark:R.drawable.widget_waiting_background;freeBackground=dark?R.drawable.widget_free_background_dark:R.drawable.widget_free_background;

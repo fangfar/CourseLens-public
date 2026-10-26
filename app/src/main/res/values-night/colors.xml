@@ -23,13 +23,10 @@
     <color name="app_switch_off">#4A5058</color>
     <color name="app_switch_thumb">#E8EAED</color>
     <color name="app_field">#1A1E22</color>
-    <color name="app_empty_title">#C3CEDD</color>
-    <color name="app_empty_hint">#8CB9FF</color>
     <color name="widget_ink">#F1F3F5</color>
     <color name="widget_header">#A8B0BC</color>
     <color name="widget_muted">#9AA3AF</color>
     <color name="widget_tomorrow">#9AA3AF</color>
     <color name="widget_status_next">#6FDCB2</color>
     <color name="widget_status_waiting">#8CB9FF</color>
-    <color name="widget_empty_status">#6FDCB2</color>
 </resources>

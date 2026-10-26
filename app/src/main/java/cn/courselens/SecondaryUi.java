@@ -9,12 +9,12 @@ import java.util.*;
 
 /** Shared secondary-page controls used by settings and platform connections. */
 final class SecondaryUi {
- final int INK,MUTED,SURFACE,CARD,PRIMARY,AQUA,SOFT,NAVY,BLUE,DIVIDER,DANGER,DISABLED,ON_PRIMARY,HANDLE,COURSE_BORDER,EMPTY_TITLE,EMPTY_HINT,NAV_MUTED,WARNING,CHIP;
+ final int INK,MUTED,SURFACE,CARD,PRIMARY,AQUA,SOFT,NAVY,BLUE,DIVIDER,DANGER,DISABLED,ON_PRIMARY,HANDLE,COURSE_BORDER,NAV_MUTED,WARNING,CHIP;
  final boolean dark;
  private final Activity activity;
  SecondaryUi(Activity activity){
   this.activity=activity;dark=Appearance.dark(activity);
-  INK=color(R.color.app_ink);MUTED=color(R.color.app_muted);SURFACE=color(R.color.app_surface);CARD=color(R.color.app_card);PRIMARY=color(R.color.app_primary);AQUA=color(R.color.app_selected);SOFT=color(R.color.app_soft);NAVY=INK;BLUE=color(R.color.app_blue);DIVIDER=color(R.color.app_divider);DANGER=color(R.color.app_danger);DISABLED=color(R.color.app_disabled);ON_PRIMARY=color(R.color.app_on_primary);HANDLE=color(R.color.app_handle);COURSE_BORDER=color(R.color.app_course_border);EMPTY_TITLE=color(R.color.app_empty_title);EMPTY_HINT=color(R.color.app_empty_hint);NAV_MUTED=color(R.color.app_nav_muted);WARNING=color(R.color.app_warning);CHIP=color(R.color.app_chip);
+  INK=color(R.color.app_ink);MUTED=color(R.color.app_muted);SURFACE=color(R.color.app_surface);CARD=color(R.color.app_card);PRIMARY=color(R.color.app_primary);AQUA=color(R.color.app_selected);SOFT=color(R.color.app_soft);NAVY=INK;BLUE=color(R.color.app_blue);DIVIDER=color(R.color.app_divider);DANGER=color(R.color.app_danger);DISABLED=color(R.color.app_disabled);ON_PRIMARY=color(R.color.app_on_primary);HANDLE=color(R.color.app_handle);COURSE_BORDER=color(R.color.app_course_border);NAV_MUTED=color(R.color.app_nav_muted);WARNING=color(R.color.app_warning);CHIP=color(R.color.app_chip);
  }
  private int color(int resource){return activity.getColor(resource);}
  int dp(int value){return Math.round(value*activity.getResources().getDisplayMetrics().density);}
