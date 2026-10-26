@@ -251,7 +251,7 @@ final class TaskPage extends LinearLayout {
  }
 
  private void courses(){
-  if(busy||closed)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"加载的课程");sheet.body.setTag("task-course-selection");
+  if(busy||closed)return;MainActivity.NavigationOverlay sheet=activity.new NavigationOverlay(false,"加载的课程");sheet.fitContent=true;sheet.body.setTag("task-course-selection");
   TextView intro=ui.text("关闭后停止加载并隐藏该课程任务，已保存的任务仍保留。重新开启后可点击刷新。",14,ui.MUTED);intro.setPadding(0,0,0,ui.dp(12));sheet.body.addView(intro);
   Set<String> disabled=new LinkedHashSet<>(snapshot.disabledCourses);
   TextView count=ui.text("",13,ui.MUTED);count.setTag("task-courses-count");count.setPadding(0,0,0,ui.dp(12));sheet.body.addView(count);
