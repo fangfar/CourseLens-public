@@ -32,16 +32,22 @@ jobs:
       - name: Business regression checks
         run: python3 tests/run_checks.py
       - name: Release validation tests
-        run: python3 tests/ReleaseChecksTest.py
+        run: |
+          python3 tests/ReleaseChecksTest.py
+          python3 tests/OcrPluginChecksTest.py
       - name: Signing boundaries without official secrets
         run: python3 tests/SigningChecks.py
       - name: Build isolated QA APKs and lint
         run: sh gradlew --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug
+      - name: Verify optional OCR separation
+        run: python3 tests/OcrPluginChecks.py --host app/build/outputs/apk/debug/app-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk
       - name: Upload QA APKs
         uses: actions/upload-artifact@v4
         with:
           name: courselens-qa-${{ github.sha }}
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            ocr-plugin/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
       - name: Upload test APK and lint reports
@@ -51,6 +57,8 @@ jobs:
           name: courselens-checks-${{ github.sha }}
           path: |
             app/build/outputs/apk/androidTest/debug/*.apk
+            ocr-plugin/build/outputs/apk/androidTest/debug/*.apk
+            ocr-plugin/build/reports/lint-results-debug.*
             app/build/reports/lint-results-debug.*
             app/build/reports/tests/testDebugUnitTest/**
             app/build/test-results/testDebugUnitTest/**
