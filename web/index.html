@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
-  <meta name="description" content="Morrow，轻量的 Android 课表应用。按周查看课程，管理多份课表，灵活调课，用桌面小组件查看安排。已导入课表可离线查看。">
+  <meta name="description" content="Morrow，轻量的 Android 校园助手。按周查看课程，管理作业任务与快递取件信息，支持桌面小组件，已导入课表可离线查看。">
   <title>Morrow · 让校园日常更清晰</title>
   <link rel="canonical" href="https://morrow.xvyan.cn/">
   <link rel="icon" type="image/webp" href="assets/courselens-icon.webp">
@@ -40,7 +40,7 @@
         <p class="fine-print">适用于 Android 8.0 及以上<br>从 GitHub 下载最新正式版 APK</p>
       </div>
       <figure class="product-preview">
-        <img class="timetable" src="assets/timetable-demo.webp" width="841" height="1870" fetchpriority="high" alt="Morrow 界面参考：七列周课表以不同颜色区分课程，展示节次、上课地点和冲突标记；所有课程与教室均为合成示例。">
+        <img class="timetable" src="assets/app-timetable.webp" width="720" height="1232" fetchpriority="high" alt="Morrow 课表页示例：按周显示课程、教室与上课时间；所有课程与教室均为合成示例。">
         <figcaption>界面参考 · 示例数据</figcaption>
       </figure>
     </section>
@@ -58,6 +58,24 @@
         <h2>桌面一瞥，就知道</h2>
         <p>提供多种尺寸的桌面小组件，不必打开应用，也能快速查看课程安排。</p>
       </article>
+    </section>
+
+    <section class="modules wrap" aria-labelledby="modules-title">
+      <div class="modules-intro">
+        <p class="eyebrow">课表之外，同样有序</p>
+        <h2 id="modules-title">作业有截止，<br>取件有提醒。</h2>
+        <p class="section-description">Morrow 也把学习平台作业和快递取件码放在手边。任务按课程归拢，最近截止优先显示；取件信息可手动添加，也可在本机从图片读取，少一次来回翻找。</p>
+      </div>
+      <div class="module-grid">
+        <figure class="module-card">
+          <img src="assets/app-tasks.webp" width="720" height="1232" loading="lazy" alt="Morrow 任务页示例：按课程分组显示作业名称、待交数量和截止时间；所有任务与课程均为合成示例。">
+          <figcaption><strong>任务</strong><span>按课程归拢作业，最近截止优先。</span></figcaption>
+        </figure>
+        <figure class="module-card">
+          <img src="assets/app-parcels.webp" width="720" height="1232" loading="lazy" alt="Morrow 快递中心示例：展示身份码入口、手动添加和读取信息按钮，以及合成取件码。">
+          <figcaption><strong>快递</strong><span>取件码集中管理，支持图片识别。</span></figcaption>
+        </figure>
+      </div>
     </section>
 
     <section class="everyday" aria-labelledby="everyday-title">
@@ -101,8 +119,8 @@
       <h2 id="download-title">选择适合你的版本</h2>
       <p>轻量版安装包更小，需要识图时再下载插件；完整版内置图片识别，安装后即可离线使用。</p>
       <div class="actions">
-        <a class="button" data-download="lite" href="https://github.com/fangfar/Morrow/releases/latest"><img class="light-icon" src="assets/android2.svg" width="24" height="24" alt="">下载轻量版</a>
-        <a class="button secondary" data-download="full" href="https://github.com/fangfar/Morrow/releases/latest">下载完整版</a>
+        <a class="button" data-download="full" href="https://github.com/fangfar/Morrow/releases/latest"><img class="light-icon" src="assets/android2.svg" width="24" height="24" alt="">下载完整版</a>
+        <a class="button secondary" data-download="lite" href="https://github.com/fangfar/Morrow/releases/latest"><img src="assets/android2.svg" width="24" height="24" alt="">下载轻量版</a>
         <a class="button secondary" href="https://github.com/fangfar/Morrow"><img src="assets/github.svg" width="24" height="24" alt="">GitHub 仓库</a>
       </div>
       <p class="fine-print">Android 8.0 及以上 · 已导入课表可离线查看</p>

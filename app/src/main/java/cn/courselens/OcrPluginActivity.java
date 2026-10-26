@@ -132,7 +132,7 @@ public final class OcrPluginActivity extends Activity {
   }catch(RuntimeException e){stage="idle";show("无法打开安装界面，请检查系统安装权限后重试","重试安装");}
  }
  private void usePlugin(){
-  if(image==null){stage="picker";try{startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE),604);}catch(RuntimeException e){stage="idle";show("系统没有可用的图片选择器","重试");}return;}
+  if(image==null){stage="picker";try{ImagePicker.open(this,604);}catch(RuntimeException e){stage="idle";show("系统没有可用的图片选择器","重试");}return;}
   try{
    if(!installed(this))throw new SecurityException();stage="recognizing";
    Intent recognize=new Intent().setComponent(new ComponentName(pluginPackage(this),"cn.courselens.ocr.OcrActivity")).setDataAndType(image,"image/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).putExtra("protocol",ParcelOcr.PROTOCOL);recognize.setClipData(ClipData.newRawUri("待识别图片",image));startActivityForResult(recognize,601);

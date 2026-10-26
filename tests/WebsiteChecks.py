@@ -11,6 +11,7 @@ class SiteParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.ids = set()
         self.links = []
+        self.downloads = {}
         self.heading_count = 0
 
     def handle_starttag(self, tag, attrs):
@@ -18,6 +19,8 @@ class SiteParser(HTMLParser):
         if 'id' in attrs:
             assert attrs['id'] not in self.ids, f"Duplicate id: {attrs['id']}"
             self.ids.add(attrs['id'])
+        if 'data-download' in attrs:
+            self.downloads[attrs['data-download']] = attrs.get('class', '').split()
         self.heading_count += tag == 'h1'
         if tag == 'img':
             assert 'alt' in attrs, 'Image needs an alt attribute'
@@ -35,6 +38,9 @@ page = SiteParser()
 page.feed(html)
 page.close()
 assert page.heading_count == 1, 'Site needs one primary heading'
+assert 'button' in page.downloads['full'] and 'secondary' not in page.downloads['full'], 'Full edition needs the highlighted download button'
+assert 'button' in page.downloads['lite'] and 'secondary' in page.downloads['lite'], 'Lite edition needs the secondary download button'
+assert html.index('data-download="full"') < html.index('data-download="lite"'), 'Full edition download must appear before lite'
 for link in page.links:
     uri = urlsplit(link)
     if uri.scheme or uri.netloc:

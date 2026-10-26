@@ -63,6 +63,16 @@ figcaption { text-align: center; color: var(--muted); margin-top: 16px; font-siz
 .features article:last-child { padding-right: 0; }
 .features h2 { font-size: 23px; line-height: 1.5; margin-bottom: 14px; }
 .features p { font-size: 16px; color: var(--muted); }
+.modules { display: grid; grid-template-columns: .85fr 1.15fr; gap: 56px; align-items: center; padding-block: 0 72px; }
+.modules-intro .eyebrow { margin-bottom: 16px; }
+.modules h2 { font-size: 40px; line-height: 1.5; letter-spacing: -.035em; }
+.modules .section-description { margin-top: 20px; }
+.module-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.module-card { padding: 20px 20px 18px; background: var(--pale-blue); border-radius: 24px; }
+.module-card img { width: 100%; height: auto; border: 5px solid var(--white); border-radius: 20px; box-shadow: 0 14px 40px #243f5b12; }
+.module-card figcaption { text-align: left; margin-top: 14px; }
+.module-card strong { display: block; font-size: 17px; color: var(--ink); }
+.module-card span { display: block; margin-top: 2px; font-size: 13px; line-height: 1.6; color: var(--muted); }
 .everyday { background: var(--pale-blue); padding-block: 64px 48px; }
 .everyday-intro { display: grid; grid-template-columns: 1fr 1.4fr; gap: 56px; align-items: start; }
 .everyday h2, .download h2 { font-size: 40px; line-height: 1.5; letter-spacing: -.035em; }
@@ -112,6 +122,9 @@ details[open] .summary-hint::after { content: "−"; }
   .product-preview { padding-inline: 28px; }
   .features article { padding-inline: 24px; }
   .features h2 { font-size: 20px; }
+  .modules { grid-template-columns: 1fr; gap: 28px; padding-block: 0 56px; }
+  .modules h2 { font-size: 34px; }
+  .module-grid { max-width: 760px; }
   .everyday-intro { gap: 32px; }
   .everyday h2, .download h2 { font-size: 34px; }
   .site-footer { flex-wrap: wrap; }
@@ -132,6 +145,11 @@ details[open] .summary-hint::after { content: "−"; }
   .features article, .features article:first-child, .features article:last-child { border-left: 0; border-top: 1px solid var(--line); padding: 24px 0; }
   .features h2 { font-size: 22px; margin-bottom: 10px; }
   .features p { max-width: 35em; }
+  .modules { padding-block: 0 40px; }
+  .modules h2 { font-size: 30px; }
+  .module-card { padding: 14px 14px 12px; border-radius: 18px; }
+  .module-card img { border-width: 4px; border-radius: 15px; }
+  .module-card figcaption { margin-top: 10px; }
   .everyday { padding-block: 40px 32px; }
   .everyday-intro { grid-template-columns: 1fr; gap: 16px; }
   .everyday h2 br { display: none; }
@@ -157,7 +175,8 @@ details[open] .summary-hint::after { content: "−"; }
   .hero-description { font-size: 16px; }
   .hero .actions { gap: 10px; }
   .product-preview { padding-inline: 28px; }
-  .everyday h2, .download h2 { font-size: 28px; }
+  .module-grid { grid-template-columns: 1fr; max-width: 340px; margin-inline: auto; gap: 16px; }
+  .modules h2, .everyday h2, .download h2 { font-size: 28px; }
   .desktop-break { display: none; }
   .supporting-copy { font-size: 14px; }
   .guide { margin-top: 28px; }

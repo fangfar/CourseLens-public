@@ -239,7 +239,7 @@ final class ParcelPage extends LinearLayout {
  private void readFeedback(String value){if(importError!=null&&currentSheet!=null&&currentSheet.isShowing()&&currentSheet.getWindow().getDecorView().findViewWithTag("parcel-import-feedback")==importError){importError.setText(value);importError.setVisibility(VISIBLE);}else message(value);}
  private void ocr(android.net.Uri uri){
   if(uri==null&&(LocalOcr.AVAILABLE||OcrPluginActivity.installed(activity))){
-   try{activity.startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE),501);}catch(ActivityNotFoundException e){readFeedback("系统没有可用的图片选择器");}
+   try{ImagePicker.open(activity,501);}catch(ActivityNotFoundException e){readFeedback("系统没有可用的图片选择器");}
    return;
   }
   if(LocalOcr.AVAILABLE){

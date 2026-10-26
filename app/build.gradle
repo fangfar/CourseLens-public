@@ -30,7 +30,7 @@ android {
  flavorDimensions 'distribution'
  productFlavors {
   lite { dimension 'distribution'; resValue 'string', 'distribution_name', '轻量版' }
-  full { dimension 'distribution'; resValue 'string', 'distribution_name', '完整版' }
+  full { dimension 'distribution'; resValue 'string', 'distribution_name', '' }
  }
  signingConfigs {
   fixed {
