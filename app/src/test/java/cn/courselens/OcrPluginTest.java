@@ -35,6 +35,12 @@ public class OcrPluginTest {
  }
  private JSONObject release()throws Exception{return new JSONObject().put("schemaVersion",1).put("protocol",1).put("enabled",true).put("packageName","cn.courselens.ocr").put("url","https://example.com/plugin.apk").put("sha256","a".repeat(64)).put("bytes",1000).put("versionCode",1);}
  @Test public void acceptsBoundedHttpsDownload()throws Exception{var value=OcrPluginRelease.parse(release().toString());assertEquals(1000,value.bytes);assertEquals(1,value.versionCode);}
+ @Test public void qaDownloadCannotCrossIntoProductionOrLan()throws Exception{
+  JSONObject qa=release().put("packageName","cn.courselens.ocr.qa").put("url","http://127.0.0.1:8765/plugin.apk");assertEquals(1000,OcrPluginRelease.parse(qa.toString(),true).bytes);
+  try{OcrPluginRelease.parse(qa.toString());fail();}catch(Exception expected){}
+  try{OcrPluginRelease.parse(release().toString(),true);fail();}catch(Exception expected){}
+  for(String url:new String[]{"http://192.168.1.1:8765/a","http://127.0.0.1.evil:8765/a","http://user@127.0.0.1:8765/a","http://127.0.0.1/a"})assertFalse(OcrPluginRelease.validLink(url,true));
+ }
  @Test public void rejectsUntrustedDownloadDescriptors()throws Exception{
   for(JSONObject value:new JSONObject[]{release().put("enabled",false),release().put("url","http://example.com/plugin.apk"),release().put("url","https://user@example.com/a"),release().put("sha256","no"),release().put("bytes",OcrPluginRelease.MAX_BYTES+1),release().put("bytes",1.5),release().put("versionCode",0),release().put("packageName","other"),release().put("protocol",2)}){
    try{OcrPluginRelease.parse(value.toString());fail("Accepted untrusted descriptor");}catch(Exception expected){}

@@ -33,7 +33,10 @@ android {
   }
  }
  buildTypes {
-  debug { if (qaBuild) applicationIdSuffix '.qa'; else signingConfig signingConfigs.fixed }
+  debug {
+   if (qaBuild) applicationIdSuffix '.qa'; else signingConfig signingConfigs.fixed
+   manifestPlaceholders = [qaOcrManifest: qaBuild ? providers.gradleProperty('qaOcrManifest').getOrElse('') : '']
+  }
   release { if (!qaBuild) signingConfig signingConfigs.fixed }
  }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }

@@ -15,7 +15,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.concurrent.*;
-import javax.net.ssl.HttpsURLConnection;
+import java.net.HttpURLConnection;
 
 /** Optional APK download/install and a bounded Activity-result bridge to local OCR. */
 public final class OcrPluginActivity extends Activity {
@@ -25,6 +25,11 @@ public final class OcrPluginActivity extends Activity {
  private SharedPreferences prefs;private DownloadManager downloads;private TextView status;private Button action,cancel;private ProgressBar progress;
  private Uri image;private boolean foreground,busy;private String stage="idle";
  private final Runnable poll=this::pollDownload;
+ private boolean qaDownloads(){return getPackageName().endsWith(".qa")&&(getApplicationInfo().flags&ApplicationInfo.FLAG_DEBUGGABLE)!=0;}
+ private String manifestUrl()throws PackageManager.NameNotFoundException {
+  if(qaDownloads()){Bundle metadata=getPackageManager().getApplicationInfo(getPackageName(),PackageManager.GET_META_DATA).metaData;if(metadata!=null){String value=metadata.getString("cn.courselens.ocr.QA_MANIFEST","");if(!value.isEmpty())return value;}}
+  return MANIFEST;
+ }
  @Override protected void attachBaseContext(Context base){super.attachBaseContext(Appearance.wrap(base));}
  static String pluginPackage(Context context){return context.getPackageName().endsWith(".qa")?"cn.courselens.ocr.qa":"cn.courselens.ocr";}
  static boolean compatible(Context context,PackageInfo info){
@@ -62,24 +67,23 @@ public final class OcrPluginActivity extends Activity {
   busy=true;show("正在获取插件下载信息…","请稍候");
   IO.execute(()->{
    try{
-    OcrPluginRelease release=OcrPluginRelease.parse(fetchManifest());
-    // QA uses its own package and signing; public release APKs must never replace it.
-    if(getPackageName().endsWith(".qa"))throw new IOException("QA 环境请安装同签名 QA 插件；正式下载包与 QA 隔离");
+    OcrPluginRelease release=OcrPluginRelease.parse(fetchManifest(manifestUrl(),qaDownloads()),qaDownloads());
     runOnUiThread(()->{if(isDestroyed())return;try{
      clearDownload();File folder=getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);if(folder==null)throw new IOException();File target=new File(folder,"ocr-plugin.apk");if(target.exists()&&!target.delete())throw new IOException();
      long id=downloads.enqueue(new DownloadManager.Request(Uri.parse(release.url)).setTitle("Morrow 图片识别插件").setMimeType("application/vnd.android.package-archive").setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED).setDestinationInExternalFilesDir(this,Environment.DIRECTORY_DOWNLOADS,"ocr-plugin.apk"));
      if(!prefs.edit().putLong("downloadId",id).putString("sha256",release.sha256).putLong("bytes",release.bytes).putLong("versionCode",release.versionCode).commit()){downloads.remove(id);throw new IOException();}
      busy=false;if(foreground)pollDownload();
     }catch(Exception e){failed("无法开始下载，请检查存储空间和系统下载管理器后重试");}});
-   }catch(Exception e){runOnUiThread(()->failed(e instanceof IOException&&e.getMessage()!=null&&e.getMessage().startsWith("图片识别插件尚未")?e.getMessage():getPackageName().endsWith(".qa")?"QA 请安装同签名的独立 QA 插件后重试":"获取插件失败，请检查网络后重试"));}
+   }catch(Exception e){runOnUiThread(()->failed(e instanceof IOException&&e.getMessage()!=null&&e.getMessage().startsWith("图片识别插件尚未")?e.getMessage():getPackageName().endsWith(".qa")?"获取 QA 插件失败，请确认测试下载源连接后重试":"获取插件失败，请检查网络后重试"));}
   });
  }
- static String fetchManifest()throws Exception {
-  String url=MANIFEST;
+ static String fetchManifest(String endpoint,boolean qa)throws Exception {
+  String url=endpoint;
   for(int redirects=0;redirects<4;redirects++){
-   HttpsURLConnection connection=(HttpsURLConnection)new URL(url).openConnection();connection.setConnectTimeout(15000);connection.setReadTimeout(15000);connection.setInstanceFollowRedirects(false);
+   if(!OcrPluginRelease.validLink(url,qa))throw new IOException();
+   HttpURLConnection connection=(HttpURLConnection)new URL(url).openConnection();connection.setConnectTimeout(15000);connection.setReadTimeout(15000);connection.setInstanceFollowRedirects(false);
    try{
-    int code=connection.getResponseCode();if(code>=300&&code<400){String next=new URL(new URL(url),connection.getHeaderField("Location")).toString();if(!RemoteConfig.validLink(next))throw new IOException();url=next;continue;}
+    int code=connection.getResponseCode();if(code>=300&&code<400){String next=new URL(new URL(url),connection.getHeaderField("Location")).toString();if(!OcrPluginRelease.validLink(next,qa))throw new IOException();url=next;continue;}
     if(code!=200)throw new IOException();try(InputStream in=connection.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] buffer=new byte[2048];int count;while((count=in.read(buffer))!=-1){if(out.size()+count>16384)throw new IOException();out.write(buffer,0,count);}return out.toString(StandardCharsets.UTF_8.name());}
    }finally{connection.disconnect();}
   }
