@@ -16,6 +16,34 @@ import static org.robolectric.util.ReflectionHelpers.*;
 @Config(sdk=34)
 @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 public class TaskPageDesignTest {
+ @Test public void categoryArrowKeepsSelectorOpenAndPreservesEditorDraft()throws Exception{
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();callInstanceMethod(activity,"prepareTasks");TaskPage page=getField(activity,"taskPage");ExecutorService worker=getField(page,"worker");worker.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();
+   ChaoxingClient.Result data=new ChaoxingClient.Result();data.courses.add(new ChaoxingClient.Subject("程序设计","1","1",""));setField(page,"snapshot",data);
+   callInstanceMethod(page,"editTask",ClassParameter.from(ChaoxingClient.Work.class,(ChaoxingClient.Work)null));MainActivity.NavigationOverlay editor=getField(activity,"navigationOverlay");EditText title=editor.body.findViewWithTag("task-editor-title"),category=editor.body.findViewWithTag("task-editor-course");title.setText("保留草稿");category.setText("自定义分类");category.requestFocus();
+   for(int i=0;i<3;i++){
+    editor.body.findViewWithTag("task-category-open").performClick();MainActivity.NavigationOverlay picker=getField(activity,"navigationOverlay");layout(activity.findViewById(android.R.id.content),activity);shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));assertTrue(picker.open);assertSame(editor,picker.previous);assertNotNull(picker.body.findViewWithTag("task-category-selection"));
+    if(i==0){snapshot(activity.findViewById(android.R.id.content),"task-category-picker");((TextView)picker.body.getChildAt(0)).performClick();assertEquals("程序设计",category.getText().toString());}else{picker.requestClose();assertEquals("程序设计",category.getText().toString());}
+    shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(600));assertSame(editor,getField(activity,"navigationOverlay"));assertEquals("保留草稿",title.getText().toString());
+   }
+   category.setText("仍可输入新分类");assertEquals("仍可输入新分类",category.getText().toString());editor.close(false);
+  }
+ }
+ @Test @Config(shadows=CourseAccount.class) public void courseLoadingSwitchesStayDraftUntilSaved()throws Exception{courseLoadingSwitches(false);}
+ @Test @Config(shadows=CourseAccount.class) public void courseLoadingSupportsNarrowScreenAndLargeFont()throws Exception{courseLoadingSwitches(true);}
+ @org.robolectric.annotation.Implements(ChaoxingAccount.class)
+ public static class CourseAccount {
+  @org.robolectric.annotation.Implementation protected ChaoxingAccount.Saved load(){return new ChaoxingAccount.Saved("qa-course-loading","synthetic-password");}
+ }
+ private void courseLoadingSwitches(boolean large)throws Exception{
+  if(large){RuntimeEnvironment.setQualifiers("w320dp-h640dp");android.content.res.Configuration config=RuntimeEnvironment.getApplication().getResources().getConfiguration();config.fontScale=1.5f;RuntimeEnvironment.getApplication().getResources().updateConfiguration(config,null);}
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();callInstanceMethod(activity,"prepareTasks");TaskPage page=getField(activity,"taskPage");ExecutorService worker=getField(page,"worker");worker.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();
+   ChaoxingClient.Result data=new ChaoxingClient.Result();ChaoxingClient.Subject course=new ChaoxingClient.Subject("用于检查换行的较长课程名称：程序设计基础与计算思维实验","1","1","");data.courses.add(course);new ChaoxingCache(activity,"qa-course-loading").save(data);setField(page,"snapshot",data);
+   callInstanceMethod(page,"courses");MainActivity.NavigationOverlay sheet=getField(activity,"navigationOverlay");Switch toggle=sheet.body.findViewWithTag("task-course-"+course.key());toggle.performClick();assertTrue(data.disabledCourses.isEmpty());assertEquals("已开启 0 / 1 门课程",((TextView)sheet.body.findViewWithTag("task-courses-count")).getText().toString());assertNull(sheet.body.findViewWithTag("task-courses-save"));assertNotNull(sheet.panel.findViewWithTag("task-courses-save"));layout(activity.findViewById(android.R.id.content),activity);snapshot(activity.findViewById(android.R.id.content),"task-course-loading"+(large?"-large":""));assertTrue(toggle.getHeight()>=new SecondaryUi(activity).dp(56));sheet.close(false);
+   callInstanceMethod(page,"courses");sheet=getField(activity,"navigationOverlay");toggle=sheet.body.findViewWithTag("task-course-"+course.key());assertTrue(toggle.isChecked());toggle.performClick();sheet.panel.findViewWithTag("task-courses-save").performClick();for(int i=0;i<3;i++){worker.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();}assertTrue(((ChaoxingClient.Result)getField(page,"snapshot")).disabledCourses.contains(course.key()));assertFalse(sheet.open);
+  }
+ }
  @Test public void emptyPageOffersLocalTaskAndNotesToggleResets()throws Exception{
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity activity=controller.get();activity.findViewById(android.R.id.content).findViewWithTag("nav-tasks").performClick();TaskPage page=activity.findViewById(android.R.id.content).findViewWithTag("tasks-page");
