@@ -3,9 +3,9 @@ name: Remote configuration
 on:
   push:
     branches: [main]
-    paths: ['web/**', 'tests/Website*', 'remote/config.json', '.github/workflows/remote-config-pages.yml']
+    paths: ['web/**', 'tests/Website*', 'remote/**', '.github/workflows/remote-config-pages.yml']
   pull_request:
-    paths: ['web/**', 'tests/Website*', 'remote/config.json', '.github/workflows/remote-config-pages.yml']
+    paths: ['web/**', 'tests/Website*', 'remote/**', '.github/workflows/remote-config-pages.yml']
   workflow_dispatch:
 
 permissions:

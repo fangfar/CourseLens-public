@@ -14,4 +14,5 @@ if __name__ == '__main__':
     for name in ('index.html', 'styles.css', 'download.js'):
         shutil.copy2(ROOT / 'web' / name, output / name)
     (output / 'remote/config.json').write_bytes(config_bytes)
+    shutil.copy2(ROOT / 'remote/ocr-plugin.json', output / 'remote/ocr-plugin.json')
     (output / '.nojekyll').touch()

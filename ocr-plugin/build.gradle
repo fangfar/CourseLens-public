@@ -1,0 +1,34 @@
+plugins { id 'com.android.application' }
+
+evaluationDependsOn(':app')
+def qaBuild = providers.gradleProperty('qaBuild').isPresent()
+android {
+ namespace 'cn.courselens.ocr'
+ compileSdk 34
+ defaultConfig {
+  applicationId 'cn.courselens.ocr'; minSdk 26; targetSdk 34
+  versionCode 1; versionName '1.0.0'
+  testInstrumentationRunner 'cn.courselens.ocr.OcrChecks'
+  manifestPlaceholders = [hostPackage: qaBuild ? 'cn.courselens.qa' : 'cn.courselens']
+ }
+ buildTypes {
+  debug { if (qaBuild) applicationIdSuffix '.qa'; else signingConfig project(':app').android.signingConfigs.fixed }
+  release { if (!qaBuild) signingConfig project(':app').android.signingConfigs.fixed }
+ }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+androidComponents {
+ beforeVariants(selector().withBuildType('release')) { variant -> variant.enable = !qaBuild }
+}
+dependencies {
+ implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+ // Keep Android support versions aligned with the host's tested SDK 34 stack.
+ constraints {
+  implementation 'androidx.core:core:1.13.0'
+  implementation 'androidx.activity:activity:1.8.0'
+  implementation 'androidx.customview:customview:1.1.0'
+  implementation 'androidx.profileinstaller:profileinstaller:1.3.1'
+  implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
+  implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
+ }
+}

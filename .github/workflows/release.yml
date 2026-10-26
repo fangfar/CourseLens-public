@@ -60,6 +60,7 @@ jobs:
           python3 tests/SigningChecks.py --signed
           sh gradlew --no-daemon assembleRelease lintRelease
           python3 tests/ReleaseChecks.py "$RELEASE_TAG" --apk app/build/outputs/apk/release/app-release.apk
+          python3 tests/OcrPluginChecks.py --host app/build/outputs/apk/release/app-release.apk --plugin ocr-plugin/build/outputs/apk/release/ocr-plugin-release.apk --release-base-url "https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG"
       - name: Save verified artifacts
         uses: actions/upload-artifact@v4
         with:
