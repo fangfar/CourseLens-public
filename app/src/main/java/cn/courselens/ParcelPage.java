@@ -40,7 +40,7 @@ final class ParcelPage extends LinearLayout {
   setTag("parcel-center");setOrientation(VERTICAL);setBackgroundColor(surface);setPadding(0,ui.dp(8),0,0);
   LinearLayout pinned=new LinearLayout(activity);pinned.setOrientation(VERTICAL);
   LinearLayout header=new LinearLayout(activity);header.setGravity(Gravity.CENTER_VERTICAL);header.setPadding(ui.dp(16),ui.dp(4),ui.dp(16),0);pinned.addView(header);
-  Button menu=ui.menuAction(header,openMenu);menu.getCompoundDrawables()[0].setTint(ink);header.addView(new View(activity),new LinearLayout.LayoutParams(ui.dp(56),1));TextView title=text("快递中心",24,ink);title.setTag("primary-page-title");title.setGravity(Gravity.CENTER);title.setTypeface(Typeface.create("serif",Typeface.BOLD));header.addView(title,new LinearLayout.LayoutParams(0,-2,1));icon(header,R.drawable.ic_add,"添加快递",this::showActions);header.getChildAt(header.getChildCount()-1).setTag("quick-menu-button");icon(header,R.drawable.ic_more,"快递设置",this::settings);header.getChildAt(header.getChildCount()-1).setTag("parcel-settings");ui.fitHeader(header,title);
+  Button menu=ui.menuAction(header,openMenu);menu.getCompoundDrawables()[0].setTint(ink);header.addView(new View(activity),new LinearLayout.LayoutParams(ui.dp(56),1));TextView title=text("快递",24,ink);title.setTag("primary-page-title");title.setGravity(Gravity.CENTER);title.setTypeface(Typeface.DEFAULT_BOLD);header.addView(title,new LinearLayout.LayoutParams(0,-2,1));icon(header,R.drawable.ic_add,"添加快递",()->edit(new ParcelRecord()));header.getChildAt(header.getChildCount()-1).setTag("quick-menu-button");icon(header,R.drawable.ic_more,"快递设置",this::settings);header.getChildAt(header.getChildCount()-1).setTag("parcel-settings");ui.fitHeader(header,title);
   feedback=text("",13,muted);feedback.setVisibility(GONE);feedback.setPadding(ui.dp(20),ui.dp(4),ui.dp(20),ui.dp(8));feedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);pinned.addView(feedback);
   pinned.setBackground(new android.graphics.drawable.ColorDrawable(surface));
   scroll=new ScrollView(activity);scroll.setFillViewport(true);scroll.setTag("parcel-scroll");list=column();list.setTag("parcel-list");list.setPadding(ui.dp(18),0,ui.dp(18),ui.dp(24));scroll.addView(list);
@@ -85,7 +85,7 @@ final class ParcelPage extends LinearLayout {
  }
  private void settingsSection(int section){
   String[] labels={"识别设置","提醒设置","桌面小组件"};LinearLayout settings=sheet(labels[section]),body;SharedPreferences prefs=ParcelNotificationListener.settings(activity);
-  if(section==0){body=settingGroup(settings,"识别");
+  if(section==0){body=settings;
   body.addView(text("只在本机处理选中来源的通知，不读取短信数据库，不上传通知全文。关闭后停止识别。",14,muted));
   Switch recognition=toggle(body,"后台通知识别",prefs.getBoolean("recognition",false));
   recognition.setOnCheckedChangeListener((view,enabled)->{
@@ -97,23 +97,17 @@ final class ParcelPage extends LinearLayout {
   button(body,"选择通知来源",this::sources);
   button(body,LocalOcr.AVAILABLE?"图片识别 · 已内置":OcrPluginActivity.installed(activity)?"图片识别插件 · 已安装":"下载图片识别插件",()->ocr(null)).setTag("parcel-ocr-plugin-settings");
   }
-  if(section==1){body=settingGroup(settings,"提醒");
+  if(section==1){body=settings;
   Switch reminders=toggle(body,"快递提醒",prefs.getBoolean("reminders",false));reminders.setOnCheckedChangeListener((v,enabled)->{prefs.edit().putBoolean("reminders",enabled).apply();if(!enabled)ParcelNotifications.cancelAll(activity);if(enabled&&Build.VERSION.SDK_INT>=33&&activity.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED)activity.requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},502);ParcelWorker.schedule(activity);});
   boolean notifications=androidx.core.app.NotificationManagerCompat.from(activity).areNotificationsEnabled();
   button(body,"系统通知 · "+(notifications?"已开启":"未开启"),()->{try{activity.startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,activity.getPackageName()));}catch(ActivityNotFoundException e){message("请在系统设置中调整 Morrow 的通知权限和快递提醒频道");}});
   }
-  if(section==2){body=settingGroup(settings,"小组件");
+  if(section==2){body=settings;
   Switch widget=toggle(body,"桌面小组件显示取件码与地址",prefs.getBoolean("widgetCodes",false));widget.setOnCheckedChangeListener((v,enabled)->{prefs.edit().putBoolean("widgetCodes",enabled).apply();ParcelRepository.IO.execute(()->ParcelWidget.updateAll(activity));});body.addView(text("开启后，桌面可见的人也能看到取件码。默认只显示待取数量。",13,muted));
   button(body,"添加快递小组件",()->{android.appwidget.AppWidgetManager manager=android.appwidget.AppWidgetManager.getInstance(activity);if(manager.isRequestPinAppWidgetSupported()){boolean accepted=manager.requestPinAppWidget(new ComponentName(activity,ParcelWidget.class),null,null);message(accepted?"已向桌面请求添加，请在系统面板中确认":"桌面未接受请求，请长按桌面手动添加快递中心组件");}else message("请长按桌面 → 小组件 → Morrow → 快递中心");});
   }
  }
 
- private void showActions(){
-  LinearLayout body=sheet("添加快递");
-  button(body,"手动添加",()->edit(new ParcelRecord())).setTag("parcel-add");
-  button(body,"读取信息",this::importSheet).setTag("parcel-import");
-
- }
  private void restoreDraft(ParcelRecord restored){ParcelRepository.IO.execute(()->{ParcelRecord existing=restored.id==0?restored:ParcelDatabase.get(activity).parcels().get(restored.id);activity.runOnUiThread(()->{if(closed||existing==null)return;existing.code=restored.code;existing.station=restored.station;existing.trackingNumber=restored.trackingNumber;existing.carrier=restored.carrier;existing.state=restored.state;edit(existing);});});}
  private void receive(Intent intent){
   if(intent==null||!Intent.ACTION_SEND.equals(intent.getAction()))return;
@@ -131,7 +125,7 @@ final class ParcelPage extends LinearLayout {
   ParcelRepository.IO.execute(()->{try{List<ParcelRecord> records=ParcelDatabase.get(activity).parcels().all();activity.runOnUiThread(()->{if(!closed)render(records);});}catch(RuntimeException e){activity.runOnUiThread(()->{if(!closed)message("本机快递数据读取失败，请重试；未清空原数据");});}});
  }
  private Button pill(LinearLayout host,String label,boolean primary,Runnable action){
-  Button b=button(host,label,action);b.setTextSize(14);b.setTypeface(null,Typeface.BOLD);b.setPadding(ui.dp(8),ui.dp(10),ui.dp(8),ui.dp(10));b.setBackgroundTintList(null);b.setBackground(ui.bg(primary?ink:activity.getColor(R.color.parcel_soft),999));b.setTextColor(primary?card:ink);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(ui.dp(4),ui.dp(8),ui.dp(4),0);b.setLayoutParams(lp);return b;
+  Button b=button(host,label,action);b.setTextSize(14);b.setTypeface(null,Typeface.BOLD);b.setPadding(ui.dp(8),ui.dp(10),ui.dp(8),ui.dp(10));b.setBackgroundTintList(null);b.setBackground(ui.bg(primary?ui.PRIMARY:activity.getColor(R.color.parcel_soft),24));b.setTextColor(primary?ui.ON_PRIMARY:ink);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(ui.dp(4),ui.dp(8),ui.dp(4),0);b.setLayoutParams(lp);return b;
  }
  private LinearLayout actionRow(LinearLayout host){
   LinearLayout row=new LinearLayout(activity){
@@ -214,12 +208,11 @@ final class ParcelPage extends LinearLayout {
  private void fixedActions(LinearLayout body,Button save,TextView error,String tag){
   AlertDialog dialog=currentSheet;body.removeView(save);LinearLayout shell=(LinearLayout)body.getParent().getParent();View scroll=(View)body.getParent();scroll.setLayoutParams(new LinearLayout.LayoutParams(-1,0,1));
   if(error!=null){body.removeView(error);shell.addView(error,new LinearLayout.LayoutParams(-1,-2));}
-  LinearLayout footer=actionRow(shell);footer.setPadding(0,ui.dp(4),0,ui.dp(12));footer.setTag(tag);pill(footer,"取消",false,dialog::cancel);footer.addView(save);save.setTextColor(card);save.setBackgroundTintList(null);save.setBackground(ui.bg(ink,999));save.setTextSize(14);save.setTypeface(null,Typeface.BOLD);save.setPadding(ui.dp(8),ui.dp(10),ui.dp(8),ui.dp(10));
+  LinearLayout footer=actionRow(shell);footer.setPadding(0,ui.dp(4),0,ui.dp(12));footer.setTag(tag);pill(footer,"取消",false,dialog::cancel);footer.addView(save);save.setTextColor(ui.ON_PRIMARY);save.setBackgroundTintList(null);save.setBackground(ui.bg(ui.PRIMARY,24));save.setTextSize(14);save.setTypeface(null,Typeface.BOLD);save.setPadding(ui.dp(8),ui.dp(10),ui.dp(8),ui.dp(10));
  }
  private void actions(ParcelRecord p){LinearLayout body=sheet("快递管理");TextView summary=text(p.code.isEmpty()?p.trackingNumber:p.code,22,ink);summary.setTypeface(Typeface.MONOSPACE,Typeface.BOLD);body.addView(summary);if(!p.station.isEmpty())body.addView(text(p.station,14,muted));button(body,p.confirmed?"编辑":"核对并确认",()->edit(p));
   if(p.confirmed){if(!p.trackingEvents.isEmpty())button(body,"物流记录",()->tracking(p));if(p.state==ParcelRecord.READY)button(body,"未领取提醒",()->reminder(p));}
   button(body,"删除",()->confirmDelete(p)).setTextColor(ui.DANGER);}
- private LinearLayout settingGroup(LinearLayout host,String title){TextView heading=text(title,13,muted);heading.setTypeface(null,Typeface.BOLD);heading.setPadding(0,ui.dp(16),0,ui.dp(8));host.addView(heading);LinearLayout group=column();group.setPadding(ui.dp(12),ui.dp(8),ui.dp(12),ui.dp(12));group.setBackground(ui.bg(surface,18));host.addView(group,new LinearLayout.LayoutParams(-1,-2));return group;}
  private void undoBar(String label,Runnable undo){
   timer.removeCallbacksAndMessages(null);snack.removeAllViews();TextView value=text(label,14,card);value.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);snack.addView(value,new LinearLayout.LayoutParams(0,-2,1));Button button=ui.action(snack,"撤销",()->{snack.setVisibility(GONE);timer.removeCallbacksAndMessages(null);undo.run();});button.setTextColor(card);button.setBackgroundTintList(null);button.setBackground(ui.bg(ink,24));LinearLayout.LayoutParams size=(LinearLayout.LayoutParams)button.getLayoutParams();size.topMargin=0;size.bottomMargin=0;snack.setVisibility(VISIBLE);timer.postDelayed(()->snack.setVisibility(GONE),5000);
  }

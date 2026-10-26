@@ -80,7 +80,6 @@ public class ParcelAndroidTest {
   try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
    ParcelActivity activity=controller.get();android.view.View root=activity.findViewById(android.R.id.content);int width=Math.round(320*activity.getResources().getDisplayMetrics().density),height=Math.round(640*activity.getResources().getDisplayMetrics().density);root.measure(android.view.View.MeasureSpec.makeMeasureSpec(width,android.view.View.MeasureSpec.EXACTLY),android.view.View.MeasureSpec.makeMeasureSpec(height,android.view.View.MeasureSpec.EXACTLY));root.layout(0,0,width,height);
    android.view.View menu=root.findViewWithTag("quick-menu-button");assertNotNull(menu);assertTrue(menu.getRight()<=((android.view.View)menu.getParent()).getWidth());menu.performClick();
-   AlertDialog actions=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(actions);android.view.View add=actions.getWindow().getDecorView().findViewWithTag("parcel-add");assertNotNull(add);add.performClick();
    AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(dialog);assertTrue(dialog.isShowing());assertNotNull(dialog.getWindow().getDecorView().findViewWithTag("parcel-editor-code"));
    assertNotEquals(android.graphics.Color.WHITE,activity.getColor(R.color.parcel_card));
   }

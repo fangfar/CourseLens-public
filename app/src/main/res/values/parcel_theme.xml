@@ -1,7 +1,7 @@
 <resources>
- <color name="parcel_soft">#E4E6E9</color>
- <color name="parcel_surface">#F2F3F5</color><color name="parcel_card">#FFFFFF</color>
- <color name="parcel_ink">#1B1D20</color><color name="parcel_muted">#626870</color>
+ <color name="parcel_soft">@color/app_soft</color>
+ <color name="parcel_surface">@color/app_surface</color><color name="parcel_card">@color/app_card</color>
+ <color name="parcel_ink">@color/app_ink</color><color name="parcel_muted">@color/app_muted</color>
  <style name="ParcelTheme" parent="android:style/Theme.Material.Light.NoActionBar">
   <item name="android:fontFamily">sans</item><item name="android:colorAccent">#0866D9</item>
   <item name="android:windowLightStatusBar">true</item>

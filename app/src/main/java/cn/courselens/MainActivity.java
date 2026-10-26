@@ -18,7 +18,7 @@ import java.util.concurrent.*;
 public class MainActivity extends Activity {
  private SecondaryUi secondaryUi;
  private ClassTimes classTimes=ClassTimes.DEFAULT;private String[] START_TIMES=classTimes.starts,END_TIMES=classTimes.ends;private String schoolId="squ",loginSchool="squ";
- private int INK,MUTED,BLUE,PRIMARY,SURFACE,AQUA,SOFT,NAVY,CARD,DIVIDER,DANGER,DISABLED,ON_PRIMARY,HANDLE,COURSE_BORDER,EMPTY_TITLE,EMPTY_HINT,NAV_MUTED,WARNING;
+ private int INK,MUTED,BLUE,PRIMARY,SURFACE,AQUA,SOFT,NAVY,CARD,DIVIDER,DANGER,DISABLED,ON_PRIMARY,HANDLE,COURSE_BORDER,NAV_MUTED,WARNING;
  private boolean dark;
  private AlertDialog widgetDialog,unsavedDialog;
  private AlertDialog remoteDialog;private RemoteConfigClient remote;private TextView remoteStatus;private final Handler remoteHandler=new Handler(Looper.getMainLooper());
@@ -42,7 +42,7 @@ public class MainActivity extends Activity {
  private SchoolClient school=new SchoolClient();private final ExecutorService worker=Executors.newSingleThreadExecutor();private boolean busy=false,showingDetail=false;private int screen=0;private Runnable pageBack;private CourseChoiceSheet choiceSheet;private NavigationOverlay navigationOverlay,exitingOverlay;
  private EditText account,password,captcha;private TextView loginStatus;private ProgressBar loginProgress;private Button loginButton;private LinearLayout captchaBox;private ImageView captchaImage;private SchoolAccount schoolAccount;private String loginAccountPrefill;
  private int dp(float n){return Math.round(n*getResources().getDisplayMetrics().density);}
- private void applyPalette(){secondaryUi=new SecondaryUi(this);INK=secondaryUi.INK;MUTED=secondaryUi.MUTED;BLUE=secondaryUi.BLUE;PRIMARY=secondaryUi.PRIMARY;SURFACE=secondaryUi.SURFACE;AQUA=secondaryUi.AQUA;SOFT=secondaryUi.SOFT;NAVY=secondaryUi.NAVY;CARD=secondaryUi.CARD;DIVIDER=secondaryUi.DIVIDER;DANGER=secondaryUi.DANGER;DISABLED=secondaryUi.DISABLED;ON_PRIMARY=secondaryUi.ON_PRIMARY;HANDLE=secondaryUi.HANDLE;COURSE_BORDER=secondaryUi.COURSE_BORDER;EMPTY_TITLE=secondaryUi.EMPTY_TITLE;EMPTY_HINT=secondaryUi.EMPTY_HINT;NAV_MUTED=secondaryUi.NAV_MUTED;WARNING=secondaryUi.WARNING;dark=secondaryUi.dark;}
+ private void applyPalette(){secondaryUi=new SecondaryUi(this);INK=secondaryUi.INK;MUTED=secondaryUi.MUTED;BLUE=secondaryUi.BLUE;PRIMARY=secondaryUi.PRIMARY;SURFACE=secondaryUi.SURFACE;AQUA=secondaryUi.AQUA;SOFT=secondaryUi.SOFT;NAVY=secondaryUi.NAVY;CARD=secondaryUi.CARD;DIVIDER=secondaryUi.DIVIDER;DANGER=secondaryUi.DANGER;DISABLED=secondaryUi.DISABLED;ON_PRIMARY=secondaryUi.ON_PRIMARY;HANDLE=secondaryUi.HANDLE;COURSE_BORDER=secondaryUi.COURSE_BORDER;NAV_MUTED=secondaryUi.NAV_MUTED;WARNING=secondaryUi.WARNING;dark=secondaryUi.dark;}
  @Override protected void attachBaseContext(Context base){super.attachBaseContext(Appearance.wrap(base));}
  @Override public void onCreate(Bundle state){super.onCreate(state);applyPalette();schoolAccount=new SchoolAccount(this);Appearance.edgeToEdge(this);setTimes(ClassTimes.parse(getPreferences(0).getString("classTimes","")));schoolId=getPreferences(0).getString("school","squ");loginSchool=schoolId;school=schoolClient(schoolId);data=getPreferences(0).getString("courses","");notes=getPreferences(0).getString("notes","");if((getApplicationInfo().flags&android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0)school.onDiagnostic=summary->{try(java.io.FileOutputStream out=openFileOutput("sync-diagnostic.txt",0)){out.write(summary.getBytes(java.nio.charset.StandardCharsets.UTF_8));}catch(Exception ignored){}};else deleteFile("sync-diagnostic.txt");week=getPreferences(0).getInt("week",6);term=getPreferences(0).getString("term",term);displayChoices=new HashSet<>(getPreferences(0).getStringSet("displayChoices",Collections.emptySet()));adjustments=getPreferences(0).getString("courseAdjustments","");home();openWidget(getIntent());widgetShortcut();
   if(state!=null){taskState=state.getBundle("taskPage");parcelState=state.getBundle("parcelPage");boolean skip=CourseWidget.OPEN.equals(getIntent().getAction())||ADD_WIDGET.equals(getIntent().getAction());if(state.getBoolean("parcelsVisible")&&!skip)parcels();else if(state.getBoolean("tasksVisible")&&!skip)tasks();}
@@ -149,7 +149,7 @@ public class MainActivity extends Activity {
  }
 
  private void changeWeek(int next){if(next<1||next>30)return;if(navigationOverlay!=null)navigationOverlay.close(true);if(pager!=null&&pager.isAttachedToWindow()){pager.setCurrentItem(next-1,true);}else{week=next;saveWeek();home();}}
- private LinearLayout secondary(String title,String description,Runnable back){base(true);root.setTag(title);pageBack=back;updateSystemBack();root.setBackgroundColor(SURFACE);Appearance.systemBars(this);LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(12),dp(4),dp(12),dp(4));TextView close=icon(R.drawable.ic_back,"返回",()->{if(busy){toast("正在同步，请稍候");return;}backPage();});bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));TextView heading=text(title,18,INK);heading.setGravity(Gravity.CENTER);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));View spacer=new View(this);spacer.setTag("header-spacer");spacer.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);bar.addView(spacer,new LinearLayout.LayoutParams(dp(48),dp(48)));root.addView(bar);ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(16),dp(8),dp(16),dp(20));scroll.addView(body);if(!description.isEmpty()){TextView intro=text(description,14,MUTED);intro.setLineSpacing(dp(4),1);intro.setPadding(dp(4),0,dp(4),dp(20));body.addView(intro);}return body;}
+ private LinearLayout secondary(String title,String description,Runnable back){base(true);root.setTag(title);pageBack=back;updateSystemBack();root.setBackgroundColor(SURFACE);Appearance.systemBars(this);LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(dp(12),dp(4),dp(12),dp(4));TextView close=icon(R.drawable.ic_back,"返回",()->{if(busy){toast("正在同步，请稍候");return;}backPage();});bar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));TextView heading=text(title,18,INK);heading.setTypeface(null,Typeface.BOLD);if(Build.VERSION.SDK_INT>=28)heading.setAccessibilityHeading(true);heading.setGravity(Gravity.CENTER);bar.addView(heading,new LinearLayout.LayoutParams(0,-2,1));View spacer=new View(this);spacer.setTag("header-spacer");spacer.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);bar.addView(spacer,new LinearLayout.LayoutParams(dp(48),dp(48)));root.addView(bar);ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setClipToPadding(false);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(dp(16),dp(8),dp(16),dp(20));scroll.addView(body);if(!description.isEmpty()){TextView intro=text(description,14,MUTED);intro.setLineSpacing(dp(4),1);intro.setPadding(dp(4),0,dp(4),dp(20));body.addView(intro);}return body;}
  private LinearLayout bottomSheet(String title,String description,Runnable back){
   if(returningPage&&navigationOverlay==null)back.run();
   NavigationOverlay overlay=new NavigationOverlay(false,title);LinearLayout body=overlay.body;
@@ -230,7 +230,7 @@ public class MainActivity extends Activity {
    pager.setCurrentItem(week-1,false);updateHeader();timetableScroll.scrollTo(0,timetableScrollY);return;
   }
   base(false);LinearLayout header=new LinearLayout(this);header.setTag("home-header");header.setOrientation(LinearLayout.VERTICAL);LinearLayout toolbar=new LinearLayout(this);toolbar.setGravity(Gravity.CENTER_VERTICAL);toolbar.setPadding(dp(16),dp(8),dp(16),dp(6));header.addView(toolbar);secondaryUi.menuAction(toolbar,this::openSideMenu);toolbar.addView(new View(this),new LinearLayout.LayoutParams(0,1));
-  LinearLayout dates=new LinearLayout(this);dates.setOrientation(LinearLayout.VERTICAL);dates.setGravity(Gravity.CENTER);Calendar today=date();TextView title=text((today.get(Calendar.MONTH)+1)+"月"+today.get(Calendar.DAY_OF_MONTH)+"日",25,INK);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);title.setTag("primary-page-title");dates.addView(title);TextView sub=text(weekCaption(),14,MUTED);sub.setGravity(Gravity.CENTER);weekLabel=sub;LinearLayout.LayoutParams subp=new LinearLayout.LayoutParams(-1,-2);subp.topMargin=dp(4);dates.addView(sub,subp);dates.setTag("home-date");dates.setMinimumHeight(dp(48));dates.setFocusable(true);dates.setContentDescription(title.getText()+"，"+sub.getText()+"，点击回到本周");dates.setTooltipText("回到本周");dates.setOnClickListener(v->changeWeek(currentWeek()));focusOutline(dates);toolbar.addView(dates,new LinearLayout.LayoutParams(0,-2,1));
+  LinearLayout dates=new LinearLayout(this);dates.setOrientation(LinearLayout.VERTICAL);dates.setGravity(Gravity.CENTER);Calendar today=date();TextView title=text((today.get(Calendar.MONTH)+1)+"月"+today.get(Calendar.DAY_OF_MONTH)+"日",24,INK);title.setGravity(Gravity.CENTER);title.setTypeface(null,Typeface.BOLD);title.setTag("primary-page-title");dates.addView(title);TextView sub=text(weekCaption(),14,MUTED);sub.setGravity(Gravity.CENTER);weekLabel=sub;LinearLayout.LayoutParams subp=new LinearLayout.LayoutParams(-1,-2);subp.topMargin=dp(4);dates.addView(sub,subp);dates.setTag("home-date");dates.setMinimumHeight(dp(48));dates.setFocusable(true);dates.setContentDescription(title.getText()+"，"+sub.getText()+"，点击回到本周");dates.setTooltipText("回到本周");dates.setOnClickListener(v->changeWeek(currentWeek()));focusOutline(dates);toolbar.addView(dates,new LinearLayout.LayoutParams(0,-2,1));
   TextView moduleSettings=icon(R.drawable.ic_more,"课表设置",this::timetableSettings);moduleSettings.setTag("timetable-settings");LinearLayout.LayoutParams settingsSize=new LinearLayout.LayoutParams(dp(48),dp(48));settingsSize.leftMargin=dp(8);toolbar.addView(moduleSettings,settingsSize);secondaryUi.fitHeader(toolbar,dates);
   daysBar=new FrameLayout(this);daysBar.setTag("week-days-viewport");header.addView(daysBar,new LinearLayout.LayoutParams(-1,dp(55)));
   TimetableScrollView scroll=new TimetableScrollView(this);timetableScroll=scroll;scroll.setFillViewport(false);scroll.setVerticalScrollBarEnabled(false);LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);scroll.addView(content);
@@ -247,7 +247,7 @@ public class MainActivity extends Activity {
  @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(parcelPage!=null)parcelPage.onActivityResult(request,result,data);}
  @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] grants){super.onRequestPermissionsResult(request,permissions,grants);if(parcelPage!=null)parcelPage.onRequestPermissionsResult(request,permissions,grants);}
  @Override public boolean dispatchTouchEvent(MotionEvent event){if(event.getActionMasked()==MotionEvent.ACTION_DOWN)touching=true;interactionAt=SystemClock.uptimeMillis();try{return super.dispatchTouchEvent(event);}finally{if(event.getActionMasked()==MotionEvent.ACTION_UP||event.getActionMasked()==MotionEvent.ACTION_CANCEL){touching=false;scheduleRemoteNotice();}}}
- private String weekCaption(){String name=Timetables.names(this).get(Timetables.active(this));return "第 "+week+" 周  当前为第 "+currentWeek()+" 周"+(Timetables.names(this).size()>1?" · "+name:"");}
+ private String weekCaption(){String name=Timetables.names(this).get(Timetables.active(this));return "第 "+week+" 周"+(week==currentWeek()?"":" · 本周第 "+currentWeek()+" 周")+(Timetables.names(this).size()>1?" · "+name:"");}
  private void updateHeader(){Calendar today=date();((TextView)((LinearLayout)weekLabel.getParent()).getChildAt(0)).setText(String.format(Locale.ROOT,"%d月%d日",today.get(Calendar.MONTH)+1,today.get(Calendar.DAY_OF_MONTH)));weekLabel.setText(weekCaption());((View)weekLabel.getParent()).setContentDescription(((TextView)((LinearLayout)weekLabel.getParent()).getChildAt(0)).getText()+"，"+weekLabel.getText()+"，点击回到本周");for(int i=0;i<pager.getChildCount();i++)if(pager.getChildAt(i) instanceof WeekGrid){WeekGrid grid=(WeekGrid)pager.getChildAt(i);updateDays(grid.days,grid.shownWeek);}syncWeekDays();}
  private LinearLayout weekDays(int shownWeek){
   LinearLayout days=new LinearLayout(this);days.setTag("week-days-"+shownWeek);days.setPadding(0,dp(3),0,dp(10));
@@ -260,10 +260,10 @@ public class MainActivity extends Activity {
   String[] begin=START_TIMES,end=END_TIMES;
   for(int i=0;i<START_TIMES.length;i++){LinearLayout label=new LinearLayout(this);label.setOrientation(LinearLayout.VERTICAL);label.setGravity(Gravity.CENTER_HORIZONTAL);TextView n=text(""+(i+1),14,INK);n.setGravity(Gravity.CENTER_HORIZONTAL);label.addView(n);TextView time=text(begin[i]+"\n"+end[i],10,INK);time.setGravity(Gravity.CENTER);LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,-2);tp.topMargin=dp(4);label.addView(time,tp);FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(axis,row);lp.topMargin=i*row+dp(8);grid.addView(label,lp);}
   List<CourseDisplay.Group> groups=CourseDisplay.groups(courses,week,displayChoices);
-  if(groups.isEmpty()){LinearLayout empty=new LinearLayout(this);empty.setOrientation(LinearLayout.VERTICAL);empty.setGravity(Gravity.CENTER);empty.setPadding(dp(16),0,dp(16),0);TextView msg=text(data.trim().isEmpty()?"还没有导入课表":"行到水穷处，坐看云起时",data.trim().isEmpty()?17:21,EMPTY_TITLE);msg.setTag("timetable-empty-message");msg.setGravity(Gravity.CENTER);msg.setMinHeight(row);if(!data.trim().isEmpty()){msg.setTypeface(Typeface.create("serif",Typeface.NORMAL));msg.setLetterSpacing(.04f);msg.setLineSpacing(dp(4),1);}empty.addView(msg);if(data.trim().isEmpty()){TextView link=text("点击右上角菜单中的学校登录，登录学校账号后导入课表",14,EMPTY_HINT);link.setTag("timetable-import");link.setGravity(Gravity.CENTER);link.setLineSpacing(dp(4),1);link.setPadding(0,dp(12),0,0);link.setMinHeight(dp(48));link.setFocusable(true);link.setOnClickListener(v->quickMenu());empty.addView(link);}FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(width-axis,-2);lp.leftMargin=axis;lp.topMargin=3*row;grid.addView(empty,lp);return;}
+  if(groups.isEmpty()){LinearLayout empty=new LinearLayout(this);empty.setOrientation(LinearLayout.VERTICAL);empty.setGravity(Gravity.CENTER);empty.setPadding(dp(16),0,dp(16),0);TextView msg=text(data.trim().isEmpty()?"还没有课表":"本周无课",17,MUTED);msg.setTag("timetable-empty-message");msg.setGravity(Gravity.CENTER);msg.setMinHeight(row);empty.addView(msg);if(data.trim().isEmpty()){Button link=action(empty,"新增课表",this::newTimetable);link.setTag("timetable-import");}FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(width-axis,-2);lp.leftMargin=axis;lp.topMargin=3*row;grid.addView(empty,lp);return;}
   for(CourseDisplay.Group group:groups){Course c=group.selected;String content=c.displayDetails();boolean conflict=group.courses.size()>1,adjusted=c.schoolAdjusted()||movedAdjustment(c,week)!=null;
    String cardText=cachedCardText.computeIfAbsent(c,key->SchoolParser.clean(c.name)+"\n@"+SchoolParser.clean(c.room)+(c.teacher.isEmpty()?"":"\n"+SchoolParser.clean(c.teacher))+(content.isEmpty()?"":"\n"+SchoolParser.clean(content)));
-   TextView card=text(cardText,12,Color.WHITE);card.setTypeface(null,Typeface.BOLD);card.setLineSpacing(dp(1),1);card.setPadding(dp(3),dp(4),dp(2),dp(3));card.setEllipsize(TextUtils.TruncateAt.END);card.setMaxLines(Math.max(2,(c.end-c.start+1)*4-(conflict||adjusted?1:0)));
+   TextView card=text(cardText,12,dark?Color.WHITE:INK);card.setTypeface(null,Typeface.BOLD);card.setLineSpacing(dp(1),1);card.setPadding(dp(3),dp(4),dp(2),dp(3));card.setEllipsize(TextUtils.TruncateAt.END);card.setMaxLines(Math.max(2,(c.end-c.start+1)*4-(conflict||adjusted?1:0)));
    View tile=card;
    if(conflict||adjusted){LinearLayout stack=new LinearLayout(this);stack.setOrientation(LinearLayout.VERTICAL);TextView badge=text(conflict?(adjusted?"冲突 · 调":"冲突"):"调",10,courseBadgeColor(c.name));badge.setTag(conflict?"conflict-badge":"adjustment-badge");badge.setTypeface(null,Typeface.BOLD);badge.setPadding(dp(3),dp(1),dp(3),dp(1));badge.setBackground(bg(CARD,3));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-2,-2);bp.setMargins(dp(3),dp(4),dp(3),0);stack.addView(badge,bp);stack.addView(card,new LinearLayout.LayoutParams(-1,0,1));tile=stack;}
    GradientDrawable background=bg(courseColor(c.name),5);background.setStroke(dp(1.2f),COURSE_BORDER);tile.setBackground(background);focusOutline(tile);tile.setContentDescription(c.name+"，星期"+c.day+"，第"+c.start+"到"+c.end+"节，"+c.room+"，"+c.teacher+(content.isEmpty()?"":"，"+content)+(adjusted?"，调课":"")+(conflict?"，有冲突，共 "+group.courses.size()+" 门，点击更换显示课程":""));tile.setFocusable(true);tile.setTag("course-card");tile.setOnClickListener(v->{if(conflict)conflictPicker(group,week);else detail(c,week,()->home());});
@@ -332,7 +332,7 @@ public class MainActivity extends Activity {
  private String prettyWeeks(Course c){StringBuilder out=new StringBuilder();for(int w=1;w<=30;w++){if(!c.active(w))continue;int first=w;while(w<30&&c.active(w+1))w++;if(out.length()>0)out.append("、");out.append(first);if(w>first)out.append("–").append(w);}return "第 "+out+" 周";}
  private void detailRow(LinearLayout card,String label,String value){if(card.getChildCount()>0){View divider=new View(this);divider.setBackgroundColor(DIVIDER);card.addView(divider,new LinearLayout.LayoutParams(-1,dp(1)));}LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.VERTICAL);row.setPadding(0,dp(9),0,dp(9));row.addView(text(label,12,MUTED));TextView content=text(value.isEmpty()?"学校暂未提供":value,16,INK);content.setTextIsSelectable(true);content.setLineSpacing(dp(2),1);content.setPadding(0,dp(3),0,0);row.addView(content);card.addView(row);}
  private LinearLayout settingsGroup(LinearLayout body,String title){
-  if(!title.isEmpty()){TextView label=text(title,12,MUTED);label.setPadding(dp(4),dp(4),0,dp(6));body.addView(label);}
+  if(!title.isEmpty()){TextView label=text(title,13,MUTED);if(Build.VERSION.SDK_INT>=28)label.setAccessibilityHeading(true);label.setPadding(dp(4),dp(4),0,dp(6));body.addView(label);}
   LinearLayout group=new LinearLayout(this);group.setOrientation(LinearLayout.VERTICAL);group.setTag("settings-group");group.setBackground(bg(CARD,18));group.setClipToOutline(true);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(12);body.addView(group,lp);return group;
  }
  private void closeSettings(){boolean parcel=settingsFromParcel,host=settingsFromParcelActivity;settingsFromParcel=false;settingsFromParcelActivity=false;if(parcel){pageBackwards=true;parcels();}else if(tasksVisible)tasks();else home();if(host)startActivity(new Intent(this,ParcelActivity.class).addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));}
@@ -346,22 +346,22 @@ public class MainActivity extends Activity {
   LinearLayout body=secondary("设置","",this::closeSettings);
   LinearLayout appearance=settingsGroup(body,"");option(appearance,R.drawable.ic_palette,"外观","",this::appearanceSettings).setTag("dark-mode-setting");
   LinearLayout timetable=settingsGroup(body,"课表");
-  option(timetable,R.drawable.ic_calendar,"开学日期","当前课表的第 1 周开始日期",this::termPicker).setTag("settings-term");
+  option(timetable,R.drawable.ic_calendar,"开学日期",term,this::termPicker).setTag("settings-term");
   option(timetable,R.drawable.ic_widget,"桌面小组件","",this::widgetAddPage).setTag("add-home-widget");
-  option(timetable,R.drawable.ic_person,"学校账号","登录学校账号并同步当前课表",()->login(this::menu)).setTag("school-account");
-  option(settingsGroup(body,""),R.drawable.ic_notes,"数据管理","管理课表、任务和快递的数据删除",this::dataManagement).setTag("data-management");
-  option(settingsGroup(body,""),R.drawable.ic_settings,"权限管理","查看和管理应用权限",this::openPermissionSettings).setTag("permission-settings");
-  LinearLayout software=settingsGroup(body,"");
+  option(timetable,R.drawable.ic_person,"学校账号","",()->login(this::menu)).setTag("school-account");
+  LinearLayout software=settingsGroup(body,"应用");
+  option(software,R.drawable.ic_notes,"数据管理","",this::dataManagement).setTag("data-management");
+  option(software,R.drawable.ic_settings,"权限管理","",this::openPermissionSettings).setTag("permission-settings");
   remoteStatus=null;option(software,R.drawable.ic_info,"关于软件","",this::about).setTag("about-app");
   settingsPage=root;
  }
  private void dataManagement(){
-  LinearLayout body=secondary("数据管理","各项数据独立删除，执行前会再次确认。",this::menu);
+  LinearLayout body=secondary("数据管理","",this::menu);
   option(settingsGroup(body,"课表"),R.drawable.ic_calendar,"清空当前课表","清空课程、备注和单次调整，退出学校账号",()->confirmClear()).setTag("clear-timetable");
   LinearLayout tasks=settingsGroup(body,"任务");
   option(tasks,R.drawable.ic_tasks,"任务恢复","恢复已删除或本机标记完成的任务",()->{prepareTasks();taskPage.history();}).setTag("task-deletion-history");
   option(tasks,R.drawable.ic_tasks,"删除全部任务数据","删除手动任务、所有学习通缓存和删除历史，退出学习通账号",()->{prepareTasks();taskPage.clearData();}).setTag("clear-tasks");
-  option(settingsGroup(body,"快递"),R.drawable.ic_parcel,"删除全部快递数据","删除快递记录和设置，关闭后台识别、提醒与查询",()->{prepareParcels();parcelPage.clearData();}).setTag("clear-parcels");
+  option(settingsGroup(body,"快递"),R.drawable.ic_parcel,"删除全部快递数据","删除记录和设置，关闭通知识别与提醒",()->{prepareParcels();parcelPage.clearData();}).setTag("clear-parcels");
  }
  private void timetableSettings(){
   if(navigationOverlay!=null)navigationOverlay.close(false);if(pageBack!=null)home();
@@ -373,12 +373,11 @@ public class MainActivity extends Activity {
   if(getPreferences(0).getBoolean("schoolImported",notes.startsWith("已从学校同步")))menuItem(menu,"刷新课表","refresh-timetable",this::refreshTimetable).setEnabled(!busy);
  }
  private void appearanceSettings(){
-  LinearLayout body=secondary("外观","浅色、深色与跟随系统会同时应用到课表、任务、设置和桌面小组件。",()->menu());
+  LinearLayout body=secondary("外观","",()->menu());
   LinearLayout group=settingsGroup(body,"");int selected=Appearance.mode(this);
-  String[] labels={"跟随系统","浅色","深色"},notes={"随手机系统的深色模式自动切换","始终使用明亮配色","始终使用深色配色"};
+  String[] labels={"跟随系统","浅色","深色"};
   int[] icons={R.drawable.ic_phone,R.drawable.ic_sun,R.drawable.ic_dark_mode};
-  for(int i=0;i<3;i++){final int value=i;LinearLayout row=option(group,icons[i],labels[i],notes[i],()->chooseAppearance(value));row.setTag("appearance-"+i);TextView mark=(TextView)row.getChildAt(row.getChildCount()-1);if(i==selected){mark.setText("✓");mark.setTextColor(PRIMARY);}else mark.setText("");}
-  TextView hint=text("当前："+Appearance.label(this),13,MUTED);hint.setPadding(dp(4),dp(8),dp(4),0);body.addView(hint);
+  for(int i=0;i<3;i++){final int value=i;LinearLayout row=option(group,icons[i],labels[i],"",()->chooseAppearance(value));row.setTag("appearance-"+i);row.setSelected(i==selected);TextView mark=(TextView)row.getChildAt(row.getChildCount()-1);mark.setText("");if(i==selected){secondaryUi.styleIcon(mark,R.drawable.ic_check);mark.setBackground(null);}}
  }
  private void chooseAppearance(int mode){
   if(Appearance.mode(this)==mode){toast("当前已是"+Appearance.label(this));return;}
@@ -390,9 +389,9 @@ public class MainActivity extends Activity {
  private String versionLabel(){String edition=getString(R.string.distribution_name).trim();return "当前版本 "+appVersion()+(edition.isEmpty()?"":" · "+edition);}
  private void about(){
   LinearLayout body=secondary("关于软件","",this::menu);
-  LinearLayout brand=new LinearLayout(this);brand.setOrientation(LinearLayout.VERTICAL);brand.setGravity(Gravity.CENTER);brand.setPadding(0,dp(24),0,dp(32));ImageView logo=new ImageView(this);logo.setImageResource(R.mipmap.ic_launcher);logo.setContentDescription("Morrow App 图标");logo.setTag("about-app-icon");brand.addView(logo,new LinearLayout.LayoutParams(dp(80),dp(80)));TextView name=text("Morrow",23,NAVY);name.setTypeface(null,Typeface.BOLD);name.setPadding(0,dp(20),0,dp(10));brand.addView(name);brand.addView(text("版本 "+appVersion(),14,MUTED));body.addView(brand,new LinearLayout.LayoutParams(-1,-2));
+  LinearLayout brand=new LinearLayout(this);brand.setOrientation(LinearLayout.VERTICAL);brand.setGravity(Gravity.CENTER);brand.setPadding(0,dp(24),0,dp(32));ImageView logo=new ImageView(this);logo.setImageResource(R.mipmap.ic_launcher);logo.setContentDescription("Morrow App 图标");logo.setTag("about-app-icon");brand.addView(logo,new LinearLayout.LayoutParams(dp(80),dp(80)));TextView name=text("Morrow",23,NAVY);name.setTypeface(null,Typeface.BOLD);name.setPadding(0,dp(20),0,dp(10));brand.addView(name);body.addView(brand,new LinearLayout.LayoutParams(-1,-2));
   LinearLayout updates=settingsGroup(body,"");option(updates,R.drawable.ic_sync,"软件更新",versionLabel(),this::updateSettings).setTag("update-settings");
-  LinearLayout links=settingsGroup(body,"");option(links,R.drawable.ic_notes,"官网","morrow.xvyan.cn",()->openRemoteLink("https://morrow.xvyan.cn/")).setTag("official-website");option(links,R.drawable.ic_notes,"GitHub 仓库","公开版本与使用说明",()->openRemoteLink(RemoteConfig.REPOSITORY)).setTag("public-repository");
+  LinearLayout links=settingsGroup(body,"");option(links,R.drawable.ic_notes,"官网","morrow.xvyan.cn",()->openRemoteLink("https://morrow.xvyan.cn/")).setTag("official-website");option(links,R.drawable.ic_notes,"GitHub 仓库","fangfar/Morrow",()->openRemoteLink(RemoteConfig.REPOSITORY)).setTag("public-repository");
   remoteStatus=null;
  }
 
@@ -443,7 +442,7 @@ public class MainActivity extends Activity {
  private android.content.SharedPreferences widgetAddPrefs(){return getSharedPreferences("widget_add",MODE_PRIVATE);}
  private boolean isXiaomi(){return Build.MANUFACTURER.equalsIgnoreCase("Xiaomi");}
  private void widgetAddPage(){
-  LinearLayout body=secondary("桌面小组件","保留 Android 原生添加方式，也可以从桌面的小组件列表手动添加。",this::menu);
+  LinearLayout body=secondary("桌面小组件","",this::menu);
   action(body,"添加到桌面",()->pinWidget()).setTag("pin-home-widget");
   option(body,R.drawable.ic_grid,"手动添加","从桌面选择 2×2、4×2 或 4×4",()->widgetManualGuide());
   if(isXiaomi())option(body,R.drawable.ic_notes,"权限教程","一键添加没有反应时查看",()->widgetPermissionGuide());
@@ -493,7 +492,7 @@ public class MainActivity extends Activity {
   catch(ActivityNotFoundException|SecurityException e){toast("无法打开应用详情，请在系统设置中找到 Morrow；也可以手动添加小组件");}
  }
  private void openPermissionSettings(){
-  LinearLayout body=secondary("权限管理","管理应用所需权限和系统设置",this::menu);
+  LinearLayout body=secondary("权限管理","",this::menu);
   LinearLayout system=settingsGroup(body,"系统权限");
   option(system,R.drawable.ic_notifications,"通知","允许应用发送通知",this::openNotificationSettings).setTag("permission-notification");
   option(system,R.drawable.ic_battery,"电池优化","允许后台运行，关闭省电限制",this::openBatteryOptimizationSettings).setTag("permission-battery");
@@ -536,7 +535,7 @@ public class MainActivity extends Activity {
  private void edit(Runnable back){
   LinearLayout body=secondary("课程管理","",back);LinearLayout bar=(LinearLayout)root.getChildAt(0);bar.removeView(bar.findViewWithTag("header-spacer"));TextView add=icon(R.drawable.ic_add,"添加课程",()->courseForm(null,-1,()->edit(back)));add.setTag("manage-add-course");bar.addView(add,new LinearLayout.LayoutParams(dp(48),dp(48)));
   List<Course> courses=Course.parse(data);Map<String,List<Course>> groups=new LinkedHashMap<>();for(Course c:courses)groups.computeIfAbsent(c.name,key->new ArrayList<>()).add(c);
-  if(courses.isEmpty()){body.setGravity(Gravity.CENTER);TextView empty=text("暂无课程",18,INK);empty.setGravity(Gravity.CENTER);body.addView(empty);TextView hint=text("点击右上角 ＋ 添加课程",14,MUTED);hint.setPadding(0,dp(10),0,0);hint.setGravity(Gravity.CENTER);body.addView(hint);return;}
+  if(courses.isEmpty()){body.setGravity(Gravity.CENTER);TextView empty=text("暂无课程",18,INK);empty.setGravity(Gravity.CENTER);body.addView(empty);action(body,"添加课程",()->courseForm(null,-1,()->edit(back))).setTag("manage-empty-add");return;}
   LinearLayout list=settingsGroup(body,"");for(List<Course> group:groups.values()){Course first=group.get(0);option(list,R.drawable.ic_notes,SchoolParser.clean(first.name),group.size()>1?group.size()+" 个上课时段":"",()->courseForm(first,courses.indexOf(first),()->edit(back))).setTag("manage-course-"+courses.indexOf(first));}
  }
 

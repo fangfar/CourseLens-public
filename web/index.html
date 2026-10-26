@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#ffffff">
-  <meta name="description" content="Morrow，轻量的 Android 校园助手。按周查看课程，管理作业任务与快递取件信息，支持桌面小组件，已导入课表可离线查看。">
-  <title>Morrow · 让校园日常更清晰</title>
+  <meta name="theme-color" content="#f3f4f5">
+  <meta name="description" content="Morrow 是 Android 校园助手，支持周课表、作业任务、快递取件码和桌面小组件。">
+  <title>Morrow · 课表、任务与快递</title>
   <link rel="canonical" href="https://morrow.xvyan.cn/">
   <link rel="icon" type="image/webp" href="assets/courselens-icon.webp">
   <link rel="stylesheet" href="styles.css">
@@ -15,127 +15,77 @@
   <a class="skip-link" href="#main">跳到主要内容</a>
   <header class="site-header wrap">
     <a class="brand" href="#main" aria-label="Morrow 首页">
-      <img src="assets/courselens-icon.webp" width="56" height="56" alt="">
-      <span><strong translate="no">Morrow</strong></span>
+      <img src="assets/courselens-icon.webp" width="48" height="48" alt="">
+      <strong translate="no">Morrow</strong>
     </a>
     <nav aria-label="主导航">
-      <a href="#features">功能</a>
-      <a href="#guide">使用指南</a>
-      <a href="#privacy">隐私</a>
-      <a href="https://github.com/fangfar/Morrow" translate="no">GitHub</a>
+      <a href="#features">功能</a><a href="#guide">使用指南</a><a href="https://github.com/fangfar/Morrow" translate="no">GitHub</a>
     </nav>
-    <a class="button header-download" href="#download">下载 Android 版</a>
+    <a class="button header-download" href="#download">下载</a>
   </header>
-
   <main id="main" tabindex="-1">
     <section class="hero wrap" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <p class="eyebrow">你的校园日常，轻装上阵。</p>
-        <h1 id="hero-title"><span>把课表装进口袋，</span><span class="blue">把安排放在心上。</span></h1>
-        <p class="hero-description">每周课程、临时调课与桌面小组件，<br class="desktop-break">让校园日常更清晰。</p>
-        <div class="actions">
-          <a class="button" href="#download"><img class="light-icon" src="assets/android2.svg" width="24" height="24" alt="">下载 Android 版</a>
-          <a class="button secondary" href="#guide">查看使用指南</a>
-        </div>
-        <p class="fine-print">适用于 Android 8.0 及以上<br>从 GitHub 下载最新正式版 APK</p>
+        <h1 id="hero-title">课表、任务与快递</h1>
+        <p class="hero-description">Morrow 是 Android 校园助手。按周查看课程，管理作业和取件码。</p>
+        <div class="actions"><a class="button" href="#download">下载 Android 版</a><a class="text-link" href="#guide">使用指南</a></div>
+        <p class="fine-print">Android 8.0 及以上</p>
       </div>
       <figure class="product-preview">
-        <img class="timetable" src="assets/app-timetable.webp" width="720" height="1207" fetchpriority="high" alt="Morrow 课表页示例：按周显示课程、教室与上课时间；所有课程与教室均为合成示例。">
-        <figcaption>界面参考 · 示例数据</figcaption>
+        <img src="assets/app-timetable.webp" width="720" height="1232" fetchpriority="high" alt="Morrow 周课表，显示课程、教室与上课时间，使用合成示例数据。">
+        <figcaption>周课表 · 示例数据</figcaption>
       </figure>
     </section>
-
-    <section class="features wrap" id="features" aria-label="主要功能">
-      <article>
-        <h2>一周课程，一目了然</h2>
-        <p>按周查看课程安排，上课时间与教室清晰呈现。左右滑动，提前看看下一周。</p>
-      </article>
-      <article>
-        <h2>安排有变，轻松调整</h2>
-        <p>支持单次调课、停课和冲突课程选择，让临时变化也有处安放。</p>
-      </article>
-      <article>
-        <h2>桌面一瞥，就知道</h2>
-        <p>提供多种尺寸的桌面小组件，不必打开应用，也能快速查看课程安排。</p>
-      </article>
-    </section>
-
-    <section class="modules wrap" aria-labelledby="modules-title">
-      <div class="modules-intro">
-        <p class="eyebrow">课表之外，同样有序</p>
-        <h2 id="modules-title">作业有截止，<br>取件有提醒。</h2>
-        <p class="section-description">Morrow 也把学习平台作业和快递取件码放在手边。任务按课程归拢，最近截止优先显示；取件信息可手动添加，也可在本机从图片读取，少一次来回翻找。</p>
+    <section class="features wrap" id="features" aria-labelledby="features-title">
+      <h2 id="features-title">课程与日常安排</h2>
+      <div class="feature-list">
+        <article><h3>周课表</h3><p>左右滑动切周，支持多份课表、单次调课、停课与冲突课程选择。宿迁学院、徐州工程学院可学校导入，其他学校可手动添加。</p></article>
+        <article><h3>桌面小组件</h3><p>在桌面查看课程与待取快递，支持多种尺寸。已导入的课表可离线查看。</p></article>
       </div>
       <div class="module-grid">
-        <figure class="module-card">
-          <img src="assets/app-tasks.webp" width="720" height="1207" loading="lazy" alt="Morrow 任务页示例：按课程分组显示作业名称、待交数量和截止时间；所有任务与课程均为合成示例。">
-          <figcaption><strong>任务</strong><span>按课程归拢作业，最近截止优先。</span></figcaption>
+        <figure class="module">
+          <img src="assets/app-tasks.webp" width="720" height="1232" loading="lazy" alt="Morrow 任务页，按课程分组显示作业与截止时间，使用合成示例数据。">
+          <figcaption><h3>任务</h3><p>手动添加任务，或连接学习通同步作业；按课程分组，显示截止时间。</p></figcaption>
         </figure>
-        <figure class="module-card">
-          <img src="assets/app-parcels.webp" width="720" height="1207" loading="lazy" alt="Morrow 快递中心示例：展示身份码入口、手动添加和读取信息按钮，以及合成取件码。">
-          <figcaption><strong>快递</strong><span>取件码集中管理，支持图片识别。</span></figcaption>
+        <figure class="module">
+          <img src="assets/app-parcels.webp" width="720" height="1232" loading="lazy" alt="Morrow 快递页，显示身份码入口与取件码，使用合成示例数据。">
+          <figcaption><h3>快递</h3><p>手动添加、粘贴文字或识别截图；通知识别需单独授权。提供官方身份码入口。</p></figcaption>
         </figure>
       </div>
     </section>
-
-    <section class="everyday" aria-labelledby="everyday-title">
-      <div class="wrap">
-        <div class="everyday-intro">
-          <h2 id="everyday-title">多份课表，<br>各有安排。</h2>
-          <div>
-            <p class="section-description">创建并切换多份课表。课程、学期与作息分别保存，<br class="desktop-break">不同安排之间，切换自如。</p>
-            <p class="keywords">课表 <span aria-hidden="true">/</span> 作息 <span aria-hidden="true">/</span> 备注</p>
-            <p class="supporting-copy">不只是上课时间，也留得下你的课程备注与学期安排。</p>
-          </div>
-        </div>
-
-        <details class="guide" id="guide">
-          <summary><span>第一次使用？从这里开始</span><span class="summary-hint">查看指南</span></summary>
-          <ol>
-            <li><strong>创建或导入课表。</strong>从右上角更多菜单进入“新增课表”。支持宿迁学院与徐州工程学院学校导入，其他学校可手动添加。</li>
-            <li><strong>核对开学日期与作息。</strong>在完整设置中确认学期和上课时间，导入后检查课程、周次和地点。重新同步学校课表会覆盖手动修改。</li>
-            <li><strong>把课表放到桌面。</strong>通过完整设置申请添加小组件，或在手机桌面的小组件列表中选择 Morrow。实际尺寸和刷新时机取决于系统及启动器。</li>
-          </ol>
-        </details>
-
-        <details class="privacy" id="privacy">
-          <summary>
-            <img src="assets/shield-lock.svg" width="36" height="36" alt="">
-            <span class="privacy-heading"><strong>课表保存在本机，离线也能查看。</strong><span>公告和更新服务不接收课表、账号或密码。</span></span>
-            <span class="summary-hint">了解数据与隐私</span>
-          </summary>
-          <div class="privacy-copy">
-            <p>课表、备注和学期设置保存在手机本机。学校账号密码在登录成功后按课表使用 Android Keystore 加密保存，仅用于该课表的静默刷新；验证码或凭据失效时需要重新登录。只有刷新成功才更新课表，同步失败保留已有课表。</p>
-            <p>学习通账号密码在验证成功后使用 Android Keystore 加密保存在本机，仅在主动验证或刷新时用于学习通认证；作业数据保存在应用私有目录。</p>
-            <p>徐州工程学院当前教务入口使用 HTTP。密码按学校协议加密，但账号、课表和会话传输不受 HTTPS 保护，请在可信网络中同步。</p>
-            <p>课表不会通过系统备份自动迁移。更换手机、卸载或清空应用数据前，请保存重要信息。</p>
-            <a href="https://github.com/fangfar/Morrow#数据与隐私">阅读完整数据与隐私说明</a>
-          </div>
-        </details>
-      </div>
-    </section>
-
     <section class="download wrap" id="download" aria-labelledby="download-title">
-      <h2 id="download-title">选择适合你的版本</h2>
-      <p>完整版内置图片识别，安装后即可离线使用；轻量版安装包更小，需要识图时再下载插件。</p>
-      <div class="actions">
-        <a class="button" data-download="full" href="https://github.com/fangfar/Morrow/releases/latest"><img class="light-icon" src="assets/android2.svg" width="24" height="24" alt="">下载完整版</a>
-        <a class="button secondary" data-download="lite" href="https://github.com/fangfar/Morrow/releases/latest"><img src="assets/android2.svg" width="24" height="24" alt="">下载轻量版</a>
-        <a class="button secondary" href="https://github.com/fangfar/Morrow"><img src="assets/github.svg" width="24" height="24" alt="">GitHub 仓库</a>
+      <div><h2 id="download-title">下载 Morrow</h2><p>两种版本可覆盖安装切换，无需卸载。更新记录与校验文件见 <a class="text-link" href="https://github.com/fangfar/Morrow/releases/latest">GitHub Releases</a>。</p></div>
+      <div class="editions">
+        <div><h3>完整版</h3><p>内置图片识别，安装后可离线识图。</p><a class="button" data-download="full" href="https://github.com/fangfar/Morrow/releases/latest">下载完整版</a></div>
+        <div><h3>轻量版</h3><p>安装包更小，识图时另装可选插件。</p><a class="button secondary" data-download="lite" href="https://github.com/fangfar/Morrow/releases/latest">下载轻量版</a></div>
       </div>
-      <p class="fine-print">Android 8.0 及以上 · 已导入课表可离线查看</p>
+    </section>
+    <section class="help wrap" aria-label="使用与隐私">
+      <details id="guide">
+        <summary>使用指南</summary>
+        <ol>
+          <li><strong>创建课表。</strong>课表页右上角菜单 → 新增课表，选择手动创建或学校导入；从“切换课表”使用已有课表。</li>
+          <li><strong>核对安排。</strong>侧栏 → 设置 → 开学日期；课表页右上角菜单 → 作息时间。导入后核对课程、周次和地点，重新同步会覆盖手动修改。</li>
+          <li><strong>添加小组件。</strong>侧栏 → 设置 → 桌面小组件，或从桌面的小组件列表选择 Morrow。实际尺寸和刷新时机取决于系统及启动器。</li>
+          <li><strong>管理任务。</strong>任务页右上角加号添加；同步状态可刷新学习通作业，更多菜单提供账号、课程、自动刷新与任务恢复。</li>
+          <li><strong>管理快递。</strong>“读取信息”可粘贴文字或选择截图，识别后核对再保存。轻量版识图需安装插件；通知识别在快递设置中开启。</li>
+        </ol>
+      </details>
+      <details id="privacy">
+        <summary>数据与隐私</summary>
+        <div class="privacy-copy">
+          <p>课表、任务和快递数据保存在本机。学校与学习通账号密码在验证成功后使用 Android Keystore 加密保存，用于对应平台的验证与刷新。同步失败保留已有数据。</p>
+          <p>通知识别默认关闭，需要应用内同意和系统授权；只解析选定来源，不保存通知全文，不读取短信数据库。图片在本机识别，不上传；桌面显示取件码需单独开启。</p>
+          <p>公告和更新服务不接收课表、账号或密码。徐州工程学院当前教务入口使用 HTTP；密码按学校协议加密，但账号、课表和会话传输不受 HTTPS 保护，请在可信网络中同步。</p>
+          <p>课表不会通过系统备份自动迁移。更换手机、卸载或清空应用数据前，请保存重要信息。</p>
+          <a class="text-link" href="https://github.com/fangfar/Morrow#数据与隐私">完整隐私说明</a>
+        </div>
+      </details>
     </section>
   </main>
-
   <footer class="site-footer wrap">
-    <a class="brand" href="#main" aria-label="返回顶部">
-      <img src="assets/courselens-icon.webp" width="48" height="48" alt="">
-      <span><strong translate="no">Morrow</strong></span>
-    </a>
-    <nav aria-label="页脚导航">
-      <a href="#guide">使用指南</a><a href="#privacy">数据与隐私</a><a href="https://github.com/fangfar/Morrow/issues">问题反馈</a>
-    </nav>
-    <p><span translate="no">Morrow</span><br><span translate="no">morrow.xvyan.cn</span></p>
+    <span translate="no">Morrow</span>
+    <nav aria-label="页脚导航"><a href="#privacy">隐私</a><a href="https://github.com/fangfar/Morrow/issues">反馈</a><a href="https://github.com/fangfar/Morrow" translate="no">GitHub</a></nav>
   </footer>
   <aside class="download-feedback" hidden aria-label="下载状态">
     <p role="status" aria-live="polite" data-download-status></p>

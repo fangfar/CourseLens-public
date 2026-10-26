@@ -138,10 +138,10 @@ public class AppNavigationTest {
    assertNotNull(page.findViewWithTag("task-add"));assertEquals("打开导航菜单",((android.view.ViewGroup)page.findViewWithTag("task-add").getParent()).getChildAt(0).getContentDescription());assertNull(page.findViewWithTag("quick-menu-button"));assertNull(page.findViewWithTag("chaoxing-connect"));page.findViewWithTag("task-settings").performClick();assertNotNull(content.findViewWithTag("chaoxing-connect"));content.findViewWithTag("chaoxing-connect").performClick();android.app.AlertDialog configuration=org.robolectric.util.ReflectionHelpers.getField(page,"configuration");assertNotNull(configuration);assertTrue(configuration.isShowing());
   }
  }
- @Test public void parcelActionsRemainAvailableFromAdd(){
+ @Test public void parcelAddOpensEditorAndReadingRemainsDirect()throws Exception{
   try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
-   View content=controller.get().findViewById(android.R.id.content);assertNull(content.findViewWithTag("parcel-import"));content.findViewWithTag("quick-menu-button").performClick();
-   android.app.AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();for(String tag:new String[]{"parcel-add","parcel-import"})assertNotNull(menu.getWindow().getDecorView().findViewWithTag(tag));assertNull(menu.getWindow().getDecorView().findViewWithTag("parcel-settings"));menu.getWindow().getDecorView().findViewWithTag("parcel-add").performClick();assertNotSame(menu,org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog());
+   View content=controller.get().findViewById(android.R.id.content);ParcelRepository.IO.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();assertNotNull(content.findViewWithTag("parcel-read-info"));content.findViewWithTag("quick-menu-button").performClick();
+   android.app.AlertDialog editor=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(editor.getWindow().getDecorView().findViewWithTag("parcel-editor-save"));assertNull(editor.getWindow().getDecorView().findViewWithTag("parcel-import"));((MotionSheetDialog)editor).dismissNow();content.findViewWithTag("parcel-read-info").performClick();android.app.AlertDialog read=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotSame(editor,read);assertNotNull(read.getWindow().getDecorView().findViewWithTag("parcel-import-text"));
   }
  }
  @Test public void commonSettingsContainMigratedTimetableOptionsAndReturnToTheirModule()throws Exception {
