@@ -100,8 +100,9 @@ details[open] .summary-hint::after { content: "−"; }
 .privacy-copy p { margin-block: 12px; }
 .privacy-copy a { color: var(--blue); text-decoration: underline; text-underline-offset: 4px; display: inline-flex; align-items: center; min-height: 44px; }
 .download { text-align: center; padding-block: 72px; }
-.download .actions { justify-content: center; margin-top: 28px; }
-.download .secondary { color: var(--ink); border-color: var(--line); }
+.download .actions { flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin-top: 28px; }
+.download .button { width: min(340px, 100%); }
+.download .secondary { width: min(300px, 100%); color: var(--ink); border-color: var(--line); }
 .site-footer { display: flex; align-items: center; justify-content: space-between; gap: 28px; border-top: 1px solid var(--line); padding-block: 28px 36px; }
 .site-footer .brand strong { font-size: 18px; }
 .site-footer .brand img { width: 40px; height: 40px; }
