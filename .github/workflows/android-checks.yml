@@ -37,16 +37,20 @@ jobs:
           python3 tests/OcrPluginChecksTest.py
       - name: Signing boundaries without official secrets
         run: python3 tests/SigningChecks.py
-      - name: Build isolated QA APKs and lint
-        run: sh gradlew --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug
-      - name: Verify optional OCR separation
-        run: python3 tests/OcrPluginChecks.py --host app/build/outputs/apk/debug/app-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk
+      - name: Build and test both QA editions
+        run: |
+          sh gradlew --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :app:assembleFullDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:testLiteDebugUnitTest :app:testFullDebugUnitTest :app:lintLiteDebug :app:lintFullDebug :ocr-plugin:lintDebug :ocr-engine:lintDebug
+      - name: Verify both OCR distributions
+        run: |
+          python3 tests/OcrPluginChecks.py --host app/build/outputs/apk/lite/debug/app-lite-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk
+          python3 tests/OcrPluginChecks.py --edition full --host app/build/outputs/apk/full/debug/app-full-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk
       - name: Upload QA APKs
         uses: actions/upload-artifact@v4
         with:
           name: courselens-qa-${{ github.sha }}
           path: |
-            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/lite/debug/*.apk
+            app/build/outputs/apk/full/debug/*.apk
             ocr-plugin/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
@@ -56,11 +60,12 @@ jobs:
         with:
           name: courselens-checks-${{ github.sha }}
           path: |
-            app/build/outputs/apk/androidTest/debug/*.apk
+            app/build/outputs/apk/androidTest/*/debug/*.apk
             ocr-plugin/build/outputs/apk/androidTest/debug/*.apk
             ocr-plugin/build/reports/lint-results-debug.*
-            app/build/reports/lint-results-debug.*
-            app/build/reports/tests/testDebugUnitTest/**
-            app/build/test-results/testDebugUnitTest/**
+            app/build/reports/lint-results-*.html
+            app/build/reports/lint-results-*.xml
+            app/build/reports/tests/test*DebugUnitTest/**
+            app/build/test-results/test*DebugUnitTest/**
           if-no-files-found: ignore
           retention-days: 7

@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import subprocess
+import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE = "cn.courselens"
@@ -34,6 +35,13 @@ def check_new_version(code, previous_codes):
         raise ValueError("versionCode must be greater than every existing release tag")
 
 
+def check_edition(files, edition):
+    models = any(name.startswith('assets/mlkit-google-ocr-models/') for name in files)
+    engine = any('libmlkit_google_ocr_pipeline.so' in name for name in files)
+    if (edition == 'full' and not (models and engine)) or (edition == 'lite' and (models or engine)):
+        raise ValueError('APK contents do not match the selected edition')
+
+
 def run(*command):
     return subprocess.check_output(command, cwd=ROOT).decode("utf-8", "replace")
 
@@ -42,6 +50,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("tag")
     parser.add_argument("--apk", type=Path)
+    parser.add_argument("--edition", choices=["lite", "full"], default="lite")
     parser.add_argument("--prepare", action="store_true", help="Reject existing tags and non-increasing versionCode")
     args = parser.parse_args()
     name, code = version((ROOT / "app/build.gradle").read_text(encoding="utf-8"), args.tag)
@@ -66,15 +75,18 @@ def main():
     badging = run(str(sdk / ("aapt.exe" if os.name == "nt" else "aapt")), "dump", "badging", str(args.apk.resolve()))
     certificates = run(str(sdk / ("apksigner.bat" if os.name == "nt" else "apksigner")), "verify", "--print-certs", str(args.apk.resolve()))
     check_apk(badging, certificates, name, code, fingerprint)
+    with zipfile.ZipFile(args.apk) as archive:
+        check_edition(archive.namelist(), args.edition)
     output = ROOT / "app/build/release"
     output.mkdir(parents=True, exist_ok=True)
-    filename = f"Morrow-{name}-vc{code}.apk"
+    filename = f"Morrow-{name}-{args.edition}-vc{code}.apk"
     shutil.copyfile(args.apk, output / filename)
     digest = hashlib.sha256((output / filename).read_bytes()).hexdigest()
-    (output / "SHA256SUMS").write_text(f"{digest}  {filename}\n", encoding="utf-8")
+    with (output / "SHA256SUMS").open("w" if args.edition == "lite" else "a", encoding="utf-8") as checksums:
+        checksums.write(f"{digest}  {filename}\n")
     metadata = {"tag": args.tag, "sourceCommit": run("git", "rev-parse", "HEAD").strip(), "package": PACKAGE,
-                "versionName": name, "versionCode": code, "signingCertificateSHA256": fingerprint, "apkSHA256": digest}
-    (output / "release-metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+                "versionName": name, "versionCode": code, "edition": args.edition, "signingCertificateSHA256": fingerprint, "apkSHA256": digest}
+    (output / f"release-metadata-{args.edition}.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     print(f"Validated signed release APK: {filename} ({digest})")
 
 

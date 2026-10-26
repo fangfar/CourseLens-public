@@ -42,7 +42,7 @@
 - `MotionSystemTest` 通过显式推进动画时间验证中断和清理；真机专项：`adb -s SERIAL shell am instrument -w -e motionSystemOnly true cn.courselens.qa.test/cn.courselens.NativeChecks`，覆盖冷开关、课程详情半屏高度与不透明滑动、嵌套返回、拖动回弹、返回取消、抽屉三模块重复路由、草稿确认、输入法及快递窗口退出。它使用合成任务并输出帧时间与截图，运行前后必须按设备验证章节备份、隔离并恢复 QA 数据。模拟回调的进度检查不等于系统边缘手势的物理验收，低性能设备与厂商键盘仍需实机覆盖。
 
 
-使用本公开仓库的 `main` 和短期功能分支；重要修改经 PR 和检查后合入。协作权限见 [AGENTS.md](AGENTS.md)。工程沿用单模块 Java / 原生 View 架构，版本和依赖以 `app/build.gradle` 为准。常规底部内容弹层与表单选择器占可用高度的一半；快递操作与设置弹层按内容展开并限制最大高度，正文不足时不保留半屏空白，内容超出时内部滚动。任务添加/编辑面板按内容展开并预留顶部空间，普通字号下表单与固定取消/保存区完整可见；键盘或大字体导致空间不足时仍允许内部滚动，避免裁切字段。快递添加/编辑面板同样预留顶部空间、固定取消/保存区，字段内部滚动；保存中禁止重复提交，保存成功后切到记录所属分类。已有的本机物流记录仍可展开，不提供在线查询。任务空页优先提供本机添加入口，学习通配置作为次级操作。
+使用本公开仓库的 `main` 和短期功能分支；重要修改经 PR 和检查后合入。协作权限见 [AGENTS.md](AGENTS.md)。工程沿用单模块 Java / 原生 View 架构，版本和依赖以 `app/build.gradle` 为准。常规底部内容弹层与表单选择器占可用高度的一半；快递操作与设置弹层按内容展开并限制最大高度，正文不足时不保留半屏空白，内容超出时内部滚动。任务添加/编辑面板按内容展开并预留顶部空间，普通字号下表单与固定取消/保存区完整可见；键盘或大字体导致空间不足时仍允许内部滚动，避免裁切字段。快递添加/编辑面板按内容高度显示并预留顶部空间、固定取消/保存区，字段内部滚动；保存中禁止重复提交，保存成功后切到记录所属分类。已有的本机物流记录仍可展开，不提供在线查询。任务空页优先提供本机添加入口，学习通配置作为次级操作。
 
 安装 JDK 17、Python 3、Android SDK 34 与 build-tools 34.0.0。配置 `ANDROID_HOME`，或在被忽略的 `local.properties` 指定 `sdk.dir`。
 
@@ -50,7 +50,7 @@
 python tests/run_checks.py
 python tests/ReleaseChecksTest.py
 python tests/SigningChecks.py
-.\gradlew.bat --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest lintDebug
+.\gradlew.bat --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :app:assembleFullDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:lintLiteDebug :app:lintFullDebug :ocr-plugin:lintDebug
 ```
 
 Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用的 Java 业务回归入口，另含本实验的学习通解析检查；Gradle 单元测试的 `NO-SOURCE` 不代表它们通过。
@@ -59,12 +59,19 @@ Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用
 
 ## 快递中心
 
+### 轻量版与完整版
+
+- `lite` / `full` 是轻量版和内置 OCR 完整版两种构建变体，`assembleDebug` 同时生成两种 QA 包。两者保持相同包名、版本号、正式签名及数据格式，可以覆盖安装切换；无需卸载或清空数据。“关于软件 / 检查更新”标明当前类型。QA 仍独立使用 `cn.courselens.qa`，两种 QA 包会互相覆盖，安装前先备份。
+- 安装包分别在 `app/build/outputs/apk/lite/` 和 `app/build/outputs/apk/full/`，测试和 Lint 报告也按变体分别保留。两套源只在 `LocalOcr` 接口处不同；`ocr-engine/` 由完整版和独立插件复用，轻量版不引用该库。完整版直接识别，轻量版已安装插件时直接打开图片选择器，只有未安装时进入下载页。
+- CI 分别构建、测试和检查两种版本。发布草稿生成 `Morrow-VERSION-lite-vcCODE.apk`、`Morrow-VERSION-full-vcCODE.apk` 及独立 OCR 插件，校验文件同时覆盖三份 APK。公开发布之后才配置 `remote/config.json` 的 `android.liteApkUrl` / `android.fullApkUrl`；旧客户端的 `apkUrl` / `diskUrl` 继续保留。新版更新按当前类型选择链接，缺少对应地址时打开 Releases 让用户选择，不自动切换类型。
+- 官网明确提供两种下载按钮并说明区别。当前历史 2.7.5 APK 已内置 OCR，因此只作为完整版地址；轻量版新产物未公开前其链接保持空，不拿旧完整版冒充轻量版。
+
 ### 可选图片识别插件
 
-- `ocr-plugin/` 是独立应用，正式包名 `cn.courselens.ocr`，QA 为 `cn.courselens.ocr.qa`。与主包使用相同签名配置，但独立安装、卸载和版本管理。主包不依赖 ML Kit、不包含 OCR 模型或原生库；通知、粘贴文字和手动录入无需插件。插件不声明网络权限，不上传截图。
+- `ocr-plugin/` 是轻量版可选安装的独立应用，正式包名 `cn.courselens.ocr`，QA 为 `cn.courselens.ocr.qa`。与主包使用相同签名配置，但独立安装、卸载和版本管理。轻量版主包不依赖 ML Kit、不包含 OCR 模型或原生库；通知、粘贴文字和手动录入无需插件。插件不声明网络权限，不上传截图。
 - 「读取信息」和「识别设置」提供插件入口。主包从 `https://morrow.xvyan.cn/remote/ocr-plugin.json` 读取 HTTPS 下载地址、字节数、SHA-256、插件版本和协议。未发布时 `enabled: false`；不使用占位 APK 地址。下载交给系统 DownloadManager，界面显示进度、等待网络和失败重试，离开页面后可继续下载，再次进入恢复进度。下载后复制到私有目录，校验大小、SHA-256、包名、主包签名和协议 1，再临时授权系统安装器读取该 APK；取消下载会清除任务和安装缓存。QA 不下载正式插件，需安装同签名 QA 产物。
 - Android 首次安装需用户允许 Morrow 安装应用，并在系统安装器确认；不静默安装。安装返回后重新检查插件并继续选择 / 识别图片，取消或拒绝授权可重试。插件只接受同签名且包名匹配的主包调用，读取单个临时 `content` URI，返回有长度和坐标边界的文本行，由主包沿用 `ParcelRules.extractImage` 提取快递信息；不传整张位图或保存截图。
-- `.\gradlew.bat --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug` 同时检查主包和插件。`python tests/OcrPluginChecks.py --host app/build/outputs/apk/debug/app-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk` 检查同签名、包名、模型隔离和插件无网络权限。正式发布工作流额外生成插件 APK 和 `ocr-plugin.json` 至草稿产物；公开插件后才把已验证的描述文件通过 PR 更新到 `remote/ocr-plugin.json`。下载地址可使用经审核的 HTTPS 国内对象存储，内容必须与校验值一致。准备产物不代表上传、公开发布或下载链路验收。
+- `.\gradlew.bat --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :app:assembleFullDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:testLiteDebugUnitTest :app:testFullDebugUnitTest :app:lintLiteDebug :app:lintFullDebug :ocr-plugin:lintDebug` 同时检查主包和插件。`python tests/OcrPluginChecks.py --host app/build/outputs/apk/lite/debug/app-lite-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk` 检查同签名、包名、模型隔离和插件无网络权限。正式发布工作流额外生成插件 APK 和 `ocr-plugin.json` 至草稿产物；公开插件后才把已验证的描述文件通过 PR 更新到 `remote/ocr-plugin.json`。下载地址可使用经审核的 HTTPS 国内对象存储，内容必须与校验值一致。准备产物不代表上传、公开发布或下载链路验收。
 - QA 下载测试可额外使用 `-PqaOcrManifest=http://127.0.0.1:8765/ocr-plugin.json`，通过 `adb -s SERIAL reverse tcp:8765 tcp:8765` 连接仅监听电脑回环地址的临时文件服务。描述文件必须指向 `cn.courselens.ocr.qa` 同签名插件；正式包拒绝 QA 插件及 HTTP 地址。只有 debug 网络配置放行精确 `127.0.0.1`，不放行局域网域名，也不部署 QA 下载配置到官网。安装 QA 主包和测试包后，可运行 `adb -s SERIAL shell am instrument -w -e ocrDownloadOnly true cn.courselens.qa.test/cn.courselens.NativeChecks` 启动下载专项；系统安装授权与确认仍需在手机界面完成，专项不打开业务页面或写入快递数据库。测试完删除 ADB 转发并停止服务，使用此测试包继续下载前需重新建立测试源。
 - 发布前验收：未安装入口、下载失败 / 取消 / 网络恢复、进后台 / 进程重建后恢复、损坏及异签名文件拒绝、拒绝安装权限、取消安装、安装成功后识别、卸载回退、图片分享、协议不兼容、深色 / 大字体。设备测试使用合成截图和隔离 QA 数据。
 
@@ -97,7 +104,7 @@ Android 实现依据：[Room Java 配置](https://developer.android.com/training
 
 ```powershell
 python tests/run_checks.py
-.\gradlew.bat --no-daemon -PqaBuild assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug
+.\gradlew.bat --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :app:assembleFullDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:testLiteDebugUnitTest :app:testFullDebugUnitTest :app:lintLiteDebug :app:lintFullDebug :ocr-plugin:lintDebug
 adb -s SERIAL shell am instrument -w -e parcelOnly true cn.courselens.qa.test/cn.courselens.NativeChecks
 ```
 
@@ -118,8 +125,8 @@ adb -s SERIAL shell am instrument -w -e parcelOnly true cn.courselens.qa.test/cn
 先核对 `adb devices -l` 的目标序列号，备份 QA 包已有偏好。只覆盖安装 QA 主包和测试包，不卸载用户正式包。
 
 ```powershell
-adb -s SERIAL install -r app/build/outputs/apk/debug/app-debug.apk
-adb -s SERIAL install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb -s SERIAL install -r app/build/outputs/apk/lite/debug/app-lite-debug.apk
+adb -s SERIAL install -r app/build/outputs/apk/androidTest/lite/debug/app-lite-debug-androidTest.apk
 adb -s SERIAL shell am instrument -w -e saveOnly true cn.courselens.qa.test/cn.courselens.NativeChecks
 ```
 
@@ -165,11 +172,11 @@ COURSELENS_KEY_PASSWORD
 
 1. 合入已批准并完成适用设备验收的源码；提高 versionCode 和 versionName。保留包名、偏好名称、存储格式及签名指纹；修改存储时另做旧数据兼容检查。
 2. 经发布授权后，手动运行 `Prepare signed release`，选择 main 和与 versionName 对应的新标签。检查结果中的来源提交必须是获准提交。
-3. 核对草稿 APK、`SHA256SUMS`、`release-metadata.json`、证书及使用说明；经明确授权后公开草稿。现有标签和 APK 不替换。
+3. 核对草稿 APK、`SHA256SUMS`、`release-metadata-lite.json` / `release-metadata-full.json`、证书及使用说明；经明确授权后公开草稿。现有标签和 APK 不替换。
 4. 发布成功且 APK 可下载后，再通过 PR 更新 `remote/config.json` 中的版本、更新日志和 APK 地址，保留公告及人工维护的网盘地址。CI 成功或草稿 Release 不等于发布成功。
 5. 核验 Pages 与 Raw 均返回 200，配置与 Git blob 一致；检查 APK 下载及旧客户端更新入口。网盘分享由维护者核对内容和有效期。
 
-本地正式构建按 `signing.properties.example` 配置被忽略的签名属性，密钥保存在仓库外；执行 `python tests/SigningChecks.py --signed`、正式 `assembleRelease lintRelease`。`python tests/ReleaseChecks.py vVERSION --apk PATH` 使用 `ANDROID_HOME` 或 `ANDROID_SDK_ROOT` 检查产物，输出到 `app/build/release/`，不发布。
+本地正式构建按 `signing.properties.example` 配置被忽略的签名属性，密钥保存在仓库外；执行 `python tests/SigningChecks.py --signed`、正式 `assembleRelease :app:lintLiteRelease :app:lintFullRelease :ocr-plugin:lintRelease`。`python tests/ReleaseChecks.py vVERSION --apk PATH --edition lite`（完整版改为 `--edition full`）使用 `ANDROID_HOME` 或 `ANDROID_SDK_ROOT` 检查产物，输出到 `app/build/release/`，不发布。
 
 ## 公告配置与旧版兼容
 

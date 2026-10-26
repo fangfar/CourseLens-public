@@ -9,6 +9,7 @@ const config = { schemaVersion: 1, android: { apkUrl: apk } };
 function setup(fetch) {
   const buttons = Array.from({ length: 3 }, () => ({
     attrs: {},
+    getAttribute(key) { return this.attrs[key] ?? null; },
     addEventListener(_, handler) { this.click = handler; },
     setAttribute(key, value) { this.attrs[key] = value; },
     removeAttribute(key) { delete this.attrs[key]; },
@@ -45,6 +46,17 @@ const click = () => ({ preventDefault() { this.prevented = true; }, button: 0 })
   assert.deepEqual(site.navigations, [apk, apk, apk]);
   site.close.click();
   assert.equal(site.feedback.hidden, true);
+  const fullApk = apk.replace('.apk', '-full.apk');
+  const choices = setup(async () => ({ ok: true, json: async () => ({ schemaVersion: 1, android: { liteApkUrl: apk, fullApkUrl: fullApk } }) }));
+  choices.buttons[0].attrs['data-download'] = 'lite';
+  choices.buttons[1].attrs['data-download'] = 'full';
+  await choices.buttons[0].click(click());
+  await choices.buttons[1].click(click());
+  assert.deepEqual(choices.navigations, [apk, fullApk]);
+  const unpublished = setup(async () => ({ ok: true, json: async () => config }));
+  unpublished.buttons[0].attrs['data-download'] = 'lite';
+  await unpublished.buttons[0].click(click());
+  assert.equal(unpublished.navigations.length, 0);
   const modified = { ...click(), ctrlKey: true };
   await site.buttons[0].click(modified);
   assert.equal(modified.prevented, undefined);

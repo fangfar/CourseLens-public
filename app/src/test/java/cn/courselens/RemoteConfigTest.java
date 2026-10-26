@@ -20,4 +20,9 @@ public class RemoteConfigTest {
    try{RemoteConfig.parse(config(url));fail("Accepted another repository: "+url);}catch(IOException expected){}
   }
  }
+ @Test public void editionUpdatesKeepTheSelectedDistribution()throws Exception {
+  JSONObject value=new JSONObject(config(RemoteConfig.REPOSITORY));String lite="https://example.com/lite.apk",full="https://example.com/full.apk";value.getJSONObject("android").put("liteApkUrl",lite).put("fullApkUrl",full);
+  RemoteConfig parsed=RemoteConfig.parse(value.toString());assertEquals(lite,parsed.downloadUrl(false));assertEquals(full,parsed.downloadUrl(true));
+  assertEquals(RemoteConfig.REPOSITORY+"/releases/latest",RemoteConfig.parse(config(RemoteConfig.REPOSITORY)).downloadUrl(true));
+ }
 }

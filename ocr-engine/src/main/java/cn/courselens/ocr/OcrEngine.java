@@ -11,10 +11,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.json.*;
 
-final class OcrEngine {
- interface Callback {void result(String value,String error);}
+public final class OcrEngine {
+ public interface Callback {void result(String value,String error);}
  private static final ExecutorService IO=Executors.newSingleThreadExecutor();
- static void read(Context context,Uri uri,Callback callback){
+ public static void read(Context context,Uri uri,Callback callback){
   IO.execute(()->{
    Bitmap bitmap=null;
    try{
@@ -29,10 +29,10 @@ final class OcrEngine {
     options.inSampleSize=1;while(Math.max(options.outWidth,options.outHeight)/options.inSampleSize>2400)options.inSampleSize*=2;
     options.inJustDecodeBounds=false;bitmap=BitmapFactory.decodeByteArray(bytes,0,bytes.length,options);if(bitmap==null)throw new IOException();
     recognize(bitmap,callback);
-   }catch(IOException|RuntimeException e){if(bitmap!=null&&!bitmap.isRecycled())bitmap.recycle();callback.result(null,"无法读取图片（限 10 MB），请重新选择截图");}
+   }catch(IOException|RuntimeException e){if(bitmap!=null&&!bitmap.isRecycled())bitmap.recycle();callback.result(null,"无法读取图片（限 10 MB），请重新选择图片");}
   });
  }
- static void recognize(Bitmap bitmap,Callback callback){
+ public static void recognize(Bitmap bitmap,Callback callback){
   com.google.mlkit.vision.text.TextRecognizer recognizer=null;
   try{
    recognizer=TextRecognition.getClient(new ChineseTextRecognizerOptions.Builder().build());

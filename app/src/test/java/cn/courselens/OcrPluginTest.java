@@ -23,6 +23,10 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=34)
 public class OcrPluginTest {
+ @Test public void distributionLabelMatchesBundledEngine()throws Exception{
+  assertEquals(LocalOcr.AVAILABLE?"完整版":"轻量版",RuntimeEnvironment.getApplication().getString(R.string.distribution_name));
+  try{Class.forName("cn.courselens.ocr.OcrEngine");assertTrue("Lite must not include the OCR engine",LocalOcr.AVAILABLE);}catch(ClassNotFoundException absent){assertFalse("Full must bundle the OCR engine",LocalOcr.AVAILABLE);}
+ }
  private JSONObject row()throws Exception{return new JSONObject().put("text","合成快递取件码 6-2-2088").put("left",0).put("top",0).put("right",800).put("bottom",80);}
  private String result(JSONObject row)throws Exception{return new JSONObject().put("protocol",1).put("lines",new JSONArray().put(row)).toString();}
  @Test public void preservesLayoutAndConfirmation()throws Exception{
@@ -56,15 +60,36 @@ public class OcrPluginTest {
    Button action=controller.get().findViewById(android.R.id.content).findViewWithTag("ocr-plugin-action");assertEquals("下载并安装",action.getText().toString());assertTrue(action.isEnabled());assertNull(Shadows.shadowOf(controller.get()).getNextStartedActivity());
   }
  }
- @Test public void verifiedPluginGetsTemporaryImageGrantAndReturnsEpoch()throws Exception{
+ private PackageInfo installTrustedPlugin()throws Exception{
   Context context=RuntimeEnvironment.getApplication();PackageManager pm=context.getPackageManager();PackageInfo host=pm.getPackageInfo(context.getPackageName(),PackageManager.GET_SIGNATURES);host.signatures=new Signature[]{new Signature("1234")};Shadows.shadowOf(pm).installPackage(host);
   PackageInfo plugin=new PackageInfo();plugin.packageName=OcrPluginActivity.pluginPackage(context);plugin.setLongVersionCode(1);plugin.signatures=host.signatures;plugin.applicationInfo=new ApplicationInfo();plugin.applicationInfo.packageName=plugin.packageName;plugin.applicationInfo.enabled=true;plugin.applicationInfo.metaData=new Bundle();plugin.applicationInfo.metaData.putInt("cn.courselens.ocr.PROTOCOL",1);
   ActivityInfo entry=new ActivityInfo();entry.name="cn.courselens.ocr.OcrActivity";entry.packageName=plugin.packageName;entry.applicationInfo=plugin.applicationInfo;entry.enabled=true;entry.exported=true;plugin.activities=new ActivityInfo[]{entry};Shadows.shadowOf(pm).installPackage(plugin);
+  return plugin;
+ }
+ @Test public void verifiedPluginGetsTemporaryImageGrantAndReturnsEpoch()throws Exception{
+  Context context=RuntimeEnvironment.getApplication();PackageInfo plugin=installTrustedPlugin();
   assertTrue(OcrPluginActivity.installed(context));
   Uri image=Uri.parse("content://synthetic/image");Intent request=new Intent(context,OcrPluginActivity.class).setData(image).putExtra("epoch","synthetic-epoch");
   try(var controller=Robolectric.buildActivity(OcrPluginActivity.class,request).setup()){
+   assertNull("Installed OCR must not show download controls",controller.get().findViewById(android.R.id.content).findViewWithTag("ocr-plugin-action"));
    var launched=Shadows.shadowOf(controller.get()).getNextStartedActivityForResult();assertEquals(601,launched.requestCode);assertEquals(plugin.packageName,launched.intent.getComponent().getPackageName());assertEquals(image,launched.intent.getClipData().getItemAt(0).getUri());assertTrue((launched.intent.getFlags()&Intent.FLAG_GRANT_READ_URI_PERMISSION)!=0);
    Intent answer=new Intent().putExtra("ocrResult",result(row()));controller.get().onActivityResult(601,Activity.RESULT_OK,answer);assertTrue(controller.get().isFinishing());assertEquals("synthetic-epoch",Shadows.shadowOf(controller.get()).getResultIntent().getStringExtra("epoch"));
+  }
+ }
+ @Test public void installedPluginOpensImagePickerWithoutDownloadPage()throws Exception{
+  installTrustedPlugin();
+  try(var controller=Robolectric.buildActivity(OcrPluginActivity.class).setup()){
+   var picker=Shadows.shadowOf(controller.get()).getNextStartedActivityForResult();assertNotNull(picker);assertEquals(Intent.ACTION_OPEN_DOCUMENT,picker.intent.getAction());assertEquals("image/*",picker.intent.getType());
+   assertNull("Installed OCR must bypass the download screen",controller.get().findViewById(android.R.id.content).findViewWithTag("ocr-plugin-action"));
+  }
+ }
+ @Test public void parcelImageButtonOpensPickerDirectlyOnEveryClick()throws Exception{
+  installTrustedPlugin();
+  try(var controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
+   ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();
+   for(int i=0;i<3;i++){ParcelRepository.IO.submit(()->{}).get();Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));}
+   page.findViewWithTag("parcel-read-info").performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();Button choose=dialog.getWindow().getDecorView().findViewWithTag("parcel-ocr-plugin");assertEquals("选择图片",choose.getText().toString());
+   for(int i=0;i<3;i++){choose.performClick();var picker=Shadows.shadowOf(activity).getNextStartedActivityForResult();assertEquals(501,picker.requestCode);assertEquals(Intent.ACTION_OPEN_DOCUMENT,picker.intent.getAction());assertEquals(Intent.ACTION_OPEN_DOCUMENT,Shadows.shadowOf(activity).getNextStartedActivity().getAction());page.onActivityResult(501,Activity.RESULT_CANCELED,null);assertNull(Shadows.shadowOf(activity).getNextStartedActivity());}
   }
  }
  @Test public void deniedInstallPermissionKeepsRetryAvailable(){
