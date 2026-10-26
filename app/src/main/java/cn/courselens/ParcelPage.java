@@ -53,7 +53,7 @@ final class ParcelPage extends LinearLayout {
  void pause(){active=false;}
  void close(){
   closed=true;active=false;if(discardDialog!=null)discardDialog.dismiss();timer.removeCallbacksAndMessages(null);feedback.removeCallbacks(clearFeedback);
-  ParcelDatabase.get(activity).getInvalidationTracker().removeObserver(observer);
+  ParcelRepository.IO.execute(()->ParcelDatabase.get(activity).getInvalidationTracker().removeObserver(observer));
   if(currentSheet!=null){currentSheet.setOnDismissListener(null);if(currentSheet instanceof MotionSheetDialog)((MotionSheetDialog)currentSheet).dismissNow();else currentSheet.dismiss();currentSheet=null;restoreNavigationColor();}
  }
  void saveState(Bundle out){
