@@ -6,6 +6,7 @@ import android.content.*;
 import android.content.pm.*;
 import android.os.Bundle;
 import android.net.Uri;
+import android.provider.MediaStore;
 import android.widget.Button;
 import android.widget.TextView;
 import android.view.View;
@@ -24,8 +25,12 @@ import static org.junit.Assert.*;
 @Config(sdk=34)
 public class OcrPluginTest {
  @Test public void distributionLabelMatchesBundledEngine()throws Exception{
-  assertEquals(LocalOcr.AVAILABLE?"完整版":"轻量版",RuntimeEnvironment.getApplication().getString(R.string.distribution_name));
+  assertEquals(LocalOcr.AVAILABLE?"":"轻量版",RuntimeEnvironment.getApplication().getString(R.string.distribution_name));
   try{Class.forName("cn.courselens.ocr.OcrEngine");assertTrue("Lite must not include the OCR engine",LocalOcr.AVAILABLE);}catch(ClassNotFoundException absent){assertFalse("Full must bundle the OCR engine",LocalOcr.AVAILABLE);}
+ }
+ @Test public void imagePickerUsesGalleryInsteadOfDocuments(){
+  Intent photo=ImagePicker.intent(34);assertEquals(MediaStore.ACTION_PICK_IMAGES,photo.getAction());assertEquals("image/*",photo.getType());
+  Intent gallery=ImagePicker.intent(28);assertEquals(Intent.ACTION_PICK,gallery.getAction());assertEquals(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,gallery.getData());
  }
  private JSONObject row()throws Exception{return new JSONObject().put("text","合成快递取件码 6-2-2088").put("left",0).put("top",0).put("right",800).put("bottom",80);}
  private String result(JSONObject row)throws Exception{return new JSONObject().put("protocol",1).put("lines",new JSONArray().put(row)).toString();}
@@ -79,7 +84,7 @@ public class OcrPluginTest {
  @Test public void installedPluginOpensImagePickerWithoutDownloadPage()throws Exception{
   installTrustedPlugin();
   try(var controller=Robolectric.buildActivity(OcrPluginActivity.class).setup()){
-   var picker=Shadows.shadowOf(controller.get()).getNextStartedActivityForResult();assertNotNull(picker);assertEquals(Intent.ACTION_OPEN_DOCUMENT,picker.intent.getAction());assertEquals("image/*",picker.intent.getType());
+   var picker=Shadows.shadowOf(controller.get()).getNextStartedActivityForResult();assertNotNull(picker);assertEquals(MediaStore.ACTION_PICK_IMAGES,picker.intent.getAction());assertEquals("image/*",picker.intent.getType());
    assertNull("Installed OCR must bypass the download screen",controller.get().findViewById(android.R.id.content).findViewWithTag("ocr-plugin-action"));
   }
  }
@@ -89,7 +94,7 @@ public class OcrPluginTest {
    ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();
    for(int i=0;i<3;i++){ParcelRepository.IO.submit(()->{}).get();Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));}
    page.findViewWithTag("parcel-read-info").performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();Button choose=dialog.getWindow().getDecorView().findViewWithTag("parcel-ocr-plugin");assertEquals("选择图片",choose.getText().toString());
-   for(int i=0;i<3;i++){choose.performClick();var picker=Shadows.shadowOf(activity).getNextStartedActivityForResult();assertEquals(501,picker.requestCode);assertEquals(Intent.ACTION_OPEN_DOCUMENT,picker.intent.getAction());assertEquals(Intent.ACTION_OPEN_DOCUMENT,Shadows.shadowOf(activity).getNextStartedActivity().getAction());page.onActivityResult(501,Activity.RESULT_CANCELED,null);assertNull(Shadows.shadowOf(activity).getNextStartedActivity());}
+   for(int i=0;i<3;i++){choose.performClick();var picker=Shadows.shadowOf(activity).getNextStartedActivityForResult();assertEquals(501,picker.requestCode);assertEquals(MediaStore.ACTION_PICK_IMAGES,picker.intent.getAction());assertEquals(MediaStore.ACTION_PICK_IMAGES,Shadows.shadowOf(activity).getNextStartedActivity().getAction());page.onActivityResult(501,Activity.RESULT_CANCELED,null);assertNull(Shadows.shadowOf(activity).getNextStartedActivity());}
   }
  }
  @Test public void deniedInstallPermissionKeepsRetryAvailable(){
