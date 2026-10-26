@@ -13,7 +13,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def inspect(host, plugin, expected_certificate):
+def inspect(host, plugin, expected_certificate, bundled=False):
     host_package, host_certificate, host_files = host
     package, certificate, files = plugin
     assert host_package in ('cn.courselens', 'cn.courselens.qa'), 'Unexpected host package'
@@ -22,13 +22,18 @@ def inspect(host, plugin, expected_certificate):
     assert certificate == host_certificate, 'Host/plugin signer mismatch'
     if not host_package.endswith('.qa'):
         assert certificate == expected_certificate, 'Official signer mismatch'
-    assert not any('mlkit' in name.lower() or name.startswith('lib/') for name in host_files), 'OCR engine leaked into host'
+    if bundled:
+        assert any(name.startswith('assets/mlkit-google-ocr-models/') for name in host_files), 'Full edition is missing OCR models'
+        assert any('libmlkit_google_ocr_pipeline.so' in name for name in host_files), 'Full edition is missing OCR engine'
+    else:
+        assert not any('mlkit' in name.lower() or name.startswith('lib/') for name in host_files), 'OCR engine leaked into lite host'
     assert any(name.startswith('assets/mlkit-google-ocr-models/') for name in files), 'OCR models missing'
     assert any('libmlkit_google_ocr_pipeline.so' in name for name in files), 'OCR engine missing'
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--edition', choices=['lite', 'full'], default='lite')
     parser.add_argument('--host', type=Path, required=True)
     parser.add_argument('--plugin', type=Path, required=True)
     parser.add_argument('--release-base-url', help='HTTPS release directory for staging production assets')
@@ -50,7 +55,7 @@ def main():
 
     host, _ = apk(args.host)
     plugin, badging = apk(args.plugin)
-    inspect(host, plugin, (ROOT / 'signing-certificate.sha256').read_text().strip())
+    inspect(host, plugin, (ROOT / 'signing-certificate.sha256').read_text().strip(), bundled=args.edition == 'full')
     assert "uses-permission: name='android.permission.INTERNET'" not in badging, 'Offline plugin must not request network access'
     tree = run('aapt', 'dump', 'xmltree', args.plugin, 'AndroidManifest.xml')
     assert 'cn.courselens.ocr.PROTOCOL' in tree, 'Protocol metadata missing'

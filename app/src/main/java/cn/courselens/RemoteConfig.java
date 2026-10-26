@@ -10,7 +10,7 @@ import org.json.*;
 final class RemoteConfig {
  static final int MAX_BYTES=64*1024;
  static final String REPOSITORY="https://github.com/fangfar/Morrow";
- final List<Announcement> announcements;final long versionCode;final boolean forcePrompt;final String versionName,changelog,promptTitle,promptMessage,apkUrl,diskUrl,repositoryUrl;
+ final List<Announcement> announcements;final long versionCode;final boolean forcePrompt;final String versionName,changelog,promptTitle,promptMessage,apkUrl,diskUrl,liteApkUrl,fullApkUrl,repositoryUrl;
  static final class Announcement {
   final String id,title,body,publishedAt;final boolean enabled;
   Announcement(JSONObject value)throws Exception{id=string(value,"id",120,false);title=string(value,"title",160,false);body=string(value,"body",8000,false);publishedAt=string(value,"publishedAt",40,true);if(!publishedAt.isEmpty())Instant.parse(publishedAt);Object flag=value.get("enabled");if(!(flag instanceof Boolean))throw new IOException("公告启用状态无效");enabled=(Boolean)flag;}
@@ -22,6 +22,7 @@ final class RemoteConfig {
   JSONObject android=value.getJSONObject("android");versionCode=integer(android,"versionCode");if(versionCode<1)throw new IOException("版本号无效");versionName=string(android,"versionName",80,false);changelog=string(android,"changelog",12000,true);
   Object force=android.has("forcePrompt")?android.get("forcePrompt"):Boolean.FALSE;if(!(force instanceof Boolean))throw new IOException("强制更新提示状态无效");forcePrompt=(Boolean)force;promptTitle=android.has("promptTitle")?string(android,"promptTitle",160,true):"";promptMessage=android.has("promptMessage")?string(android,"promptMessage",12000,true):"";
   apkUrl=link(android,"apkUrl");diskUrl=link(android,"diskUrl");repositoryUrl=link(value,"repositoryUrl");if(!repositoryUrl.isEmpty()&&!REPOSITORY.equals(repositoryUrl))throw new IOException("仓库入口必须为公开发布仓库");
+  liteApkUrl=android.has("liteApkUrl")?link(android,"liteApkUrl"):"";fullApkUrl=android.has("fullApkUrl")?link(android,"fullApkUrl"):"";
  }
  static RemoteConfig parse(String text)throws Exception {
   if(text==null||text.getBytes(StandardCharsets.UTF_8).length>MAX_BYTES)throw new IOException("远程配置过大");
@@ -32,5 +33,6 @@ final class RemoteConfig {
  private static String link(JSONObject object,String key)throws Exception {String value=string(object,key,2048,true);if(!value.isEmpty()&&!validLink(value))throw new IOException("下载或仓库链接无效");return value;}
  static boolean validLink(String value){try{URI uri=new URI(value);return "https".equalsIgnoreCase(uri.getScheme())&&uri.getHost()!=null&&uri.getRawUserInfo()==null&&(uri.getPort()==-1||uri.getPort()==443);}catch(Exception e){return false;}}
  String downloadUrl(){return apkUrl.isEmpty()?diskUrl:apkUrl;}
+ String downloadUrl(boolean full){String url=full?fullApkUrl:liteApkUrl;return url.isEmpty()?REPOSITORY+"/releases/latest":url;}
  boolean newerThan(long installed){return versionCode>installed;}
 }

@@ -23,6 +23,8 @@ with tempfile.TemporaryDirectory() as folder:
     shutil.copy2(root / "app/build.gradle", fixture / "app/build.gradle")
     (fixture / "ocr-plugin").mkdir()
     shutil.copy2(root / "ocr-plugin/build.gradle", fixture / "ocr-plugin/build.gradle")
+    (fixture / "ocr-engine").mkdir()
+    shutil.copy2(root / "ocr-engine/build.gradle", fixture / "ocr-engine/build.gradle")
     if (root / "local.properties").exists():
         shutil.copy2(root / "local.properties", fixture / "local.properties")
     wrapper = root / ("gradlew.bat" if os.name == "nt" else "gradlew")
@@ -38,7 +40,8 @@ with tempfile.TemporaryDirectory() as folder:
 
     check("missing key fails instead of generating a signer", [], "Fixed signing is required")
     check("PR verification works without signing secrets", ["-PqaBuild"], None)
-    check("QA cannot build an unsigned official release", ["-PqaBuild", "assembleRelease", "--dry-run"], "not found")
+    for task in (":app:assembleLiteRelease", ":app:assembleFullRelease", ":ocr-plugin:assembleRelease"):
+        check("QA disables official APK task " + task, ["-PqaBuild", task, "--dry-run"], "not found")
     if not args.signed:
         print("SKIP: official key checks (use --signed in the release environment)")
         raise SystemExit(0)

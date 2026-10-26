@@ -45,20 +45,27 @@ public final class OcrPluginActivity extends Activity {
  @Override public void onCreate(Bundle saved){
   super.onCreate(saved);prefs=getSharedPreferences("ocr-plugin",MODE_PRIVATE);downloads=(DownloadManager)getSystemService(DOWNLOAD_SERVICE);image=getIntent().getData();
   if(saved!=null){stage=saved.getString("stage","idle");String value=saved.getString("image");if(value!=null)image=Uri.parse(value);}
+  if(installed(this)){
+   if(!"recognizing".equals(stage)&&!"picker".equals(stage)&&!"permission".equals(stage)&&!"installer".equals(stage)){stage="idle";usePlugin();}
+   return;
+  }
+  downloadView();
+  if("recognizing".equals(stage)||"picker".equals(stage)||"permission".equals(stage)||"installer".equals(stage)){show("等待系统操作完成…","继续");return;}
+  stage="idle";if(installed(this))usePlugin();else if(prefs.getLong("downloadId",-1)<0)show("未安装图片识别插件","下载并安装");
+ }
+ private void downloadView(){
   SecondaryUi ui=new SecondaryUi(this);ScrollView scroll=new ScrollView(this);LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(ui.dp(24),ui.dp(32),ui.dp(24),ui.dp(24));body.setBackgroundColor(ui.SURFACE);scroll.addView(body);setContentView(scroll);
-  body.addView(ui.text("图片识别插件",24,ui.INK));TextView explanation=ui.text("仅需要识别截图时下载。安装后在本机离线识别，不上传图片；卸载插件不影响课表、任务和快递记录。下载完成后需要在系统界面确认安装。",15,ui.MUTED);explanation.setPadding(0,ui.dp(20),0,ui.dp(20));body.addView(explanation);
+  body.addView(ui.text("图片识别插件",24,ui.INK));TextView explanation=ui.text("仅需要识别图片时下载。安装后在本机离线识别，不上传图片；卸载插件不影响课表、任务和快递记录。下载完成后需要在系统界面确认安装。",15,ui.MUTED);explanation.setPadding(0,ui.dp(20),0,ui.dp(20));body.addView(explanation);
   status=ui.text("",15,ui.INK);status.setTag("ocr-plugin-status");status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);body.addView(status);
   progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);progress.setMax(100);body.addView(progress,new LinearLayout.LayoutParams(-1,ui.dp(20)));
   action=ui.action(body,"下载并安装",this::perform);action.setTag("ocr-plugin-action");cancel=ui.action(body,"取消下载",()->{clearDownload();busy=false;stage="idle";show("下载已取消，可稍后重试","下载并安装");});cancel.setTag("ocr-plugin-cancel");cancel.setVisibility(View.GONE);
   ui.action(body,"返回",this::finish);
-  if("recognizing".equals(stage)||"picker".equals(stage)||"permission".equals(stage)||"installer".equals(stage)){show("等待系统操作完成…","继续");return;}
-  stage="idle";if(installed(this))usePlugin();else if(prefs.getLong("downloadId",-1)<0)show("未安装图片识别插件","下载并安装");
  }
  @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);out.putString("stage",stage);if(image!=null)out.putString("image",image.toString());}
  @Override protected void onResume(){super.onResume();foreground=true;if("idle".equals(stage)&&prefs.getLong("downloadId",-1)>=0)pollDownload();}
  @Override protected void onPause(){super.onPause();foreground=false;timer.removeCallbacks(poll);}
  @Override protected void onDestroy(){timer.removeCallbacks(poll);super.onDestroy();}
- private void show(String message,String label){if(isDestroyed())return;status.setText(message);action.setText(label);action.setEnabled(!busy);progress.setVisibility(busy?View.VISIBLE:View.GONE);cancel.setVisibility(!busy&&prefs.getLong("downloadId",-1)>=0?View.VISIBLE:View.GONE);}
+ private void show(String message,String label){if(isDestroyed())return;if(status==null)downloadView();status.setText(message);action.setText(label);action.setEnabled(!busy);progress.setVisibility(busy?View.VISIBLE:View.GONE);cancel.setVisibility(!busy&&prefs.getLong("downloadId",-1)>=0?View.VISIBLE:View.GONE);}
  private void perform(){
   if(busy)return;
   if(installed(this)){usePlugin();return;}

@@ -41,7 +41,26 @@ public class ParcelPageDesignTest {
    }
   }
  }
+ @Test public void manualEditorWrapsContentInsteadOfFillingScreen()throws Exception{
+  RuntimeEnvironment.setQualifiers("w380dp-h900dp-notnight");RuntimeEnvironment.setFontScale(1f);
+  try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
+   ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();layout(activity.findViewById(android.R.id.content),activity);
+   java.lang.reflect.Method edit=ParcelPage.class.getDeclaredMethod("edit",ParcelRecord.class);edit.setAccessible(true);edit.invoke(page,new ParcelRecord());
+   AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();layoutDialog(dialog,activity);View shell=dialog.getWindow().getDecorView().findViewWithTag("parcel-sheet");
+   assertTrue("Manual entry should wrap its fields, not fill the screen: "+shell.getHeight(),shell.getHeight()<activity.getResources().getDisplayMetrics().heightPixels*.85f);
+   assertContained((ViewGroup)shell,shell.findViewWithTag("parcel-editor-save"));
+  }
+ }
  @Test public void repeatedPickupKeepsUndoableOriginalState()throws Exception{checkPickupUndo(ParcelRecord.READY);}
+ @Test public void manualEditorKeepsActionsAboveKeyboardAtLargeFont()throws Exception{
+  RuntimeEnvironment.setQualifiers("w320dp-h640dp-night");RuntimeEnvironment.setFontScale(2f);
+  try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
+   ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();layout(activity.findViewById(android.R.id.content),activity);
+   java.lang.reflect.Method edit=ParcelPage.class.getDeclaredMethod("edit",ParcelRecord.class);edit.setAccessible(true);edit.invoke(page,new ParcelRecord());MotionSheetDialog dialog=(MotionSheetDialog)org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+   int ime=Math.round(240*activity.getResources().getDisplayMetrics().density);androidx.core.view.ViewCompat.dispatchApplyWindowInsets(dialog.overlay,new androidx.core.view.WindowInsetsCompat.Builder().setInsets(androidx.core.view.WindowInsetsCompat.Type.ime(),androidx.core.graphics.Insets.of(0,0,0,ime)).setVisible(androidx.core.view.WindowInsetsCompat.Type.ime(),true).build());layoutDialog(dialog,activity);
+   ViewGroup shell=dialog.getWindow().getDecorView().findViewWithTag("parcel-sheet");assertContained(shell,shell.findViewWithTag("parcel-editor-save"));assertContained(shell,shell.findViewWithTag("parcel-editor-actions"));assertTrue(shell.getHeight()<=activity.getResources().getDisplayMetrics().heightPixels-ime);
+  }
+ }
  @Test public void trackingOnlyPickupCanCompleteAndUndo()throws Exception{checkPickupUndo(ParcelRecord.TRANSIT);}
  private void checkPickupUndo(int initial)throws Exception{
   try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){

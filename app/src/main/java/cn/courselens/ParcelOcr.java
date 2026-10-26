@@ -6,6 +6,7 @@ import org.json.*;
 
 /** The host parses layout data only; the optional APK owns the OCR engine. */
 final class ParcelOcr {
+ interface Callback {void result(String value,String error);}
  static final int PROTOCOL=1;
  static List<ParcelRules.OcrLine> lines(String value)throws Exception {
   if(value==null||value.length()>128*1024)throw new IOException("识别结果过大");

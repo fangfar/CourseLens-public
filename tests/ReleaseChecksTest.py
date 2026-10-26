@@ -9,6 +9,13 @@ from ReleaseChecks import check_apk, check_new_version, version
 
 
 class ReleaseChecksTest(unittest.TestCase):
+    def test_edition_cannot_mislabel_ocr_contents(self):
+        files = ['assets/mlkit-google-ocr-models/model', 'lib/arm64-v8a/libmlkit_google_ocr_pipeline.so']
+        ReleaseChecks.check_edition(files, 'full')
+        ReleaseChecks.check_edition(['classes.dex'], 'lite')
+        for contents, edition in [(files, 'lite'), (['classes.dex'], 'full'), (files[:1], 'full')]:
+            with self.assertRaises(ValueError):
+                ReleaseChecks.check_edition(contents, edition)
     def test_prepare_with_legacy_tag_without_source(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

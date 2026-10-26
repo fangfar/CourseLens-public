@@ -66,6 +66,9 @@ jobs:
               text(android, 'promptMessage', 12000, True)
           link(android, 'apkUrl')
           link(android, 'diskUrl')
+          for edition in ('liteApkUrl', 'fullApkUrl'):
+              if edition in android:
+                  link(android, edition)
           assert link(config, 'repositoryUrl') in ('', 'https://github.com/fangfar/Morrow')
           print('Valid configuration')
           PY
