@@ -18,6 +18,8 @@ public class ParcelRulesTest {
   for(String label:new String[]{"提货号","签收码","快件编号","提货编码","取件編號"})check(ParcelRules.extract("合成快递已到北门快递站，"+label+"：6-2-2088").get(0).code.equals("6-2-2088"),"supported pickup alias missing: "+label);
   check(ParcelRules.extract("合成快递取件码：6-2-\n2088").get(0).code.equals("6-2-2088"),"OCR line break inside code lost");
   check(ParcelRules.extract("快递取件码：6-2-2088、9-8-7654").size()==2,"multiple codes after one label lost");
+  found=ParcelRules.extract("【合成快递】取件码2-4-1111，您的快件尾号1234已送达合成学院京东校园服务站，地址：合成地址，取件和寄件可咨询。");
+  check(found.size()==1&&found.get(0).code.equals("2-4-1111")&&found.get(0).station.equals("合成学院京东校园服务站"),"parcel SMS notification text not recognized");
   imageLayout();
   System.out.println("Parcel rules checks passed");
  }
@@ -35,6 +37,10 @@ public class ParcelRulesTest {
   check(ParcelRules.extractImage(Arrays.asList(line("取件码",0,0,60,30),line("123456",70,250,200,280))).isEmpty(),"unrelated distant number linked to label");
   result=ParcelRules.extractImage(Arrays.asList(line("合成东门驿站",0,0,200,30),line("取件码",0,40,60,70),line("1-2-3456",70,40,200,70),line("合成西门驿站",0,400,200,430),line("取件码",0,440,60,470),line("9-8-7654",70,440,200,470)));
   check(result.size()==2&&result.get(0).station.equals("合成东门驿站")&&result.get(1).station.equals("合成西门驿站"),"two parcel cards crossed addresses");
+  result=ParcelRules.extractImage(Arrays.asList(line("【快递】取件码2-4-1111，您",0,0,400,30),line("的快件尾号1234已送达合成学院京",0,40,400,70),line("东校园服务站，地址：合成地址",0,80,400,110),line("【快递】取件码2-4-2222，您",0,200,400,230),line("的快件尾号5678已送达合成西门",0,240,400,270),line("校园服务站，地址：合成地址",0,280,400,310)));
+  check(result.size()==2&&result.get(0).station.equals("合成学院京东校园服务站")&&result.get(1).station.equals("合成西门校园服务站"),"wrapped station below code not associated with its parcel");
+  result=ParcelRules.extractImage(Arrays.asList(line("【快递】取件码2-4-1111",0,0,400,30),line("【快递】取件码2-4-2222",0,80,400,110),line("已送达合成西门校园服务站，地址：合成地址",0,120,400,150)));
+  check(result.size()==2&&result.get(0).station.isEmpty()&&result.get(1).station.equals("合成西门校园服务站"),"following parcel station crossed into earlier parcel");
  }
 
 }
