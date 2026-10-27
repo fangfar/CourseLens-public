@@ -88,6 +88,15 @@ final class ParcelRules {
     Matcher named=NAMED_STATION.matcher(line.text);if(named.find()&&line.text.length()<=80){int distance=Math.abs(codeLine.top-line.bottom);if(distance<best){best=distance;station=named.group(1);}}
     Matcher waybill=TRACKING.matcher(line.text);if(waybill.find())tracking=waybill.group(1);
    }
+   List<OcrLine> below=new ArrayList<>(lines);below.sort(Comparator.comparingInt(line->line.top));
+   StringBuilder nearby=new StringBuilder(label.text);
+   for(OcrLine line:below){
+    if(line==label||line.top<label.bottom)continue;
+    if(line.top-label.bottom>label.height()*8||PICKUP_LABEL.matcher(line.text).find())break;
+    if(SENSITIVE.matcher(line.text).find())break;
+    if(line.right>label.left&&line.left<label.right)nearby.append(line.text);
+   }
+   Matcher address=STATION.matcher(nearby);if(address.find())station=address.group(1).trim();
    for(Candidate c:codes){Candidate value=new Candidate(c.code,codes.size()==1?station:"",codes.size()==1?tracking:"","ocr-layout-v2",85);found.putIfAbsent(c.code+"\n"+value.station,value);}
   }
   if(found.isEmpty()&&lines.stream().noneMatch(line->PICKUP_LABEL.matcher(line.text).find())){StringBuilder text=new StringBuilder();for(OcrLine line:lines)text.append(line.text).append('\n');for(Candidate c:extract(text.toString()))found.put(c.code+"\n"+c.station,new Candidate(c.code,c.station,c.tracking,"ocr-text-v2",85));}
