@@ -9,6 +9,7 @@ import java.util.*;
 
 /** Shared secondary-page controls used by settings and platform connections. */
 final class SecondaryUi {
+ static final int MENU_WIDTH=168, MENU_VERTICAL_PADDING=8;
  final int INK,MUTED,SURFACE,CARD,PRIMARY,AQUA,SOFT,NAVY,BLUE,DIVIDER,DANGER,DISABLED,ON_PRIMARY,HANDLE,COURSE_BORDER,NAV_MUTED,WARNING,CHIP;
  final boolean dark;
  private final Activity activity;
