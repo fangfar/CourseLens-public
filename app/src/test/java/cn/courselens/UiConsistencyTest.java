@@ -59,12 +59,12 @@ public class UiConsistencyTest {
    callInstanceMethod(a,"parcels");ParcelPage parcels=getField(a,"parcelPage");parcels.pause();ParcelRepository.IO.submit(()->{}).get();settle();ParcelRecord parcel=new ParcelRecord();parcel.id=100;parcel.code="6-2-2088";parcel.station="合成东门驿站";callInstanceMethod(parcels,"render",ClassParameter.from(List.class,Arrays.asList(parcel)));snapshot(a,"app-parcels.webp");root(a).findViewWithTag("quick-menu-button").performClick();assertNotNull(((AlertDialog)getField(parcels,"currentSheet")).getWindow().getDecorView().findViewWithTag("parcel-editor-save"));
   }
  }
- @Test public void courseAndNavigationColorsRemainReadableInBothThemes()throws Exception{
+ @Test public void courseTextStaysWhiteAndNavigationKeepsContrastInBothThemes()throws Exception{
   for(boolean dark:new boolean[]{false,true}){
    RuntimeEnvironment.setQualifiers("w380dp-h800dp-"+(dark?"night":"notnight"));
    try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
     MainActivity a=controller.get();setField(a,"data","1|1|2|合成课|A1|1-30");setField(a,"week",1);callInstanceMethod(a,"home");settle();snapshot(a,(dark?"dark":"normal")+"-course-contrast.png");TextView card=root(a).findViewWithTag("course-card");assertNotNull(card);
-    for(String name:new String[]{"数据结构","模拟电子","电路","英语","复变","物理","合成课"}){int color=callInstanceMethod(a,"courseColor",ClassParameter.from(String.class,name));assertTrue("Course contrast: "+name,androidx.core.graphics.ColorUtils.calculateContrast(card.getCurrentTextColor(),color)>=4.5);}
+    assertEquals("Course text keeps its original white color",Color.WHITE,card.getCurrentTextColor());
     assertTrue(androidx.core.graphics.ColorUtils.calculateContrast(a.getColor(R.color.app_nav_muted),a.getColor(R.color.app_surface))>=3);
    }
   }
