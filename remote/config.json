@@ -10,15 +10,15 @@
     }
   ],
   "android": {
-    "versionCode": 19,
-    "versionName": "2.7.7",
+    "versionCode": 20,
+    "versionName": "2.7.8",
     "forcePrompt": false,
     "promptTitle": "",
     "promptMessage": "",
-    "changelog": "修复默认短信应用可能不显示在快递通知来源中的问题。\n改进截图中换行快递站名称的识别，恢复课表卡片的白色文字。",
-    "apkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.7/Morrow-2.7.7-full-vc19.apk",
-    "liteApkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.7/Morrow-2.7.7-lite-vc19.apk",
-    "fullApkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.7/Morrow-2.7.7-full-vc19.apk",
+    "changelog": "空课表与空任务优先引导登录，优化设置及课表切换。\n新增快递恢复，支持找回本次更新后删除的快递。",
+    "apkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.8/Morrow-2.7.8-full-vc20.apk",
+    "liteApkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.8/Morrow-2.7.8-lite-vc20.apk",
+    "fullApkUrl": "https://github.com/fangfar/Morrow/releases/download/v2.7.8/Morrow-2.7.8-full-vc20.apk",
     "diskUrl": "https://pan.baidu.com/s/5Q7q-93RIXFczWfL1i3cvQg"
   },
   "repositoryUrl": "https://github.com/fangfar/Morrow"
