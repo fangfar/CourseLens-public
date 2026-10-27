@@ -2,8 +2,12 @@
 from pathlib import Path
 import subprocess
 import tempfile
+import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parent.parent
+manifest = ET.parse(root / "app/src/main/AndroidManifest.xml")
+android_name = "{http://schemas.android.com/apk/res/android}name"
+assert any(action.get(android_name) == "android.provider.Telephony.SMS_DELIVER" for action in manifest.findall("./queries/intent/action")), "default SMS package visibility missing"
 models = ("Course", "ClassTimes", "CourseDisplay", "NextClass", "CourseAdjustment", "WidgetSchedule", "ChaoxingHomework", "TaskRefresh", "ParcelRules")
 tests = sorted((root / "tests").glob("*Test.java"))
 with tempfile.TemporaryDirectory() as output:
