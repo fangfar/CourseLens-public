@@ -2,6 +2,10 @@
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
+import json
+import subprocess
+import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1] / 'web'
 
@@ -53,3 +57,10 @@ for link in page.links:
     else:
         raise AssertionError(f'Empty link: {link}')
 print(f'Website checks passed: {len(page.links)} links and resources')
+
+with tempfile.TemporaryDirectory() as directory:
+    subprocess.run([sys.executable, str(ROOT / 'build.py'), directory], check=True)
+    generated = (Path(directory) / 'index.html').read_text(encoding='utf-8')
+    config = json.loads((Path(directory) / 'remote/config.json').read_text(encoding='utf-8'))
+    for edition in ('full', 'lite'):
+        assert f'data-download="{edition}" href="{config["android"][edition + "ApkUrl"]}"' in generated, f'{edition} must link directly to its APK without JavaScript'
