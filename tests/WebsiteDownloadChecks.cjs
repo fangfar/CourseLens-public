@@ -78,6 +78,9 @@ const click = () => ({ preventDefault() { this.prevented = true; }, button: 0 })
   const network = setup(async () => { throw new Error('Network unavailable'); });
   await network.buttons[0].click(click());
   assert.equal(network.navigations.length, 0);
+  network.buttons[0].href = apk;
+  await network.buttons[0].click(click());
+  assert.deepEqual(network.navigations, [apk]);
 
   let resolve;
   const waiting = setup(() => new Promise(done => { resolve = done; }));
