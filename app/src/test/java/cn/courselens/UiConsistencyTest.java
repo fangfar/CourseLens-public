@@ -28,7 +28,7 @@ public class UiConsistencyTest {
     View settings=getField(a,"root");View data=settings.findViewWithTag("data-management"),permissions=settings.findViewWithTag("permission-settings"),about=settings.findViewWithTag("about-app");assertSame(data.getParent(),permissions.getParent());assertSame(data.getParent(),about.getParent());assertNotNull(settings.findViewWithTag("settings-term"));assertNotNull(settings.findViewWithTag("school-account"));assertNotNull(settings.findViewWithTag("add-home-widget"));
     for(String tag:new String[]{"timetable-management","dark-mode-setting","data-management","permission-settings","about-app"}){
      ((View)getField(a,"root")).findViewWithTag(tag).performClick();settle();snapshot(a,variant+"-"+tag+".png");
-     if(tag.equals("timetable-management")){View page=getField(a,"root");for(String action:new String[]{"manage-courses","switch-timetable","add-timetable"})assertNotNull(page.findViewWithTag(action));page.findViewWithTag("add-timetable").performClick();settle();a.onBackPressed();settle();assertEquals("课表管理",((View)getField(a,"root")).getTag());}
+     if(tag.equals("timetable-management")){View page=getField(a,"root");for(String action:new String[]{"manage-courses","timetable-","add-timetable"})assertNotNull(page.findViewWithTag(action));page.findViewWithTag("add-timetable").performClick();settle();a.onBackPressed();settle();assertEquals("课表管理",((View)getField(a,"root")).getTag());}
      if(tag.equals("dark-mode-setting")){View appearance=getField(a,"root");assertTrue(appearance.findViewWithTag("appearance-0").isSelected());assertNotNull(appearance.findViewWithTag("appearance-2"));}
      if(tag.equals("data-management")){View page=getField(a,"root");for(String action:new String[]{"clear-timetable","clear-tasks","clear-parcels","task-deletion-history"})assertNotNull(page.findViewWithTag(action));}
      a.onBackPressed();settle();assertSame(settings,getField(a,"root"));
@@ -37,9 +37,14 @@ public class UiConsistencyTest {
    }
   }
  }
- @Test public void timetableManagementRestoresAndShowsImportedRefresh(){
+ @Test public void timetableManagementRestoresWithoutRefresh(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
-   MainActivity a=controller.get();a.getPreferences(0).edit().putBoolean("schoolImported",true).commit();callInstanceMethod(a,"menu");((View)getField(a,"root")).findViewWithTag("timetable-management").performClick();assertNotNull(((View)getField(a,"root")).findViewWithTag("settings-refresh-timetable"));controller.recreate();a=controller.get();assertEquals("课表管理",((View)getField(a,"root")).getTag());assertNotNull(((View)getField(a,"root")).findViewWithTag("settings-refresh-timetable"));a.onBackPressed();assertEquals("设置",((View)getField(a,"root")).getTag());
+   MainActivity a=controller.get();a.getPreferences(0).edit().putBoolean("schoolImported",true).commit();callInstanceMethod(a,"menu");((View)getField(a,"root")).findViewWithTag("timetable-management").performClick();assertNull(((View)getField(a,"root")).findViewWithTag("settings-refresh-timetable"));controller.recreate();a=controller.get();assertEquals("课表管理",((View)getField(a,"root")).getTag());assertNull(((View)getField(a,"root")).findViewWithTag("settings-refresh-timetable"));a.onBackPressed();assertEquals("设置",((View)getField(a,"root")).getTag());
+  }
+ }
+ @Test public void timetableManagementSwitchesInlineAndRenames()throws Exception{
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();Timetables.add(a,"合成课表","squ",ClassTimes.DEFAULT,"2026-08-31");String second=Timetables.active(a);Timetables.select(a,"");callInstanceMethod(a,"reloadTimetable");callInstanceMethod(a,"menu");((View)getField(a,"root")).findViewWithTag("timetable-management").performClick();View page=getField(a,"root");assertTrue(page.findViewWithTag("timetable-").isSelected());page.findViewWithTag("timetable-"+second).performClick();page=getField(a,"root");assertEquals("课表管理",page.getTag());assertEquals(second,Timetables.active(a));assertTrue(page.findViewWithTag("timetable-"+second).isSelected());assertNull(getField(a,"navigationOverlay"));assertTrue(page.findViewWithTag("timetable-"+second).performLongClick());((EditText)((View)getField(a,"root")).findViewWithTag("rename-timetable-name")).setText("修改名称");((View)getField(a,"root")).findViewWithTag("save-timetable-name").performClick();assertEquals("修改名称",Timetables.names(a).get(second));assertEquals("课表管理",((View)getField(a,"root")).getTag());
   }
  }
  @Test public void emptyTimetableCreatesDirectlyAndCancelKeepsData()throws Exception{

@@ -24,7 +24,7 @@ android {
  namespace 'cn.courselens'
  compileSdk 34
  defaultConfig {
-  applicationId 'cn.courselens'; minSdk 26; targetSdk 34; versionCode 19; versionName '2.7.7'; testInstrumentationRunner 'cn.courselens.NativeChecks'
+  applicationId 'cn.courselens'; minSdk 26; targetSdk 34; versionCode 20; versionName '2.7.8'; testInstrumentationRunner 'cn.courselens.NativeChecks'
   javaCompileOptions { annotationProcessorOptions { arguments += ['room.schemaLocation': "$projectDir/schemas".toString()] } }
  }
  flavorDimensions 'distribution'

@@ -358,11 +358,11 @@ public class MainActivity extends Activity {
   settingsPage=root;
  }
  private void timetableManagement(){
-  LinearLayout body=secondary("课表管理","",this::menu);LinearLayout group=settingsGroup(body,"");
-  option(group,R.drawable.ic_calendar,"课程管理","",()->edit(this::timetableManagement)).setTag("manage-courses");
-  option(group,R.drawable.ic_calendar,"切换课表","",this::timetablePicker).setTag("switch-timetable");
-  option(group,R.drawable.ic_calendar,"新增课表","",()->newTimetable(this::timetableManagement)).setTag("add-timetable");
-  if(getPreferences(0).getBoolean("schoolImported",notes.startsWith("已从学校同步")))option(group,R.drawable.ic_sync,"刷新课表","",this::refreshTimetable).setTag("settings-refresh-timetable");
+  LinearLayout body=secondary("课表管理","",this::menu);LinearLayout courses=settingsGroup(body,"");
+  option(courses,R.drawable.ic_calendar,"课程管理","",()->edit(this::timetableManagement)).setTag("manage-courses");
+  LinearLayout list=settingsGroup(body,"切换课表");String current=Timetables.active(this);
+  for(var entry:Timetables.names(this).entrySet()){String id=entry.getKey();boolean selected=id.equals(current);LinearLayout row=option(list,R.drawable.ic_calendar,entry.getValue(),selected?"当前课表":"",()->{if(busy){toast("请等待同步结束");return;}if(selected)return;try{Timetables.select(this,id);reloadTimetable(this::timetableManagement);}catch(Exception e){toast(e.getMessage());}});row.setTag("timetable-"+id);row.setSelected(selected);TextView mark=(TextView)row.getChildAt(row.getChildCount()-1);mark.setText("");if(selected){secondaryUi.styleIcon(mark,R.drawable.ic_check);mark.setBackground(null);}row.setTooltipText("长按修改课表名称");row.setOnLongClickListener(v->{renameTimetable(id,this::timetableManagement);return true;});}
+  option(list,R.drawable.ic_add,"新增课表","",()->newTimetable(this::timetableManagement)).setTag("add-timetable");
  }
  private void dataManagement(){
   LinearLayout body=secondary("数据管理","",this::menu);
@@ -370,7 +370,8 @@ public class MainActivity extends Activity {
   LinearLayout tasks=settingsGroup(body,"任务");
   option(tasks,R.drawable.ic_tasks,"任务恢复","恢复已删除或本机标记完成的任务",()->{prepareTasks();taskPage.history();}).setTag("task-deletion-history");
   option(tasks,R.drawable.ic_tasks,"删除全部任务数据","删除手动任务、所有学习通缓存和删除历史，退出学习通账号",()->{prepareTasks();taskPage.clearData();}).setTag("clear-tasks");
-  option(settingsGroup(body,"快递"),R.drawable.ic_parcel,"删除全部快递数据","删除记录和设置，关闭通知识别与提醒",()->{prepareParcels();parcelPage.clearData();}).setTag("clear-parcels");
+  LinearLayout parcels=settingsGroup(body,"快递");option(parcels,R.drawable.ic_parcel,"快递恢复","",()->{prepareParcels();parcelPage.history();}).setTag("parcel-deletion-history");
+  option(parcels,R.drawable.ic_parcel,"删除全部快递数据","删除记录和设置，关闭通知识别与提醒",()->{prepareParcels();parcelPage.clearData();}).setTag("clear-parcels");
  }
  private void timetableSettings(){
   if(navigationOverlay!=null)navigationOverlay.close(false);if(pageBack!=null)home();
@@ -771,8 +772,9 @@ public class MainActivity extends Activity {
   if(busy){toast("请等待同步结束");return;}LinearLayout body=secondary("新增课表","每份课表独立保存，新增后仍可切回已有课表。",back);LinearLayout card=panel(body);EditText name=courseField(card,"课表名称","","例如：大二上学期","timetable-name");Spinner source=courseChoice(card,"创建方式",new String[]{"手动创建","宿迁学院导入","徐州工程学院导入"},0,"timetable-source");TextView error=text("",13,DANGER);error.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);card.addView(error);
   Button create=action(body,"创建课表",()->{try{int selected=source.getSelectedItemPosition();String id=selected==2?"xzit":"squ";Timetables.add(this,name.getText().toString(),id,selected==2?ClassTimes.XZIT:ClassTimes.DEFAULT,term);reloadTimetable(this::home);if(selected>0)login();}catch(Exception e){error.setText(e.getMessage());}});create.setTag("create-timetable");saveHeader(body,create);choiceSheet=new CourseChoiceSheet();windowContent.addView(choiceSheet,new FrameLayout.LayoutParams(-1,-1));
  }
- private void renameTimetable(String id){
-  if(busy){toast("请等待同步结束");return;}Runnable back=()->{home();timetablePicker();};
+ private void renameTimetable(String id){renameTimetable(id,()->{home();timetablePicker();});}
+ private void renameTimetable(String id,Runnable back){
+  if(busy){toast("请等待同步结束");return;}
   LinearLayout body=secondary("修改课表名称","名称只用于区分课表，不影响课程和作息时间。",back);EditText name=courseField(panel(body),"课表名称",Timetables.names(this).get(id),"1–40 个字","rename-timetable-name");
   Button save=action(body,"保存课表名称",()->{try{Timetables.rename(this,id,name.getText().toString());back.run();}catch(Exception e){name.setError(e.getMessage());}});save.setTag("save-timetable-name");saveHeader(body,save);
  }

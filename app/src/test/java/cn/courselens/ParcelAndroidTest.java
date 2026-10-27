@@ -38,12 +38,20 @@ public class ParcelAndroidTest {
   repository.clear();assertTrue(db.parcels().all().isEmpty());assertTrue(repository.ingest(record("123456","合成驿站","")));
  }
  @Test public void undoPreservesRecordAndReplayProtection(){
-  ParcelRecord p=record("123456","合成撤销驿站","YT00000000009");p.trackingEvents="[]";repository.save(p);long created=p.createdAt;
-  repository.delete(p.id);assertNull(db.parcels().get(p.id));repository.restoreDeleted(p);
-  assertEquals(created,db.parcels().get(p.id).createdAt);assertEquals("[]",db.parcels().get(p.id).trackingEvents);assertFalse(repository.ingest(record(p.code,p.station,p.trackingNumber)));
-  try{repository.restoreDeleted(p);fail("undo must not overwrite an existing record");}catch(IllegalArgumentException expected){}
+  ParcelRecord p=record("123456","合成撤销驿站","YT00000000009");p.trackingEvents="[]";repository.save(p);p.remindAt=1234;db.parcels().update(p);long created=p.createdAt;
+  ParcelRecord deleted=repository.delete(p.id);assertNull(db.parcels().get(p.id));assertEquals(1,db.parcels().deleted().size());repository.restoreDeleted(deleted);assertTrue(db.parcels().deleted().isEmpty());
+  assertEquals(created,db.parcels().get(p.id).createdAt);assertEquals(1234,db.parcels().get(p.id).remindAt);assertEquals("[]",db.parcels().get(p.id).trackingEvents);assertFalse(repository.ingest(record(p.code,p.station,p.trackingNumber)));
+  try{repository.restoreDeleted(deleted);fail("undo must not overwrite an existing record");}catch(IllegalArgumentException expected){}
   p.state=ParcelRecord.DONE;repository.save(p);repository.undoComplete(p.id,p.updatedAt,ParcelRecord.READY,1234,567);assertEquals(ParcelRecord.READY,db.parcels().get(p.id).state);assertEquals(1234,db.parcels().get(p.id).remindAt);
   try{repository.undoComplete(p.id,p.updatedAt,ParcelRecord.READY,1234,567);fail("stale undo must not change a record");}catch(IllegalArgumentException expected){}
+ }
+ @Test public void deletedHistoryRejectsDuplicatesAndStaleRestore(){
+  ParcelRecord original=record("127890","合成驿站","");repository.save(original);ParcelRecord deleted=repository.delete(original.id);ParcelRecord duplicate=record("127890","合成驿站","");repository.save(duplicate);try{repository.restoreDeleted(deleted);fail();}catch(IllegalArgumentException expected){}assertEquals(1,db.parcels().deleted().size());repository.delete(duplicate.id);repository.restoreDeleted(deleted);ParcelRecord later=repository.delete(original.id);try{repository.restoreDeleted(deleted);fail();}catch(IllegalArgumentException expected){}assertNotEquals(deleted.deletedAt,later.deletedAt);repository.clear();assertTrue(db.parcels().deleted().isEmpty());
+ }
+ @Test public void schemaOneMigratesWithoutLosingParcels()throws Exception{
+  String name="parcel-migration-test.db";context.deleteDatabase(name);java.io.File schema=new java.io.File("schemas/cn.courselens.ParcelDatabase/1.json");if(!schema.exists())schema=new java.io.File("app/schemas/cn.courselens.ParcelDatabase/1.json");org.json.JSONObject spec=new org.json.JSONObject(new String(java.nio.file.Files.readAllBytes(schema.toPath()),java.nio.charset.StandardCharsets.UTF_8)).getJSONObject("database");android.database.sqlite.SQLiteDatabase old=context.openOrCreateDatabase(name,0,null);
+  try{org.json.JSONArray entities=spec.getJSONArray("entities");for(int i=0;i<entities.length();i++){org.json.JSONObject entity=entities.getJSONObject(i);String table=entity.getString("tableName");old.execSQL(entity.getString("createSql").replace("${TABLE_NAME}",table));org.json.JSONArray indexes=entity.optJSONArray("indices");if(indexes!=null)for(int j=0;j<indexes.length();j++)old.execSQL(indexes.getJSONObject(j).getString("createSql").replace("${TABLE_NAME}",table));}org.json.JSONArray setup=spec.getJSONArray("setupQueries");for(int i=0;i<setup.length();i++)old.execSQL(setup.getString(i));old.execSQL("INSERT INTO parcels VALUES(1,'123456','合成驿站','','','手动','manual',0,100,1,10,11,0,0,0,0,'','','')");old.setVersion(1);}finally{old.close();}
+  ParcelDatabase migrated=Room.databaseBuilder(context,ParcelDatabase.class,name).addMigrations(ParcelDatabase.MIGRATION_1_2).allowMainThreadQueries().build();try{assertEquals("123456",migrated.parcels().get(1).code);assertTrue(migrated.parcels().deleted().isEmpty());ParcelRepository r=new ParcelRepository(migrated);ParcelRecord removed=r.delete(1);assertEquals(1,migrated.parcels().deleted().size());r.restoreDeleted(removed);assertEquals("合成驿站",migrated.parcels().get(1).station);}finally{migrated.close();context.deleteDatabase(name);}
  }
  @Test public void notificationPermissionAndSwitchAreIndependent(){
   shadowOf((Application)context).denyPermissions(Manifest.permission.POST_NOTIFICATIONS);

@@ -53,9 +53,10 @@ final class ParcelRepository {
    p.createdAt=p.updatedAt=now;p.id=db.parcels().insert(p);return true;
   });if(added)changed();return added;
  }
- void delete(long id){db.runInTransaction(()->{ParcelRecord p=db.parcels().get(id);if(p==null)return;ParcelDatabase.Seen seen=new ParcelDatabase.Seen();seen.fingerprint=fingerprint(p);seen.expiresAt=System.currentTimeMillis()+REPLAY_WINDOW;db.parcels().remember(seen);db.parcels().delete(id);});if(context!=null)ParcelNotifications.cancel(context,id);changed();}
- void restoreDeleted(ParcelRecord p){
-  validate(p);db.runInTransaction(()->{if(db.parcels().get(p.id)!=null||db.parcels().duplicate(p.id,p.code,p.station,p.trackingNumber,System.currentTimeMillis()-REPLAY_WINDOW)!=null)throw new IllegalArgumentException("已有相同快递");p.updatedAt=Math.max(System.currentTimeMillis(),p.updatedAt+1);db.parcels().insert(p);});changed();
+ ParcelRecord delete(long id){ParcelRecord removed=db.runInTransaction(()->{ParcelRecord p=db.parcels().get(id);if(p==null)return null;ParcelDatabase.Seen seen=new ParcelDatabase.Seen();seen.fingerprint=fingerprint(p);seen.expiresAt=System.currentTimeMillis()+REPLAY_WINDOW;db.parcels().remember(seen);p.deletedAt=Math.max(System.currentTimeMillis(),p.updatedAt+1);db.parcels().update(p);return p;});if(removed!=null){if(context!=null)ParcelNotifications.cancel(context,id);changed();}return removed;}
+ void restoreDeleted(ParcelRecord p){restoreDeleted(p,true);}
+ void restoreDeleted(ParcelRecord p,boolean keepReminder){
+  db.runInTransaction(()->{ParcelRecord saved=db.parcels().deleted(p.id);if(saved==null||saved.deletedAt!=p.deletedAt||db.parcels().duplicate(p.id,saved.code,saved.station,saved.trackingNumber,System.currentTimeMillis()-REPLAY_WINDOW)!=null)throw new IllegalArgumentException("已有相同快递或记录已变更");validate(saved);saved.deletedAt=0;if(!keepReminder){saved.remindAt=0;saved.remindedAt=0;}saved.updatedAt=Math.max(System.currentTimeMillis(),saved.updatedAt+1);db.parcels().update(saved);});changed();
  }
  void undoComplete(long id,long changedAt,int previous,long remindAt,long remindedAt){
   db.runInTransaction(()->{ParcelRecord p=db.parcels().get(id);if(p==null||p.state!=ParcelRecord.DONE||p.updatedAt!=changedAt)throw new IllegalArgumentException("记录已变更");p.state=previous;p.remindAt=remindAt;p.remindedAt=remindedAt;p.updatedAt=Math.max(System.currentTimeMillis(),changedAt+1);validate(p);db.parcels().update(p);});changed();
