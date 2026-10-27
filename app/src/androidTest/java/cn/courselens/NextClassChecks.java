@@ -44,7 +44,7 @@ public final class NextClassChecks {
     View home=(View)field("root").get(a),dates=home.findViewWithTag("home-date");
     check(dates.isClickable()&&dates.isFocusable()&&dates.hasOnClickListeners(),"Date cannot return to current week");
     check(home.findViewWithTag("quick-menu-button")==null&&home.findViewWithTag("timetable-settings")!=null,"Standalone course action remains or settings missing");
-    call(a,"timetableSettings");View menu=(View)field("root").get(a);check(menu.findViewWithTag("manage-courses")!=null&&menu.findViewWithTag("return-current-week")==null,"Course management missing or duplicate return action remains");a.onBackPressed();
+    call(a,"timetableSettings");View menu=(View)field("root").get(a);check(menu.findViewWithTag("adjustment-manager")!=null&&menu.findViewWithTag("return-current-week")==null,"Adjustment recovery missing or duplicate return action remains");a.onBackPressed();
     field("term").set(a,term);call(a,"home");androidx.viewpager.widget.ViewPager pager=(androidx.viewpager.widget.ViewPager)field("pager").get(a);pager.setCurrentItem(currentWeek[0]<=15?29:0,false);
    }catch(Throwable e){failure.set(e);}});
    runner.waitForIdleSync();android.os.SystemClock.sleep(400);if(failure.get()!=null)throw new RuntimeException(failure.get());

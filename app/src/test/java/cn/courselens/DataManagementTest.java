@@ -75,6 +75,11 @@ public class DataManagementTest {
    general.findViewWithTag("data-management").performClick();controller.recreate();assertEquals("数据管理",((View)getField(controller.get(),"root")).getTag());controller.get().onBackPressed();assertEquals("设置",((View)getField(controller.get(),"root")).getTag());
   }
  }
+ @Test public void clearingTimetableKeepsDataManagementPage()throws Exception {
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();setField(activity,"data","1|1|2|合成课程|A101|1");callInstanceMethod(activity,"menu");((View)getField(activity,"root")).findViewWithTag("data-management").performClick();View data=getField(activity,"root");data.findViewWithTag("clear-timetable").performClick();org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertSame(data,getField(activity,"root"));assertEquals("",getField(activity,"data"));
+  }
+ }
  @Test public void clearingTasksRemovesAllAccountCachesAndCredentialsOnlyAfterConfirmation()throws Exception {
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity activity=controller.get();ChaoxingClient.Result fixture=new ChaoxingClient.Result();fixture.items.add(new ChaoxingClient.Work("合成课程","合成任务","未交",""));fixture.deleted.add(new ChaoxingClient.Work("合成课程","合成历史","未交",""));

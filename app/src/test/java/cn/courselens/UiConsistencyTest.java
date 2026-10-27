@@ -38,7 +38,7 @@ public class UiConsistencyTest {
  }
  @Test public void emptyTimetableCreatesDirectlyAndCancelKeepsData()throws Exception{
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
-   MainActivity a=controller.get();int current=callInstanceMethod(a,"currentWeek");setField(a,"week",current);assertEquals("第 "+current+" 周",callInstanceMethod(a,"weekCaption"));setField(a,"week",current==1?2:1);assertTrue(((String)callInstanceMethod(a,"weekCaption")).contains("本周第 "+current+" 周"));View add=root(a).findViewWithTag("timetable-import");assertNotNull(add);add.performClick();settle();assertEquals("新增课表",((View)getField(a,"root")).getTag());a.onBackPressed();settle();assertEquals("",getField(a,"data"));
+   MainActivity a=controller.get();int current=callInstanceMethod(a,"currentWeek");setField(a,"week",current);assertEquals("第 "+current+" 周",callInstanceMethod(a,"weekCaption"));setField(a,"week",current==1?2:1);assertTrue(((String)callInstanceMethod(a,"weekCaption")).contains("本周第 "+current+" 周"));View add=root(a).findViewWithTag("timetable-import");assertNotNull(add);add.performClick();settle();assertNotNull(root(a).findViewWithTag("select-school"));a.onBackPressed();settle();assertEquals("",getField(a,"data"));
    callInstanceMethod(a,"edit");settle();View emptyAdd=root(a).findViewWithTag("manage-empty-add");assertNotNull(emptyAdd);emptyAdd.performClick();settle();assertEquals("添加课程",((View)getField(a,"root")).getTag());
   }
  }

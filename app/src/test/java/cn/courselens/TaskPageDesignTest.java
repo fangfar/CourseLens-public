@@ -49,13 +49,13 @@ public class TaskPageDesignTest {
    MainActivity activity=controller.get();activity.findViewById(android.R.id.content).findViewWithTag("nav-tasks").performClick();TaskPage page=activity.findViewById(android.R.id.content).findViewWithTag("tasks-page");
    try{
     ExecutorService worker=getField(page,"worker");worker.submit(()->{}).get();shadowOf(android.os.Looper.getMainLooper()).idle();
-    callInstanceMethod(page,"render");layout(activity.findViewById(android.R.id.content),activity);TextView action=page.findViewWithTag("task-empty-action");assertEquals("添加任务",action.getText().toString());snapshot(activity.findViewById(android.R.id.content),"task-empty");
+    callInstanceMethod(page,"render");layout(activity.findViewById(android.R.id.content),activity);TextView action=page.findViewWithTag("task-empty-action");assertEquals("登录学习通",action.getText().toString());action.performClick();assertNotNull(org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog());org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog().dismiss();snapshot(activity.findViewById(android.R.id.content),"task-empty");
     ChaoxingClient.Result result=new ChaoxingClient.Result();result.warnings.add("合成课程读取失败，原任务保留");setField(page,"snapshot",result);callInstanceMethod(page,"readingNotes");
     TextView expand=page.findViewWithTag("task-banner-expand");View details=page.findViewWithTag("task-read-notes");assertEquals(View.GONE,details.getVisibility());
     expand.performClick();assertEquals("收起",expand.getText().toString());assertEquals(View.VISIBLE,details.getVisibility());
     expand.performClick();assertEquals("展开",expand.getText().toString());assertEquals(View.GONE,details.getVisibility());
     expand.performClick();callInstanceMethod(page,"readingNotes");assertEquals("展开",expand.getText().toString());assertEquals(View.GONE,details.getVisibility());
-    action.performClick();assertNotNull(activity.findViewById(android.R.id.content).findViewWithTag("task-editor-title"));
+    page.findViewWithTag("task-empty-add").performClick();assertNotNull(activity.findViewById(android.R.id.content).findViewWithTag("task-editor-title"));
    }finally{page.close();}
   }
  }
