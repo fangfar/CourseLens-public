@@ -58,6 +58,11 @@ public class DataManagementTest {
    page.history();View decor=activity.findViewById(android.R.id.content);View reopen=decor.findViewWithTag("task-reopen");assertNotNull("Previously hidden local completion must be recoverable",reopen);reopen.performClick();tasksIdle(page);assertFalse(cache.load().items.get(0).completed());assertTrue(cache.load().deleted.isEmpty());page.history();assertNull(decor.findViewWithTag("task-reopen"));
   }
  }
+ @Test public void deletedParcelCanBeRestoredFromDataManagement()throws Exception {
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();ParcelRecord record=new ParcelRecord();record.code="987654";record.station="合成恢复驿站";ParcelRepository.IO.submit(()->{ParcelRepository r=new ParcelRepository(a);r.save(record);r.delete(record.id);}).get(10,TimeUnit.SECONDS);callInstanceMethod(a,"menu");((View)getField(a,"root")).findViewWithTag("data-management").performClick();((View)getField(a,"root")).findViewWithTag("parcel-deletion-history").performClick();parcelsIdle();ParcelPage page=getField(a,"parcelPage");AlertDialog dialog=getField(page,"currentSheet");View restore=dialog.getWindow().getDecorView().findViewWithTag("parcel-history-restore-"+record.id);assertNotNull(restore);restore.performClick();parcelsIdle();assertNotNull(ParcelRepository.IO.submit(()->ParcelDatabase.get(a).parcels().get(record.id)).get(10,TimeUnit.SECONDS));assertTrue(ParcelRepository.IO.submit(()->ParcelDatabase.get(a).parcels().deleted().isEmpty()).get(10,TimeUnit.SECONDS));
+  }
+ }
  @Test public void deletionActionsAreCentralizedAndCancellationKeepsData()throws Exception {
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity activity=controller.get();activity.getPreferences(0).edit().putString("courses","synthetic-timetable").commit();
@@ -73,6 +78,11 @@ public class DataManagementTest {
    ParcelPage parcels=getField(activity,"parcelPage");parcels.settings();AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNull(menu.getWindow().getDecorView().findViewWithTag("parcel-setting-4"));menu.dismiss();
    activity.onBackPressed();assertSame(general,getField(activity,"root"));
    general.findViewWithTag("data-management").performClick();controller.recreate();assertEquals("数据管理",((View)getField(controller.get(),"root")).getTag());controller.get().onBackPressed();assertEquals("设置",((View)getField(controller.get(),"root")).getTag());
+  }
+ }
+ @Test public void clearingTimetableKeepsDataManagementPage()throws Exception {
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity activity=controller.get();setField(activity,"data","1|1|2|合成课程|A101|1");callInstanceMethod(activity,"menu");((View)getField(activity,"root")).findViewWithTag("data-management").performClick();View data=getField(activity,"root");data.findViewWithTag("clear-timetable").performClick();org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertSame(data,getField(activity,"root"));assertEquals("",getField(activity,"data"));
   }
  }
  @Test public void clearingTasksRemovesAllAccountCachesAndCredentialsOnlyAfterConfirmation()throws Exception {

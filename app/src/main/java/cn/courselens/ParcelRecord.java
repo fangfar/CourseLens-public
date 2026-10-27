@@ -11,6 +11,7 @@ public class ParcelRecord {
  public int state=READY,confidence=100;
  public boolean confirmed=true;
  public long createdAt,updatedAt,remindAt,remindedAt,lastQueryAt,retryAt;
+ @ColumnInfo(defaultValue="0") public long deletedAt;
  @NonNull public String trackingState="",trackingEvents="",trackingError="";
  public String group(){return station.isEmpty()?"地址待补充":station;}
  public String stateLabel(){return state==TRANSIT?"运输中":state==DONE?"已完成":"待取件";}
