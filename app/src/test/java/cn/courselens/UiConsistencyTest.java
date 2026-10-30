@@ -53,6 +53,12 @@ public class UiConsistencyTest {
    callInstanceMethod(a,"edit");settle();View emptyAdd=root(a).findViewWithTag("manage-empty-add");assertNotNull(emptyAdd);emptyAdd.performClick();settle();assertEquals("添加课程",((View)getField(a,"root")).getTag());
   }
  }
+ @Test public void courseFieldsGrowWithLargeText()throws Exception{
+  RuntimeEnvironment.setQualifiers("w320dp-h640dp-notnight");RuntimeEnvironment.setFontScale(2f);
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();callInstanceMethod(a,"courseForm",ClassParameter.from(Course.class,(Course)null),ClassParameter.from(int.class,-1),ClassParameter.from(Runnable.class,(Runnable)()->{}));View root=root(a);snapshot(a,"large-course-form.png");EditText name=root.findViewWithTag("course-name");assertTrue(name.getHeight()>=a.getResources().getDisplayMetrics().density*SecondaryUi.CONTROL_HEIGHT);assertTrue(name.getHeight()>=name.getLineHeight()+name.getCompoundPaddingTop()+name.getCompoundPaddingBottom());
+  }
+ }
  @Test public void widgetHighlightsCourseWithoutExtraLabels()throws Exception{
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity a=controller.get();String term="2026-10-26";a.getPreferences(0).edit().putString("term",term).putString("courses","1|1|2|第一门|A101|1-30\n1|3|4|第二门|A202|1-30").commit();
