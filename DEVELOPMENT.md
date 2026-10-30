@@ -162,9 +162,19 @@ try {
 
 正式发布前核验：已有课表启动恢复、同步失败保留数据、课程保存与取消、多时段、调课/停课、冲突选择、切周及滚动返回、小组件、公告和更新。覆盖更新在隔离设备上保留真实格式的合成数据验证，不卸载旧版本。
 
+### 复用隔离发布模拟器
+
+在 Windows 上复用专用于发布验证的 AVD：
+
+```powershell
+.\tests\start_release_emulator.ps1 -AvdHome "C:\codex\CourseLens-backups\release-2.7.8-verification\avd"
+```
+
+脚本只启动或复用名为 `morrow-release-test` 的模拟器，不清空数据、不安装 APK；返回的 `emulator-5556` 是后续 adb 目标，不能替换为连接的真实手机。可以通过 `-AvdHome`、`-AvdName`、`-Port` 指定已建立的隔离 AVD；缺失 SDK 或 AVD 时先安装并创建，已有模拟器镜像及系统授权沿用，不重复下载。每次验证前确认该 AVD 只含合成数据，旧正式包、测试数据和新版签名 APK 分别核对来源与证书；按实际升级路径覆盖安装并验证课表、任务、快递与数据库迁移。脚本启动成功不是覆盖升级或真人体验验收。
+
 ## GitHub Actions
 
-- `Android checks`：PR、main push 和手动运行五组回归、发布校验测试、无密钥签名边界、QA 主/测试 APK 和 Lint。产物仅供 QA，不执行设备测试。
+- `Android checks`：必需检查始终名为 `checks`。仅当 PR 或 main push 的差异严格只有 `remote/config.json` 时，运行配置和网站验证；空差异、无法判断、混合改动和手动运行均执行完整 Android 检查。完整检查缓存 Gradle 依赖，验证无密钥签名边界、QA 主/测试 APK、单元测试和 Lint；不执行设备测试。
 - `Remote configuration`：PR 只验证配置，main 上相关文件变化后部署现有 Pages；不构建或发布 APK。
 - `Prepare signed release`：仅手动选择 main，拒绝已存在标签及不递增的 versionCode，构建与验证正式 APK，生成校验文件和来源元数据，创建**草稿** Release。
 
@@ -181,9 +191,9 @@ COURSELENS_KEY_PASSWORD
 
 ## 正式发布
 
-1. 合入已批准并完成适用设备验收的源码；提高 versionCode 和 versionName。保留包名、偏好名称、存储格式及签名指纹；修改存储时另做旧数据兼容检查。
-2. 经发布授权后，手动运行 `Prepare signed release`，选择 main 和与 versionName 对应的新标签。检查结果中的来源提交必须是获准提交。
-3. 核对草稿 APK、`SHA256SUMS`、`release-metadata-lite.json` / `release-metadata-full.json`、证书及使用说明；经明确授权后公开草稿。现有标签和 APK 不替换。
+1. 合入已批准并完成适用设备验收的源码；提高 versionCode 和 versionName。保留包名、偏好名称、存储格式及签名指纹；修改存储时另做旧数据兼容检查。提前并行核对版本与标签、准备隔离模拟器及合成数据；本地独立检查与远端 CI 可并行，不重复运行已通过且源码未改变的检查。
+2. 经发布授权后，main 必需检查通过即运行 `Prepare signed release`，选择 main 和与 versionName 对应的新标签；在授权范围内处理 release 环境审核。签名构建和独立的隔离覆盖升级准备可并行，检查结果中的来源提交必须是获准提交。
+3. 核对草稿 APK、`SHA256SUMS`、`release-metadata-lite.json` / `release-metadata-full.json`、证书及使用说明，完成隔离覆盖升级验证；经明确授权后公开草稿。现有标签和 APK 不替换。
 4. 发布成功且 APK 可下载后，再通过 PR 更新 `remote/config.json` 中的版本、更新日志和 APK 地址，保留公告及人工维护的网盘地址。CI 成功或草稿 Release 不等于发布成功。
 5. 核验 Pages 与 Raw 均返回 200，配置与 Git blob 一致；检查 APK 下载及旧客户端更新入口。网盘分享由维护者核对内容和有效期。
 
