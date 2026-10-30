@@ -160,6 +160,11 @@ public class AppNavigationTest {
    MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);content.findViewWithTag("timetable-settings").performClick();View root=org.robolectric.util.ReflectionHelpers.getField(activity,"root");assertEquals("课表设置",root.getTag());assertNotNull(root.findViewWithTag("adjustment-manager"));assertNotNull(root.findViewWithTag("timetable-login"));for(String tag:new String[]{"add-timetable","settings-times","manage-courses","switch-timetable","refresh-timetable"})assertNull(root.findViewWithTag(tag));root.findViewWithTag("timetable-login").performClick();assertNotNull(content.findViewWithTag("select-school"));activity.onBackPressed();assertTrue(content.findViewWithTag("nav-timetable").isSelected());
   }
  }
+ @Test public void timetableMenuAddsCourseWithMultipleSlots(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();View content=a.findViewById(android.R.id.content);content.findViewWithTag("timetable-settings").performClick();content.findViewWithTag("timetable-add-course").performClick();View form=org.robolectric.util.ReflectionHelpers.getField(a,"root");assertEquals("添加课程",form.getTag());((android.widget.EditText)form.findViewWithTag("course-name")).setText("菜单新增课程");form.findViewWithTag("add-course-slot").performClick();assertNotNull(form.findViewWithTag("course-slot-2"));form.findViewWithTag("save-course").performClick();assertEquals(2,Course.parse(a.getPreferences(0).getString("courses","")).size());
+  }
+ }
  @Test public void parcelGearInTheEmbeddedPageReturnsToTheParcelModule(){
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity activity=controller.get();View content=activity.findViewById(android.R.id.content);layoutContent(content);
