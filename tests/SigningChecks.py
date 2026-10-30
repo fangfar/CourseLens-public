@@ -8,7 +8,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--signed", action="store_true", help="Also check the configured official key and fingerprint rejection")
-args = parser.parse_args()
+options = parser.parse_args()
 
 root = Path(__file__).resolve().parent.parent
 names = ("COURSELENS_KEYSTORE_FILE", "COURSELENS_STORE_PASSWORD", "COURSELENS_KEY_ALIAS", "COURSELENS_KEY_PASSWORD")
@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory() as folder:
 
     def check(label, args, expected, environment=env):
         command = [str(wrapper)] if os.name == "nt" else ["sh", str(wrapper)]
-        result = subprocess.run([*command, "--no-daemon", "-p", str(fixture), "help", *args], cwd=root, env=environment, capture_output=True, text=True)
+        result = subprocess.run([*command, "--no-daemon" if options.signed else "--daemon", "-p", str(fixture), "help", *args], cwd=root, env=environment, capture_output=True, text=True)
         if expected:
             assert result.returncode != 0 and expected in result.stdout + result.stderr, label
         else:
@@ -42,7 +42,7 @@ with tempfile.TemporaryDirectory() as folder:
     check("PR verification works without signing secrets", ["-PqaBuild"], None)
     for task in (":app:assembleLiteRelease", ":app:assembleFullRelease", ":ocr-plugin:assembleRelease"):
         check("QA disables official APK task " + task, ["-PqaBuild", task, "--dry-run"], "not found")
-    if not args.signed:
+    if not options.signed:
         print("SKIP: official key checks (use --signed in the release environment)")
         raise SystemExit(0)
     props = {}

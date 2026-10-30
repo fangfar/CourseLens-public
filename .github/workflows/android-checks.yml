@@ -22,29 +22,56 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Determine check scope
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python3 tests/CheckScopeTest.py
+          python3 tests/RemoteConfigChecksTest.py
+          echo "config_only=$(python3 tests/CheckScope.py)" >> "$GITHUB_OUTPUT"
+      - name: Validate configuration-only change
+        if: steps.scope.outputs.config_only == 'true'
+        run: |
+          python3 tests/RemoteConfigChecks.py
+          python3 tests/WebsiteChecks.py
+          node tests/WebsiteDownloadChecks.cjs
       - uses: actions/setup-java@v4
+        if: steps.scope.outputs.config_only != 'true'
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
       - uses: android-actions/setup-android@v4
+        if: steps.scope.outputs.config_only != 'true'
       - name: Install Android SDK
+        if: steps.scope.outputs.config_only != 'true'
         run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
       - name: Business regression checks
+        if: steps.scope.outputs.config_only != 'true'
         run: python3 tests/run_checks.py
       - name: Release validation tests
+        if: steps.scope.outputs.config_only != 'true'
         run: |
           python3 tests/ReleaseChecksTest.py
           python3 tests/OcrPluginChecksTest.py
       - name: Signing boundaries without official secrets
+        if: steps.scope.outputs.config_only != 'true'
         run: python3 tests/SigningChecks.py
       - name: Build and test both QA editions
+        if: steps.scope.outputs.config_only != 'true'
         run: |
           sh gradlew --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :app:assembleFullDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:testLiteDebugUnitTest :app:testFullDebugUnitTest :app:lintLiteDebug :app:lintFullDebug :ocr-plugin:lintDebug :ocr-engine:lintDebug
       - name: Verify both OCR distributions
+        if: steps.scope.outputs.config_only != 'true'
         run: |
           python3 tests/OcrPluginChecks.py --host app/build/outputs/apk/lite/debug/app-lite-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk
           python3 tests/OcrPluginChecks.py --edition full --host app/build/outputs/apk/full/debug/app-full-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk
       - name: Upload QA APKs
+        if: steps.scope.outputs.config_only != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: courselens-qa-${{ github.sha }}
@@ -55,7 +82,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Upload test APK and lint reports
-        if: always()
+        if: always() && steps.scope.outputs.config_only != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: courselens-checks-${{ github.sha }}
