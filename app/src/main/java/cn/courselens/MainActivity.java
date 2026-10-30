@@ -452,7 +452,7 @@ public class MainActivity extends Activity {
  private void widgetAddPage(){
   LinearLayout body=secondary("桌面小组件","",this::menu);
   action(body,"添加到桌面",()->pinWidget()).setTag("pin-home-widget");
-  option(body,R.drawable.ic_grid,"手动添加","从桌面选择 2×2、4×2 或 4×5",()->widgetManualGuide());
+  option(body,R.drawable.ic_grid,"手动添加","从桌面选择 2×2、4×2 或 4×4",()->widgetManualGuide());
   if(isXiaomi())option(body,R.drawable.ic_notes,"权限教程","一键添加没有反应时查看",()->widgetPermissionGuide());
  }
  private void pinWidget(){
@@ -484,7 +484,7 @@ public class MainActivity extends Activity {
   if(remaining>0){getWindow().getDecorView().postDelayed(()->checkWidgetPin(),remaining);return;}
   prefs.edit().remove("pendingCount").apply();widgetGuide();
  }
- private String widgetManualPath(){return isXiaomi()?"长按桌面空白处 → 小部件 → 全部应用 → 安卓小部件，找到“Morrow”，选择 2×2、4×2 或 4×5。":"长按桌面空白处，打开小组件列表，找到“Morrow”，选择 2×2、4×2 或 4×5。";}
+ private String widgetManualPath(){return isXiaomi()?"长按桌面空白处 → 小部件 → 全部应用 → 安卓小部件，找到“Morrow”，选择 2×2、4×2 或 4×4。":"长按桌面空白处，打开小组件列表，找到“Morrow”，选择 2×2、4×2 或 4×4。";}
  private void widgetManualGuide(){
   if(widgetDialog!=null)widgetDialog.dismiss();
   widgetDialog=new AlertDialog.Builder(this,R.style.SecondaryDialog).setTitle("手动添加小组件").setMessage(widgetManualPath()+"\n\n手动添加无需授予创建桌面快捷方式权限。").setPositiveButton("知道了",null).show();styleDialog(widgetDialog,false);
