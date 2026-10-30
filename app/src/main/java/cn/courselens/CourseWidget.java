@@ -25,7 +25,7 @@ public class CourseWidget extends AppWidgetProvider {
   AppWidgetManager manager=AppWidgetManager.getInstance(context);AppWidgetProviderInfo info=manager.getAppWidgetInfo(id);Bundle options=manager.getAppWidgetOptions(id);android.graphics.Rect padding=AppWidgetHostView.getDefaultPaddingForWidget(context,new ComponentName(context,CourseWidget.class),null);float density=context.getResources().getDisplayMetrics().density;
   int width=options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,info!=null&&!info.provider.getClassName().equals(CourseWidget.class.getName())?340:164)-Math.round((padding.left+padding.right)/density),height=options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,info!=null&&info.provider.getClassName().equals(CourseWidgetLarge.class.getName())?340:190)-Math.round((padding.top+padding.bottom)/density);if(width<=0)width=148;if(height<=0)height=148;
   boolean compact=width<240&&height<260,large=height>=260;int limit=large?4:2;
-  RemoteViews views=new RemoteViews(context.getPackageName(),R.layout.course_widget);
+  RemoteViews views=new RemoteViews(context.getPackageName(),compact&&android.os.Build.VERSION.SDK_INT<31?R.layout.course_widget_square:R.layout.course_widget);
   Palette palette=new Palette(context);
   views.setInt(R.id.widget_surface,"setBackgroundResource",palette.surfaceBackground);
   views.setTextColor(R.id.widget_date,palette.ink);views.setViewVisibility(R.id.widget_header,android.view.View.GONE);views.setInt(R.id.widget_sync_icon,"setColorFilter",palette.header);
@@ -33,7 +33,7 @@ public class CourseWidget extends AppWidgetProvider {
 
   views.setViewVisibility(R.id.widget_empty_panel,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_one,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_two,android.view.View.GONE);
   if(android.os.Build.VERSION.SDK_INT>=31)views.setInt(R.id.widget_date,"setGravity",android.view.Gravity.START);
-  if(android.os.Build.VERSION.SDK_INT>=31){views.setViewLayoutWidth(R.id.widget_surface,width,android.util.TypedValue.COMPLEX_UNIT_DIP);views.setViewLayoutHeight(R.id.widget_surface,height,android.util.TypedValue.COMPLEX_UNIT_DIP);views.setViewLayoutHeight(R.id.widget_heading,compact?32:44,android.util.TypedValue.COMPLEX_UNIT_DIP);}
+  if(android.os.Build.VERSION.SDK_INT>=31){views.setViewLayoutWidth(R.id.widget_surface,compact?Math.min(width,height):width,android.util.TypedValue.COMPLEX_UNIT_DIP);views.setViewLayoutHeight(R.id.widget_surface,compact?Math.min(width,height):height,android.util.TypedValue.COMPLEX_UNIT_DIP);views.setViewLayoutHeight(R.id.widget_heading,compact?32:44,android.util.TypedValue.COMPLEX_UNIT_DIP);}
   views.setViewVisibility(R.id.widget_date,android.view.View.VISIBLE);views.setTextViewTextSize(R.id.widget_date,android.util.TypedValue.COMPLEX_UNIT_SP,compact?14:18);views.setTextViewText(R.id.widget_date,now.format(DateTimeFormatter.ofPattern(compact?"E · MM.dd":"M月d日 · EEEE",Locale.CHINA)));
 
   String term=prefs.getString("term","2026-08-31");
