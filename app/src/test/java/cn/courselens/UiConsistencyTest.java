@@ -53,6 +53,15 @@ public class UiConsistencyTest {
    callInstanceMethod(a,"edit");settle();View emptyAdd=root(a).findViewWithTag("manage-empty-add");assertNotNull(emptyAdd);emptyAdd.performClick();settle();assertEquals("添加课程",((View)getField(a,"root")).getTag());
   }
  }
+ @Test public void widgetHighlightsCourseWithoutExtraLabels()throws Exception{
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();String term="2026-10-26";a.getPreferences(0).edit().putString("term",term).putString("courses","1|1|2|第一门|A101|1-30\n1|3|4|第二门|A202|1-30").commit();
+   View widget=CourseWidget.views(a,0,LocalDate.parse(term).atTime(7,0)).apply(a,new FrameLayout(a));
+   assertEquals(View.GONE,widget.findViewById(R.id.widget_header).getVisibility());assertEquals(View.GONE,widget.findViewById(R.id.widget_status).getVisibility());
+   assertNotEquals(((TextView)widget.findViewById(R.id.widget_title)).getCurrentTextColor(),((TextView)widget.findViewById(R.id.widget_title_second)).getCurrentTextColor());
+   assertNull(widget.findViewById(R.id.widget_content).getBackground());assertTrue(widget.findViewById(R.id.widget_content).getContentDescription().toString().contains("下一节"));
+  }
+ }
  @Test public void widgetEmptyStatesKeepTomorrowActionWithoutRepeatedCopy()throws Exception{
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity a=controller.get();String term="2026-10-26";a.getPreferences(0).edit().putString("term",term).putString("courses","1|1|2|合成课程|测试教室|1-30\n2|1|2|明日合成课|测试教室|1-30").commit();
