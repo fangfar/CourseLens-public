@@ -62,12 +62,13 @@ public class UiConsistencyTest {
    assertNull(widget.findViewById(R.id.widget_content).getBackground());assertTrue(widget.findViewById(R.id.widget_content).getContentDescription().toString().contains("下一节"));
   }
  }
- @Test public void widgetEmptyStatesKeepTomorrowActionWithoutRepeatedCopy()throws Exception{
+ private boolean containsVisibleText(View view,String text){if(view.getVisibility()!=View.VISIBLE)return false;if(view instanceof TextView&&((TextView)view).getText().toString().contains(text))return true;if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)if(containsVisibleText(group.getChildAt(i),text))return true;}return false;}
+ @Test public void widgetEmptyStatesDoNotShowTomorrowHint()throws Exception{
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity a=controller.get();String term="2026-10-26";a.getPreferences(0).edit().putString("term",term).putString("courses","1|1|2|合成课程|测试教室|1-30\n2|1|2|明日合成课|测试教室|1-30").commit();
    for(boolean finished:new boolean[]{true,false}){
     if(!finished)a.getPreferences(0).edit().putString("courses","2|1|2|明日合成课|测试教室|1-30").commit();
-    View widget=CourseWidget.views(a,0,LocalDate.parse(term).atTime(21,0)).apply(a,new FrameLayout(a));assertEquals(finished?"今日课程已结束":"今日无课",((TextView)widget.findViewById(R.id.widget_empty_title)).getText().toString());assertEquals(1,((ViewGroup)widget.findViewById(R.id.widget_empty_panel)).getChildCount());assertTrue(widget.findViewById(R.id.widget_tomorrow).hasOnClickListeners());
+    View widget=CourseWidget.views(a,0,LocalDate.parse(term).atTime(21,0)).apply(a,new FrameLayout(a));assertEquals(finished?"今日课程已结束":"今日无课",((TextView)widget.findViewById(R.id.widget_empty_title)).getText().toString());assertEquals(1,((ViewGroup)widget.findViewById(R.id.widget_empty_panel)).getChildCount());assertFalse(containsVisibleText(widget,"明日合成课"));
    }
   }
  }

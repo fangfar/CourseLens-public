@@ -29,9 +29,9 @@ public class CourseWidget extends AppWidgetProvider {
   Palette palette=new Palette(context);
   views.setInt(R.id.widget_surface,"setBackgroundResource",palette.surfaceBackground);
   views.setTextColor(R.id.widget_date,palette.ink);views.setViewVisibility(R.id.widget_header,android.view.View.GONE);views.setInt(R.id.widget_sync_icon,"setColorFilter",palette.header);
-  views.setTextColor(R.id.widget_empty_title,palette.ink);views.setTextColor(R.id.widget_tomorrow,palette.tomorrow);
+  views.setTextColor(R.id.widget_empty_title,palette.ink);
 
-  views.setViewVisibility(R.id.widget_empty_panel,android.view.View.GONE);views.setViewVisibility(R.id.widget_tomorrow,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_one,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_two,android.view.View.GONE);
+  views.setViewVisibility(R.id.widget_empty_panel,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_one,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_two,android.view.View.GONE);
   if(android.os.Build.VERSION.SDK_INT>=31)views.setInt(R.id.widget_date,"setGravity",android.view.Gravity.START);
   if(android.os.Build.VERSION.SDK_INT>=31){views.setViewLayoutWidth(R.id.widget_surface,compact?Math.min(width,height):width,android.util.TypedValue.COMPLEX_UNIT_DIP);views.setViewLayoutHeight(R.id.widget_surface,compact?Math.min(width,height):height,android.util.TypedValue.COMPLEX_UNIT_DIP);views.setViewLayoutHeight(R.id.widget_heading,compact?32:44,android.util.TypedValue.COMPLEX_UNIT_DIP);}
   views.setViewVisibility(R.id.widget_date,android.view.View.VISIBLE);views.setTextViewTextSize(R.id.widget_date,android.util.TypedValue.COMPLEX_UNIT_SP,compact?14:18);views.setTextViewText(R.id.widget_date,now.format(DateTimeFormatter.ofPattern(compact?"E · MM.dd":"M月d日 · EEEE",Locale.CHINA)));
@@ -56,7 +56,6 @@ public class CourseWidget extends AppWidgetProvider {
     int inset=Math.round((compact?2:6)*density);views.setViewPadding(R.id.widget_empty_panel,inset,inset,inset,inset);
     if(android.os.Build.VERSION.SDK_INT>=31){views.setInt(R.id.widget_empty_title,"setGravity",compact||large?android.view.Gravity.CENTER:android.view.Gravity.START);views.setInt(R.id.widget_empty_panel,"setGravity",(compact||large?android.view.Gravity.CENTER:android.view.Gravity.START|android.view.Gravity.CENTER_VERTICAL));}
     views.setOnClickPendingIntent(R.id.widget_empty_panel,open(context,id,4,null,term,now.toLocalDate()));
-    if(schedule.tomorrow!=null){Course tomorrow=schedule.tomorrow;String hint="明天第一节 "+times.starts[tomorrow.start-1]+" · "+SchoolParser.clean(tomorrow.name)+(large&&!tomorrow.room.isEmpty()?" · "+SchoolParser.clean(tomorrow.room):"");views.setViewVisibility(R.id.widget_tomorrow,android.view.View.VISIBLE);views.setTextViewText(R.id.widget_tomorrow,hint);views.setTextViewTextSize(R.id.widget_tomorrow,android.util.TypedValue.COMPLEX_UNIT_SP,compact?9:12);views.setInt(R.id.widget_tomorrow,"setMaxLines",large?2:1);views.setOnClickPendingIntent(R.id.widget_tomorrow,open(context,id,5,tomorrow,term,now.toLocalDate().plusDays(1)));}
    }
   }catch(RuntimeException e){
    views.setViewVisibility(CONTENT[0],android.view.View.VISIBLE);for(int slot=1;slot<4;slot++)views.setViewVisibility(CONTENT[slot],android.view.View.GONE);
@@ -86,10 +85,10 @@ public class CourseWidget extends AppWidgetProvider {
   views.setOnClickPendingIntent(content,open(context,id,slot,next,term,now.toLocalDate()));
  }
  private static final class Palette {
-  final int ink,header,muted,tomorrow,nextStatus,surfaceBackground,freeBackground;
+  final int ink,header,muted,nextStatus,surfaceBackground,freeBackground;
   Palette(Context context){
    boolean dark=Appearance.dark(context);Context themed=Appearance.wrap(context);
-   ink=themed.getColor(R.color.widget_ink);header=themed.getColor(R.color.widget_header);muted=themed.getColor(R.color.widget_muted);tomorrow=themed.getColor(R.color.widget_tomorrow);
+   ink=themed.getColor(R.color.widget_ink);header=themed.getColor(R.color.widget_header);muted=themed.getColor(R.color.widget_muted);
    nextStatus=themed.getColor(R.color.widget_status_next);
    surfaceBackground=dark?R.drawable.widget_background_dark:R.drawable.widget_background;freeBackground=dark?R.drawable.widget_free_background_dark:R.drawable.widget_free_background;
   }

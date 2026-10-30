@@ -53,7 +53,6 @@
   <LinearLayout android:id="@+id/widget_empty_panel" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" android:gravity="center" android:padding="6dp" android:visibility="gone">
    <TextView android:id="@+id/widget_empty_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="22sp" android:textStyle="bold" android:textColor="#172132" android:gravity="center" android:maxLines="2" android:ellipsize="end" />
   </LinearLayout>
-  <TextView android:id="@+id/widget_tomorrow" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:padding="4dp" android:textSize="12sp" android:textColor="#7B818D" android:maxLines="2" android:ellipsize="end" android:visibility="gone" android:focusable="true" />
 
  </LinearLayout>
 </FrameLayout>
