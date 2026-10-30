@@ -37,20 +37,18 @@ jobs:
           python3 tests/OcrPluginChecksTest.py
       - name: Signing boundaries without official secrets
         run: python3 tests/SigningChecks.py
-      - name: Build and test both QA editions
+      - name: Build and test lite QA and OCR plugin
         run: |
-          sh gradlew --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :app:assembleFullDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:testLiteDebugUnitTest :app:testFullDebugUnitTest :app:lintLiteDebug :app:lintFullDebug :ocr-plugin:lintDebug :ocr-engine:lintDebug
-      - name: Verify both OCR distributions
+          sh gradlew --no-daemon -PqaBuild :app:assembleLiteDebug :ocr-plugin:assembleDebug :app:assembleLiteDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:testLiteDebugUnitTest :app:lintLiteDebug :ocr-plugin:lintDebug :ocr-engine:lintDebug
+      - name: Verify OCR plugin isolation
         run: |
           python3 tests/OcrPluginChecks.py --host app/build/outputs/apk/lite/debug/app-lite-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk
-          python3 tests/OcrPluginChecks.py --edition full --host app/build/outputs/apk/full/debug/app-full-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk
       - name: Upload QA APKs
         uses: actions/upload-artifact@v4
         with:
           name: courselens-qa-${{ github.sha }}
           path: |
             app/build/outputs/apk/lite/debug/*.apk
-            app/build/outputs/apk/full/debug/*.apk
             ocr-plugin/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7

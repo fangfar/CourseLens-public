@@ -19,6 +19,31 @@ import static org.robolectric.Shadows.shadowOf;
 @Config(sdk=34)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class ParcelPageDesignTest {
+ @Test public void notificationSettingsShowSmsAndAvoidRepeatedAuthorization()throws Exception{
+  try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
+   ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();
+   android.provider.Settings.Secure.putString(activity.getContentResolver(),"enabled_notification_listeners",new android.content.ComponentName(activity,ParcelNotificationListener.class).flattenToString());
+   java.lang.reflect.Method settings=ParcelPage.class.getDeclaredMethod("settingsSection",int.class);settings.setAccessible(true);settings.invoke(page,0);
+   AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNull(findText(dialog.getWindow().getDecorView(),"选择通知来源"));Switch toggle=(Switch)findText(dialog.getWindow().getDecorView(),"后台通知识别");toggle.setChecked(true);
+   AlertDialog consent=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();consent.getButton(AlertDialog.BUTTON_POSITIVE).performClick();assertNull(shadowOf(activity).getNextStartedActivity());
+  }
+ }
+ @Test public void systemSmsFallbackIsAcceptedWithoutSelection()throws Exception{
+  try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
+   ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();
+   android.content.pm.PackageInfo sms=new android.content.pm.PackageInfo();sms.packageName="com.android.mms";shadowOf(activity.getPackageManager()).installPackage(sms);
+   ParcelNotificationListener.settings(activity).edit().putStringSet("sources",Collections.emptySet()).commit();assertTrue(ParcelNotificationListener.accepts(activity,"com.android.mms"));for(String pkg:ParcelNotificationListener.PACKAGES)assertTrue(ParcelNotificationListener.accepts(activity,pkg));assertFalse(ParcelNotificationListener.accepts(activity,"other.app"));
+  }
+ }
+ @Test public void sharePickupCodeUsesSystemChooser()throws Exception{
+  try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
+   ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();drain();
+   ParcelRecord record=new ParcelRecord();record.id=101;record.code="6-2-2088";record.station="合成驿站";record.trackingNumber="CL12345678901";
+   java.lang.reflect.Method render=ParcelPage.class.getDeclaredMethod("render",List.class);render.setAccessible(true);render.invoke(page,Collections.singletonList(record));
+   page.findViewWithTag("parcel-content-101").performClick();page.findViewWithTag("parcel-share-101").performClick();
+   android.content.Intent chooser=shadowOf(activity).getNextStartedActivity();assertEquals(android.content.Intent.ACTION_CHOOSER,chooser.getAction());android.content.Intent send=chooser.getParcelableExtra(android.content.Intent.EXTRA_INTENT);assertEquals(android.content.Intent.ACTION_SEND,send.getAction());assertEquals("text/plain",send.getType());assertEquals(record.code,send.getStringExtra(android.content.Intent.EXTRA_TEXT));
+  }
+ }
  @Test public void singleListAndEditor()throws Exception{checkPage("w380dp-h800dp-notnight",1f,"pickup");}
  @Test public void narrowMediumText()throws Exception{checkPage("w320dp-h640dp-notnight",1.25f,"narrow-medium");}
  @Test public void narrowDarkLargeText()throws Exception{checkPage("w320dp-h640dp-night",2f,"dark-large");}
@@ -29,7 +54,7 @@ public class ParcelPageDesignTest {
    try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
     ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();layout(activity.findViewById(android.R.id.content),activity);
     ParcelRecord record=new ParcelRecord();record.code="6-2-2088";record.station="合成东门驿站";record.trackingNumber="CL12345678901";record.trackingEvents="[{\"time\":\"10-24 18:30\",\"description\":\"已到达合成转运中心\"}]";
-    String[] methods={"importSheet","sources","actions","tracking","reminder"};
+    String[] methods={"importSheet","actions","tracking","reminder"};
     for(String name:methods){
      boolean withRecord=Arrays.asList("actions","tracking","reminder").contains(name);java.lang.reflect.Method method=ParcelPage.class.getDeclaredMethod(name,withRecord?new Class<?>[]{ParcelRecord.class}:new Class<?>[0]);method.setAccessible(true);method.invoke(page,withRecord?new Object[]{record}:new Object[0]);
      AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();View decor=dialog.getWindow().getDecorView();layoutDialog(dialog,activity);View shell=decor.findViewWithTag("parcel-sheet");assertNotNull(shell);assertContained((ViewGroup)shell,findText(shell,"关闭"));
