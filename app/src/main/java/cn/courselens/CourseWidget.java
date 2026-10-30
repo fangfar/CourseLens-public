@@ -52,7 +52,6 @@ public class CourseWidget extends AppWidgetProvider {
     views.setInt(R.id.widget_empty_panel,"setBackgroundResource",compact?0:palette.freeBackground);
     views.setTextViewText(R.id.widget_empty_title,finished?"今日课程已结束":"今日无课");
     views.setTextViewTextSize(R.id.widget_empty_title,android.util.TypedValue.COMPLEX_UNIT_SP,compact?14:large?22:20);
-    if(android.os.Build.VERSION.SDK_INT>=31)views.setInt(R.id.widget_date,"setGravity",compact?android.view.Gravity.CENTER:android.view.Gravity.START);
     int inset=Math.round((compact?2:6)*density);views.setViewPadding(R.id.widget_empty_panel,inset,inset,inset,inset);
     if(android.os.Build.VERSION.SDK_INT>=31){views.setInt(R.id.widget_empty_title,"setGravity",compact||large?android.view.Gravity.CENTER:android.view.Gravity.START);views.setInt(R.id.widget_empty_panel,"setGravity",(compact||large?android.view.Gravity.CENTER:android.view.Gravity.START|android.view.Gravity.CENTER_VERTICAL));}
     views.setOnClickPendingIntent(R.id.widget_empty_panel,open(context,id,4,null,term,now.toLocalDate()));
@@ -78,7 +77,7 @@ public class CourseWidget extends AppWidgetProvider {
    views.setContentDescription(content,status+"，"+SchoolParser.clean(c.name)+"，"+when+"，第"+c.start+"到"+c.end+"节，"+where);
   }
   if(next==null)views.setTextColor(title,palette.ink);views.setInt(content,"setBackgroundResource",0);views.setTextColor(time,palette.muted);views.setTextColor(room,palette.muted);
-  views.setTextViewTextSize(title,android.util.TypedValue.COMPLEX_UNIT_SP,compact?13:18);views.setInt(title,"setMaxLines",compact?2:1);
+  views.setTextViewTextSize(title,android.util.TypedValue.COMPLEX_UNIT_SP,compact?15:18);views.setInt(title,"setMaxLines",compact?2:1);
   views.setViewVisibility(STATUS[slot],android.view.View.GONE);
   views.setViewVisibility(time,next==null?android.view.View.GONE:android.view.View.VISIBLE);
   views.setViewVisibility(room,next==null?android.view.View.GONE:android.view.View.VISIBLE);
