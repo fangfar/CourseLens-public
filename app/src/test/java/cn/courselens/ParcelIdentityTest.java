@@ -20,6 +20,7 @@ public class ParcelIdentityTest {
    Intent intent=shadowOf(activity).getNextStartedActivity();
    assertEquals(Intent.ACTION_VIEW,intent.getAction());assertEquals("com.xunmeng.pinduoduo",intent.getPackage());
    assertEquals("/mdkd/package",intent.getData().getPath());assertEquals("ID_CODE",intent.getData().getQueryParameter("tab"));assertEquals("11",intent.getData().getQueryParameter("entry_source"));
+   assertNull(org.robolectric.shadows.ShadowToast.getTextOfLatestToast());
   }
  }
 }
