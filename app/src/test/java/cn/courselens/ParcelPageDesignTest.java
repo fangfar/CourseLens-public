@@ -44,6 +44,12 @@ public class ParcelPageDesignTest {
    android.content.Intent chooser=shadowOf(activity).getNextStartedActivity();assertEquals(android.content.Intent.ACTION_CHOOSER,chooser.getAction());android.content.Intent send=chooser.getParcelableExtra(android.content.Intent.EXTRA_INTENT);assertEquals(android.content.Intent.ACTION_SEND,send.getAction());assertEquals("text/plain",send.getType());assertEquals(record.code,send.getStringExtra(android.content.Intent.EXTRA_TEXT));
   }
  }
+ @Test public void reminderPickerKeepsInvalidTimeOpenAndAllowsCancel()throws Exception{
+  try(ActivityController<ParcelActivity> controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
+   ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();ParcelRecord record=new ParcelRecord();record.id=101;record.remindAt=System.currentTimeMillis()+86400000L;
+   java.lang.reflect.Method pick=ParcelPage.class.getDeclaredMethod("pickReminder",ParcelRecord.class);pick.setAccessible(true);pick.invoke(page,record);AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();View decor=dialog.getWindow().getDecorView();android.widget.DatePicker date=decor.findViewWithTag("parcel-reminder-date");android.widget.TimePicker time=decor.findViewWithTag("parcel-reminder-time");assertNotNull(date);assertNotNull(time);layoutDialog(dialog,activity);snapshot(decor,"reminder-picker");date.updateDate(2000,0,1);dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();assertTrue(dialog.isShowing());assertEquals("请选择未来的提醒时间",((android.widget.TextView)decor.findViewWithTag("parcel-reminder-error")).getText().toString());dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));assertFalse(dialog.isShowing());
+  }
+ }
  @Test public void singleListAndEditor()throws Exception{checkPage("w380dp-h800dp-notnight",1f,"pickup");}
  @Test public void narrowMediumText()throws Exception{checkPage("w320dp-h640dp-notnight",1.25f,"narrow-medium");}
  @Test public void narrowDarkLargeText()throws Exception{checkPage("w320dp-h640dp-night",2f,"dark-large");}

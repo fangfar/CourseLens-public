@@ -68,6 +68,11 @@ public class UiConsistencyTest {
    assertNull(widget.findViewById(R.id.widget_content).getBackground());assertTrue(widget.findViewById(R.id.widget_content).getContentDescription().toString().contains("下一节"));
   }
  }
+ @Test public void widgetHighlightsOnlyCurrentCourseWhenAnotherFollows(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();String term="2026-10-26";a.getPreferences(0).edit().putString("term",term).putString("classTimes","08:00-09:00\n09:00-10:00").putString("courses","1|1|1|第一门|A101|1\n1|2|2|第二门|A102|1").commit();View widget=CourseWidget.views(a,0,LocalDate.parse(term).atTime(8,30)).apply(a,new FrameLayout(a));assertNotEquals(((TextView)widget.findViewById(R.id.widget_title)).getCurrentTextColor(),((TextView)widget.findViewById(R.id.widget_title_second)).getCurrentTextColor());
+  }
+ }
  private boolean containsVisibleText(View view,String text){if(view.getVisibility()!=View.VISIBLE)return false;if(view instanceof TextView&&((TextView)view).getText().toString().contains(text))return true;if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)if(containsVisibleText(group.getChildAt(i),text))return true;}return false;}
  @Test public void widgetEmptyStatesDoNotShowTomorrowHint()throws Exception{
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){

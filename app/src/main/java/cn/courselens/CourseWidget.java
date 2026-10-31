@@ -28,13 +28,13 @@ public class CourseWidget extends AppWidgetProvider {
   RemoteViews views=new RemoteViews(context.getPackageName(),compact?R.layout.course_widget_square:R.layout.course_widget);
   Palette palette=new Palette(context);
   views.setInt(R.id.widget_surface,"setBackgroundResource",palette.surfaceBackground);
-  views.setTextColor(R.id.widget_date,palette.ink);views.setViewVisibility(R.id.widget_header,android.view.View.GONE);views.setInt(R.id.widget_sync_icon,"setColorFilter",palette.header);
+  views.setTextColor(R.id.widget_date,palette.muted);views.setViewVisibility(R.id.widget_header,android.view.View.GONE);views.setInt(R.id.widget_sync_icon,"setColorFilter",palette.header);
   views.setTextColor(R.id.widget_empty_title,palette.ink);
 
   views.setViewVisibility(R.id.widget_empty_panel,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_one,android.view.View.GONE);views.setViewVisibility(R.id.widget_space_two,android.view.View.GONE);
   if(android.os.Build.VERSION.SDK_INT>=31)views.setInt(R.id.widget_date,"setGravity",android.view.Gravity.START);
   if(android.os.Build.VERSION.SDK_INT>=31){views.setViewLayoutHeight(R.id.widget_heading,compact?32:44,android.util.TypedValue.COMPLEX_UNIT_DIP);}
-  views.setViewVisibility(R.id.widget_date,android.view.View.VISIBLE);views.setTextViewTextSize(R.id.widget_date,android.util.TypedValue.COMPLEX_UNIT_SP,compact?14:18);views.setTextViewText(R.id.widget_date,now.format(DateTimeFormatter.ofPattern(compact?"E · MM.dd":"M月d日 · EEEE",Locale.CHINA)));
+  views.setViewVisibility(R.id.widget_date,android.view.View.VISIBLE);views.setTextViewTextSize(R.id.widget_date,android.util.TypedValue.COMPLEX_UNIT_SP,compact?12:16);views.setTextViewText(R.id.widget_date,now.format(DateTimeFormatter.ofPattern(compact?"E · MM.dd":"M月d日 · EEEE",Locale.CHINA)));
 
   String term=prefs.getString("term","2026-08-31");
   try{
@@ -44,35 +44,34 @@ public class CourseWidget extends AppWidgetProvider {
    for(int slot=0;slot<4;slot++){
     Course c=slot<limit&&slot<schedule.remaining.size()?schedule.remaining.get(slot):null;
     views.setViewVisibility(CONTENT[slot],c!=null?android.view.View.VISIBLE:android.view.View.GONE);
-    course(context,views,id,slot,c,term,now,"暂无课程",compact,slot==upcoming,times,palette);
+    course(context,views,id,slot,c,term,now,"暂无课程",compact,slot==upcoming,upcoming==0?slot==0:slot<upcoming,times,palette);
    }
    int missing=schedule.remainingCount==0?0:limit-Math.min(limit,schedule.remainingCount);views.setViewVisibility(R.id.widget_space_one,(missing&1)!=0?android.view.View.VISIBLE:android.view.View.GONE);views.setViewVisibility(R.id.widget_space_two,(missing&2)!=0?android.view.View.VISIBLE:android.view.View.GONE);
    if(schedule.remainingCount==0){
     boolean finished=schedule.todayCount>0;views.setViewVisibility(R.id.widget_empty_panel,android.view.View.VISIBLE);
     views.setInt(R.id.widget_empty_panel,"setBackgroundResource",compact?0:palette.freeBackground);
     views.setTextViewText(R.id.widget_empty_title,finished?"今日课程已结束":"今日无课");
-    views.setTextViewTextSize(R.id.widget_empty_title,android.util.TypedValue.COMPLEX_UNIT_SP,compact?14:large?22:20);
-    int inset=Math.round((compact?2:6)*density);views.setViewPadding(R.id.widget_empty_panel,inset,inset,inset,inset);
-    if(android.os.Build.VERSION.SDK_INT>=31){views.setInt(R.id.widget_empty_title,"setGravity",compact||large?android.view.Gravity.CENTER:android.view.Gravity.START);views.setInt(R.id.widget_empty_panel,"setGravity",(compact||large?android.view.Gravity.CENTER:android.view.Gravity.START|android.view.Gravity.CENTER_VERTICAL));}
+    views.setTextViewTextSize(R.id.widget_empty_title,android.util.TypedValue.COMPLEX_UNIT_SP,compact?16:large?22:20);
+    int inset=Math.round(8*density);views.setViewPadding(R.id.widget_empty_panel,inset,inset,inset,inset);
     views.setOnClickPendingIntent(R.id.widget_empty_panel,open(context,id,4,null,term,now.toLocalDate()));
    }
   }catch(RuntimeException e){
    views.setViewVisibility(CONTENT[0],android.view.View.VISIBLE);for(int slot=1;slot<4;slot++)views.setViewVisibility(CONTENT[slot],android.view.View.GONE);
-   course(context,views,id,0,null,term,now,"请检查课表设置",compact,false,ClassTimes.DEFAULT,palette);
+   course(context,views,id,0,null,term,now,"请检查课表设置",compact,false,false,ClassTimes.DEFAULT,palette);
   }
 
   views.setContentDescription(R.id.widget_refresh,"刷新课表，上次更新 "+now.format(DateTimeFormatter.ofPattern("HH:mm")));
   Intent refresh=new Intent(context,CourseWidget.class).setAction(REFRESH).setData(Uri.parse("courselens-widget://refresh/"+id));views.setOnClickPendingIntent(R.id.widget_refresh,PendingIntent.getBroadcast(context,id,refresh,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE));
   return views;
  }
- private static void course(Context context,RemoteViews views,int id,int slot,Course next,String term,LocalDateTime now,String empty,boolean compact,boolean upcoming,ClassTimes times,Palette palette){
+ private static void course(Context context,RemoteViews views,int id,int slot,Course next,String term,LocalDateTime now,String empty,boolean compact,boolean upcoming,boolean active,ClassTimes times,Palette palette){
   int content=CONTENT[slot],title=TITLE[slot],time=TIME[slot],room=ROOM[slot];
   if(next==null){views.setTextViewText(title,empty);views.setTextViewText(time,"");views.setTextViewText(room,"");views.setContentDescription(content,empty+"，点击打开课表");}
   else{
    Course c=next;
    String when=times.starts[c.start-1]+(compact?"":"–"+times.ends[c.end-1]),where=c.room.isEmpty()?"地点未填写":SchoolParser.clean(c.room);
    String status=now.toLocalTime().isBefore(LocalTime.parse(times.starts[c.start-1]))?(upcoming?"下一节":"待上课"):"上课中";
-   boolean active=upcoming||status.equals("上课中");views.setTextColor(title,active?palette.nextStatus:palette.ink);
+   views.setTextColor(title,active?palette.nextStatus:palette.ink);
    views.setTextViewText(title,SchoolParser.clean(c.name));views.setTextViewText(time,when);views.setTextViewText(room,where);
    views.setContentDescription(content,status+"，"+SchoolParser.clean(c.name)+"，"+when+"，第"+c.start+"到"+c.end+"节，"+where);
   }
