@@ -50,8 +50,8 @@
 
   <FrameLayout android:id="@+id/widget_space_one" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:visibility="gone" />
   <FrameLayout android:id="@+id/widget_space_two" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="2" android:visibility="gone" />
-  <LinearLayout android:id="@+id/widget_empty_panel" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" android:gravity="start|top" android:padding="8dp" android:visibility="gone">
-   <TextView android:id="@+id/widget_empty_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="22sp" android:textStyle="bold" android:textColor="#172132" android:gravity="start" android:maxLines="2" android:ellipsize="end" />
+  <LinearLayout android:id="@+id/widget_empty_panel" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" android:gravity="center" android:padding="6dp" android:visibility="gone">
+   <TextView android:id="@+id/widget_empty_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="22sp" android:textStyle="bold" android:textColor="#172132" android:gravity="center" android:maxLines="2" android:ellipsize="end" />
   </LinearLayout>
 
  </LinearLayout>
