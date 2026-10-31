@@ -1,0 +1,6 @@
+<resources>
+ <style name="OcrBridgeTheme" parent="android:style/Theme.Translucent.NoTitleBar">
+  <item name="android:windowDisablePreview">true</item>
+  <item name="android:windowAnimationStyle">@null</item>
+ </style>
+</resources>

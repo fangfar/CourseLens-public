@@ -81,6 +81,9 @@ public class OcrPluginTest {
    Intent answer=new Intent().putExtra("ocrResult",result(row()));controller.get().onActivityResult(601,Activity.RESULT_OK,answer);assertTrue(controller.get().isFinishing());assertEquals("synthetic-epoch",Shadows.shadowOf(controller.get()).getResultIntent().getStringExtra("epoch"));
   }
  }
+ @Test public void ocrBridgeUsesTransparentThemeBeforeWindowStarts()throws Exception{
+  Context context=RuntimeEnvironment.getApplication();ActivityInfo info=context.getPackageManager().getActivityInfo(new ComponentName(context,OcrPluginActivity.class),0);android.util.TypedValue translucent=new android.util.TypedValue();android.content.res.Resources.Theme theme=context.getResources().newTheme();theme.applyStyle(info.theme,true);assertTrue(theme.resolveAttribute(android.R.attr.windowIsTranslucent,translucent,true));assertNotEquals(0,translucent.data);
+ }
  @Test public void installedPluginOpensImagePickerWithoutDownloadPage()throws Exception{
   installTrustedPlugin();
   try(var controller=Robolectric.buildActivity(OcrPluginActivity.class).setup()){

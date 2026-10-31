@@ -43,7 +43,7 @@ public final class OcrPluginActivity extends Activity {
   catch(PackageManager.NameNotFoundException|RuntimeException e){return false;}
  }
  @Override public void onCreate(Bundle saved){
-  if(installed(this))setTheme(android.R.style.Theme_Translucent_NoTitleBar);super.onCreate(saved);prefs=getSharedPreferences("ocr-plugin",MODE_PRIVATE);downloads=(DownloadManager)getSystemService(DOWNLOAD_SERVICE);image=getIntent().getData();
+  if(!installed(this))setTheme(R.style.AppTheme);super.onCreate(saved);prefs=getSharedPreferences("ocr-plugin",MODE_PRIVATE);downloads=(DownloadManager)getSystemService(DOWNLOAD_SERVICE);image=getIntent().getData();
   if(saved!=null){stage=saved.getString("stage","idle");String value=saved.getString("image");if(value!=null)image=Uri.parse(value);}
   if(installed(this)){
    if(!"recognizing".equals(stage)&&!"picker".equals(stage)&&!"permission".equals(stage)&&!"installer".equals(stage)){stage="idle";usePlugin();}
