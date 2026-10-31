@@ -79,7 +79,7 @@ public class UiConsistencyTest {
    MainActivity a=controller.get();String term="2026-10-26";a.getPreferences(0).edit().putString("term",term).putString("courses","1|1|2|合成课程|测试教室|1-30\n2|1|2|明日合成课|测试教室|1-30").commit();
    for(boolean finished:new boolean[]{true,false}){
     if(!finished)a.getPreferences(0).edit().putString("courses","2|1|2|明日合成课|测试教室|1-30").commit();
-    View widget=CourseWidget.views(a,0,LocalDate.parse(term).atTime(21,0)).apply(a,new FrameLayout(a));assertEquals(finished?"今日课程已结束":"今日无课",((TextView)widget.findViewById(R.id.widget_empty_title)).getText().toString());assertEquals(1,((ViewGroup)widget.findViewById(R.id.widget_empty_panel)).getChildCount());assertEquals(Gravity.CENTER,((LinearLayout)widget.findViewById(R.id.widget_empty_panel)).getGravity());assertEquals(Gravity.CENTER,((TextView)widget.findViewById(R.id.widget_empty_title)).getGravity());assertFalse(containsVisibleText(widget,"明日合成课"));
+    View widget=CourseWidget.views(a,0,LocalDate.parse(term).atTime(21,0)).apply(a,new FrameLayout(a));assertEquals(finished?"偷得浮生半日闲":"偷得浮生一日闲",((TextView)widget.findViewById(R.id.widget_empty_title)).getText().toString());assertEquals(1,((ViewGroup)widget.findViewById(R.id.widget_empty_panel)).getChildCount());assertEquals(Gravity.CENTER,((LinearLayout)widget.findViewById(R.id.widget_empty_panel)).getGravity());assertEquals(Gravity.CENTER,((TextView)widget.findViewById(R.id.widget_empty_title)).getGravity());assertFalse(containsVisibleText(widget,"明日合成课"));
    }
   }
  }

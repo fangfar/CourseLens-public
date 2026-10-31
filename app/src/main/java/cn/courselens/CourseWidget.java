@@ -50,7 +50,7 @@ public class CourseWidget extends AppWidgetProvider {
    if(schedule.remainingCount==0){
     boolean finished=schedule.todayCount>0;views.setViewVisibility(R.id.widget_empty_panel,android.view.View.VISIBLE);
     views.setInt(R.id.widget_empty_panel,"setBackgroundResource",compact?0:palette.freeBackground);
-    views.setTextViewText(R.id.widget_empty_title,finished?"今日课程已结束":"今日无课");
+    views.setTextViewText(R.id.widget_empty_title,finished?"偷得浮生半日闲":"偷得浮生一日闲");
     views.setTextViewTextSize(R.id.widget_empty_title,android.util.TypedValue.COMPLEX_UNIT_SP,compact?14:large?22:20);
     int inset=Math.round((compact?2:6)*density);views.setViewPadding(R.id.widget_empty_panel,inset,inset,inset,inset);
     views.setOnClickPendingIntent(R.id.widget_empty_panel,open(context,id,4,null,term,now.toLocalDate()));
