@@ -25,7 +25,7 @@ class CheckScopeTest(unittest.TestCase):
             git("commit", "-qm", "config")
             config = git("rev-parse", "HEAD")
             self.assertTrue(config_only("pull_request", base, config, directory))
-            self.assertTrue(config_only("push", base, config, directory))
+            self.assertFalse(config_only("push", base, config, directory))
             self.assertFalse(config_only("workflow_dispatch", base, config, directory))
             self.assertFalse(config_only("pull_request", base, base, directory))
             self.assertFalse(config_only("pull_request", "missing", config, directory))
