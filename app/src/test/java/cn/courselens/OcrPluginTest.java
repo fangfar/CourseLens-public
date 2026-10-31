@@ -97,6 +97,11 @@ public class OcrPluginTest {
    for(int i=0;i<3;i++){choose.performClick();var picker=Shadows.shadowOf(activity).getNextStartedActivityForResult();assertEquals(501,picker.requestCode);assertEquals(MediaStore.ACTION_PICK_IMAGES,picker.intent.getAction());assertEquals(MediaStore.ACTION_PICK_IMAGES,Shadows.shadowOf(activity).getNextStartedActivity().getAction());page.onActivityResult(501,Activity.RESULT_CANCELED,null);assertNull(Shadows.shadowOf(activity).getNextStartedActivity());}
   }
  }
+ @Test public void imageResultDoesNotOpenImportSheet()throws Exception{
+  try(var controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
+   ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();String epoch=ParcelNotificationListener.settings(activity).getString("epoch","");JSONObject empty=new JSONObject().put("protocol",1).put("lines",new JSONArray());page.onActivityResult(503,Activity.RESULT_OK,new Intent().putExtra("epoch",epoch).putExtra("ocrResult",empty.toString()));assertNull(org.robolectric.util.ReflectionHelpers.getField(page,"currentSheet"));page.onActivityResult(503,Activity.RESULT_OK,new Intent().putExtra("epoch",epoch).putExtra("ocrResult",result(row())));ParcelRepository.IO.submit(()->{}).get();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertNull(org.robolectric.util.ReflectionHelpers.getField(page,"currentSheet"));
+  }
+ }
  @Test public void deniedInstallPermissionKeepsRetryAvailable(){
   try(var controller=Robolectric.buildActivity(OcrPluginActivity.class).setup()){
    controller.get().onActivityResult(602,Activity.RESULT_CANCELED,null);Button action=controller.get().findViewById(android.R.id.content).findViewWithTag("ocr-plugin-action");assertEquals("允许安装插件",action.getText().toString());assertTrue(action.isEnabled());

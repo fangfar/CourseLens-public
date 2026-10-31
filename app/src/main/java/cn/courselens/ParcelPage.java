@@ -66,12 +66,12 @@ final class ParcelPage extends LinearLayout {
   receive(intent);
  }
  void onActivityResult(int request,int result,Intent data){
-  if(request==501){if(result==Activity.RESULT_OK&&data!=null)ocr(data.getData());return;}
+  if(request==501){if(result==Activity.RESULT_OK&&data!=null&&data.getData()!=null){if(importInput!=null&&importInput.isShown()&&currentSheet!=null)currentSheet.dismiss();ocr(data.getData());}return;}
   if(request!=503)return;
   if(data==null)return;
   if(!Objects.equals(data.getStringExtra("epoch"),ParcelNotificationListener.settings(activity).getString("epoch","")))return;
   if(result!=Activity.RESULT_OK){String error=data.getStringExtra("error");if(error!=null)readFeedback(error);return;}
-  try{List<ParcelRules.OcrLine> lines=ParcelOcr.lines(data.getStringExtra("ocrResult"));if(importInput==null||!importInput.isShown())importSheet();importInput.setText(ParcelOcr.text(lines));ingestCandidates(ParcelRules.extractImage(lines),"截图 OCR");}
+  try{List<ParcelRules.OcrLine> lines=ParcelOcr.lines(data.getStringExtra("ocrResult"));ingestCandidates(ParcelRules.extractImage(lines),"截图 OCR");}
   catch(Exception e){readFeedback("图片识别结果无效，请更新插件后重试");}
  }
  void onRequestPermissionsResult(int request,String[] permissions,int[] grants){
@@ -238,7 +238,7 @@ final class ParcelPage extends LinearLayout {
    return;
   }
   if(LocalOcr.AVAILABLE){
-   String epoch=ParcelNotificationListener.settings(activity).getString("epoch","");readFeedback("正在本机识别图片…");
+   String epoch=ParcelNotificationListener.settings(activity).getString("epoch","");
    LocalOcr.read(activity.getApplicationContext(),uri,(value,error)->activity.runOnUiThread(()->{if(closed)return;Intent result=new Intent().putExtra("epoch",epoch);if(error!=null)result.putExtra("error",error);else result.putExtra("ocrResult",value);onActivityResult(503,error==null?Activity.RESULT_OK:Activity.RESULT_CANCELED,result);}));
    return;
   }
@@ -250,8 +250,8 @@ final class ParcelPage extends LinearLayout {
   ingestCandidates(ParcelRules.extract(input),source);
  }
  private void ingestCandidates(List<ParcelRules.Candidate> found,String source){
-  if(found.isEmpty()){readFeedback("未找到明确的取件码，可检查上方文字或手动添加");return;}
-  String epoch=ParcelNotificationListener.settings(activity).getString("epoch","");ParcelRepository.IO.execute(()->{int added=0;try{if(!epoch.equals(ParcelNotificationListener.settings(activity).getString("epoch","")))return;for(ParcelRules.Candidate c:found)if(new ParcelRepository(activity).ingest(ParcelNotificationListener.record(c,source,true)))added++;int count=added;activity.runOnUiThread(()->{if(closed)return;if(currentSheet!=null)currentSheet.dismiss();message(count==0?"识别结果已存在，未重复添加":"已读取 "+count+" 条，请展开记录核对后保存");load();});}catch(RuntimeException e){activity.runOnUiThread(()->{if(!closed)message("识别结果保存失败，请重试");});}});
+  if(found.isEmpty()){readFeedback(source.equals("截图 OCR")?"未找到明确的取件码，请尝试其他图片或手动添加":"未找到明确的取件码，可检查上方文字或手动添加");return;}
+  String epoch=ParcelNotificationListener.settings(activity).getString("epoch","");ParcelRepository.IO.execute(()->{int added=0;try{if(!epoch.equals(ParcelNotificationListener.settings(activity).getString("epoch","")))return;for(ParcelRules.Candidate c:found)if(new ParcelRepository(activity).ingest(ParcelNotificationListener.record(c,source,true)))added++;int count=added;activity.runOnUiThread(()->{if(closed)return;if(importInput!=null&&currentSheet!=null&&currentSheet.isShowing()&&currentSheet.getWindow().getDecorView().findViewWithTag("parcel-import-text")==importInput)currentSheet.dismiss();message(count==0?"识别结果已存在，未重复添加":"已读取 "+count+" 条，请展开记录核对后保存");load();});}catch(RuntimeException e){activity.runOnUiThread(()->{if(!closed)message("识别结果保存失败，请重试");});}});
  }
  private String trackingStateLabel(String state){switch(state){case "IN_TRANSIT":return "运输中";case "READY":return "到达取件点";case "DELIVERED":return "物流显示已签收";default:return "状态未知";}}
  private void tracking(ParcelRecord p){
