@@ -1,10 +1,10 @@
-"""Select the lightweight gate only for a PR or push changing remote/config.json alone."""
+"""Select the lightweight gate only for a PR changing remote/config.json alone."""
 import os
 import subprocess
 
 
 def config_only(event, base, head, cwd=None):
-    if event not in ("pull_request", "push") or not base or not head:
+    if event != "pull_request" or not base or not head:
         return False
     try:
         result = subprocess.run(
