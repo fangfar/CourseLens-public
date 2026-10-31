@@ -53,12 +53,33 @@ public class UiConsistencyTest {
    callInstanceMethod(a,"edit");settle();View emptyAdd=root(a).findViewWithTag("manage-empty-add");assertNotNull(emptyAdd);emptyAdd.performClick();settle();assertEquals("添加课程",((View)getField(a,"root")).getTag());
   }
  }
- @Test public void widgetEmptyStatesKeepTomorrowActionWithoutRepeatedCopy()throws Exception{
+ @Test public void courseFieldsGrowWithLargeText()throws Exception{
+  RuntimeEnvironment.setQualifiers("w320dp-h640dp-notnight");RuntimeEnvironment.setFontScale(2f);
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();callInstanceMethod(a,"courseForm",ClassParameter.from(Course.class,(Course)null),ClassParameter.from(int.class,-1),ClassParameter.from(Runnable.class,(Runnable)()->{}));View root=root(a);snapshot(a,"large-course-form.png");EditText name=root.findViewWithTag("course-name");assertTrue(name.getHeight()>=a.getResources().getDisplayMetrics().density*SecondaryUi.CONTROL_HEIGHT);assertTrue(name.getHeight()>=name.getLineHeight()+name.getCompoundPaddingTop()+name.getCompoundPaddingBottom());
+  }
+ }
+ @Test public void widgetHighlightsCourseWithoutExtraLabels()throws Exception{
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();String term="2026-10-26";a.getPreferences(0).edit().putString("term",term).putString("courses","1|1|2|第一门|A101|1-30\n1|3|4|第二门|A202|1-30").commit();
+   View widget=CourseWidget.views(a,0,LocalDate.parse(term).atTime(7,0)).apply(a,new FrameLayout(a));
+   assertEquals(View.GONE,widget.findViewById(R.id.widget_header).getVisibility());assertEquals(View.GONE,widget.findViewById(R.id.widget_status).getVisibility());
+   assertNotEquals(((TextView)widget.findViewById(R.id.widget_title)).getCurrentTextColor(),((TextView)widget.findViewById(R.id.widget_title_second)).getCurrentTextColor());
+   assertNull(widget.findViewById(R.id.widget_content).getBackground());assertTrue(widget.findViewById(R.id.widget_content).getContentDescription().toString().contains("下一节"));
+  }
+ }
+ @Test public void widgetHighlightsOnlyCurrentCourseWhenAnotherFollows(){
+  try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+   MainActivity a=controller.get();String term="2026-10-26";a.getPreferences(0).edit().putString("term",term).putString("classTimes","08:00-09:00\n09:00-10:00").putString("courses","1|1|1|第一门|A101|1\n1|2|2|第二门|A102|1").commit();View widget=CourseWidget.views(a,0,LocalDate.parse(term).atTime(8,30)).apply(a,new FrameLayout(a));assertNotEquals(((TextView)widget.findViewById(R.id.widget_title)).getCurrentTextColor(),((TextView)widget.findViewById(R.id.widget_title_second)).getCurrentTextColor());
+  }
+ }
+ private boolean containsVisibleText(View view,String text){if(view.getVisibility()!=View.VISIBLE)return false;if(view instanceof TextView&&((TextView)view).getText().toString().contains(text))return true;if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)if(containsVisibleText(group.getChildAt(i),text))return true;}return false;}
+ @Test public void widgetEmptyStatesDoNotShowTomorrowHint()throws Exception{
   try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
    MainActivity a=controller.get();String term="2026-10-26";a.getPreferences(0).edit().putString("term",term).putString("courses","1|1|2|合成课程|测试教室|1-30\n2|1|2|明日合成课|测试教室|1-30").commit();
    for(boolean finished:new boolean[]{true,false}){
     if(!finished)a.getPreferences(0).edit().putString("courses","2|1|2|明日合成课|测试教室|1-30").commit();
-    View widget=CourseWidget.views(a,0,LocalDate.parse(term).atTime(21,0)).apply(a,new FrameLayout(a));assertEquals(finished?"今日课程已结束":"今日无课",((TextView)widget.findViewById(R.id.widget_empty_title)).getText().toString());assertEquals(1,((ViewGroup)widget.findViewById(R.id.widget_empty_panel)).getChildCount());assertTrue(widget.findViewById(R.id.widget_tomorrow).hasOnClickListeners());
+    View widget=CourseWidget.views(a,0,LocalDate.parse(term).atTime(21,0)).apply(a,new FrameLayout(a));assertEquals(finished?"偷得浮生半日闲":"偷得浮生一日闲",((TextView)widget.findViewById(R.id.widget_empty_title)).getText().toString());assertEquals(1,((ViewGroup)widget.findViewById(R.id.widget_empty_panel)).getChildCount());assertEquals(Gravity.CENTER,((LinearLayout)widget.findViewById(R.id.widget_empty_panel)).getGravity());assertEquals(Gravity.CENTER,((TextView)widget.findViewById(R.id.widget_empty_title)).getGravity());assertFalse(containsVisibleText(widget,"明日合成课"));
    }
   }
  }

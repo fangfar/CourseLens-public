@@ -10,6 +10,10 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+    <style name="OcrBridgeTheme" parent="android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
     <style name="SecondaryPicker" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:colorAccent">@color/app_accent</item>
         <item name="android:colorControlHighlight">@android:color/transparent</item>

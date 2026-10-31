@@ -4,6 +4,6 @@
  <queries><package android:name="${hostPackage}"/></queries>
  <application android:label="Morrow 图片识别插件" android:allowBackup="false" android:usesCleartextTraffic="false" android:theme="@android:style/Theme.Material.Light.NoActionBar">
   <meta-data android:name="cn.courselens.ocr.PROTOCOL" android:value="1"/>
-  <activity android:name=".OcrActivity" android:exported="true" android:excludeFromRecents="true"/>
+  <activity android:name=".OcrActivity" android:theme="@style/OcrBridgeTheme" android:exported="true" android:excludeFromRecents="true"/>
  </application>
 </manifest>

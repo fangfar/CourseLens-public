@@ -26,7 +26,6 @@
     <color name="widget_ink">#F1F3F5</color>
     <color name="widget_header">#A8B0BC</color>
     <color name="widget_muted">#9AA3AF</color>
-    <color name="widget_tomorrow">#9AA3AF</color>
     <color name="widget_status_next">#6FDCB2</color>
     <color name="widget_status_waiting">#8CB9FF</color>
 </resources>

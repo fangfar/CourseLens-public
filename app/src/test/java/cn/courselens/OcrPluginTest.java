@@ -24,9 +24,8 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=34)
 public class OcrPluginTest {
- @Test public void distributionLabelMatchesBundledEngine()throws Exception{
-  assertEquals(LocalOcr.AVAILABLE?"":"轻量版",RuntimeEnvironment.getApplication().getString(R.string.distribution_name));
-  try{Class.forName("cn.courselens.ocr.OcrEngine");assertTrue("Lite must not include the OCR engine",LocalOcr.AVAILABLE);}catch(ClassNotFoundException absent){assertFalse("Full must bundle the OCR engine",LocalOcr.AVAILABLE);}
+ @Test public void hostDoesNotBundleOcrEngine()throws Exception{
+  try{Class.forName("cn.courselens.ocr.OcrEngine");fail("Host must not include the OCR engine");}catch(ClassNotFoundException expected){}
  }
  @Test public void imagePickerUsesGalleryInsteadOfDocuments(){
   Intent photo=ImagePicker.intent(34);assertEquals(MediaStore.ACTION_PICK_IMAGES,photo.getAction());assertEquals("image/*",photo.getType());
@@ -81,6 +80,9 @@ public class OcrPluginTest {
    Intent answer=new Intent().putExtra("ocrResult",result(row()));controller.get().onActivityResult(601,Activity.RESULT_OK,answer);assertTrue(controller.get().isFinishing());assertEquals("synthetic-epoch",Shadows.shadowOf(controller.get()).getResultIntent().getStringExtra("epoch"));
   }
  }
+ @Test public void ocrBridgeUsesTransparentThemeBeforeWindowStarts()throws Exception{
+  Context context=RuntimeEnvironment.getApplication();ActivityInfo info=context.getPackageManager().getActivityInfo(new ComponentName(context,OcrPluginActivity.class),0);android.util.TypedValue translucent=new android.util.TypedValue();android.content.res.Resources.Theme theme=context.getResources().newTheme();theme.applyStyle(info.theme,true);assertTrue(theme.resolveAttribute(android.R.attr.windowIsTranslucent,translucent,true));assertNotEquals(0,translucent.data);
+ }
  @Test public void installedPluginOpensImagePickerWithoutDownloadPage()throws Exception{
   installTrustedPlugin();
   try(var controller=Robolectric.buildActivity(OcrPluginActivity.class).setup()){
@@ -95,6 +97,11 @@ public class OcrPluginTest {
    for(int i=0;i<3;i++){ParcelRepository.IO.submit(()->{}).get();Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));}
    page.findViewWithTag("parcel-read-info").performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();Button choose=dialog.getWindow().getDecorView().findViewWithTag("parcel-ocr-plugin");assertEquals("选择图片",choose.getText().toString());
    for(int i=0;i<3;i++){choose.performClick();var picker=Shadows.shadowOf(activity).getNextStartedActivityForResult();assertEquals(501,picker.requestCode);assertEquals(MediaStore.ACTION_PICK_IMAGES,picker.intent.getAction());assertEquals(MediaStore.ACTION_PICK_IMAGES,Shadows.shadowOf(activity).getNextStartedActivity().getAction());page.onActivityResult(501,Activity.RESULT_CANCELED,null);assertNull(Shadows.shadowOf(activity).getNextStartedActivity());}
+  }
+ }
+ @Test public void imageResultDoesNotOpenImportSheet()throws Exception{
+  try(var controller=Robolectric.buildActivity(ParcelActivity.class).setup()){
+   ParcelActivity activity=controller.get();ParcelPage page=org.robolectric.util.ReflectionHelpers.getField(activity,"page");page.pause();String epoch=ParcelNotificationListener.settings(activity).getString("epoch","");JSONObject empty=new JSONObject().put("protocol",1).put("lines",new JSONArray());page.onActivityResult(503,Activity.RESULT_OK,new Intent().putExtra("epoch",epoch).putExtra("ocrResult",empty.toString()));assertNull(org.robolectric.util.ReflectionHelpers.getField(page,"currentSheet"));page.onActivityResult(503,Activity.RESULT_OK,new Intent().putExtra("epoch",epoch).putExtra("ocrResult",result(row())));ParcelRepository.IO.submit(()->{}).get();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertNull(org.robolectric.util.ReflectionHelpers.getField(page,"currentSheet"));
   }
  }
  @Test public void deniedInstallPermissionKeepsRetryAvailable(){

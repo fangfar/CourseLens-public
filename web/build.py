@@ -18,7 +18,7 @@ if __name__ == '__main__':
     for name in ('index.html', 'styles.css', 'download.js'):
         shutil.copy2(ROOT / 'web' / name, output / name)
     page = (output / 'index.html').read_text(encoding='utf-8')
-    for edition in ('full', 'lite'):
+    for edition in ('lite',):
         url = config['android'][edition + 'ApkUrl']
         parsed = urlsplit(url)
         if (parsed.scheme != 'https' or parsed.netloc != 'github.com' or parsed.query or parsed.fragment

@@ -26,17 +26,17 @@
 ### 界面与目录约定
 
 - 面向用户的名称统一为 **Morrow**，官网为 `https://morrow.xvyan.cn/`，仓库为 `fangfar/Morrow`；`cn.courselens` 包名、偏好键、签名、发布资产和工具参数保留兼容名称。
-- `app/` 维护原生 Java/View 界面；`ocr-engine/` 供完整版与 `ocr-plugin/` 复用；`web/` 为官网源码，`remote/` 为发布配置；业务检查在 `tests/`，Android 单元与仪器检查分别在 `app/src/test/`、`app/src/androidTest/`。生成目录与验收截图不提交。
+- `app/` 维护原生 Java/View 界面；`ocr-engine/` 供 `ocr-plugin/` 使用；`web/` 为官网源码，`remote/` 为发布配置；业务检查在 `tests/`，Android 单元与仪器检查分别在 `app/src/test/`、`app/src/androidTest/`。生成目录与验收截图不提交。
 - README 介绍功能、安装、隐私与反馈；官网展示实际产品及下载；开发约定集中在本文，更新记录使用 Releases。历史发布说明按对应版本保留，不将新源码能力写成已发布能力。
 - 系统无衬线字体，主页面标题 24sp、二级页标题 18sp、正文 14–16sp、元信息 12–13sp；用字重、对齐和间距分层，课程分组不再套装饰性胶囊。课表周网格、课程配色与底栏直接切换保留。
 - Android 色板以 `values/colors.xml` 与 `values-night/colors.xml` 为准，快递色值通过资源别名复用；官网同步墨色 `#171717`、次要文字 `#626870`、浅底 `#F3F4F5`、动作蓝 `#0866D9`。仅状态和操作使用强调色，课程颜色继续承担区分课程的功能。
-- 复用 `SecondaryUi` 的按钮、焦点和弹窗，48dp 触摸范围；页面间距以 8/16/24dp 为主，卡片约 16–24dp 圆角。Web 点击范围至少 44px，内容变窄时换行或纵向排列。动效沿用 `Motion`，遵循系统关闭动画及网页减少动画设置。
+- 复用 `SecondaryUi` 的尺寸常量、按钮、焦点和弹窗：间距按 4dp / 8dp 网格，普通操作至少 48dp，主要表单输入与课程选择控件至少 56dp；普通卡片使用 16dp 内边距与圆角，大面板使用 24dp 圆角。方形组件保持 1:1，横向区域由父容器宽度及内容决定尺寸；桌面组件按系统分配尺寸适配。Web 点击范围至少 44px，内容变窄时换行或纵向排列。动效沿用 `Motion`，遵循系统关闭动画及网页减少动画设置。
 - 空状态提供清楚的状态和可执行操作；删除重复标题、标语与操作说明，不删除错误恢复、隐私、授权、数据覆盖提示和无障碍名称。设置按课表与应用分组，模块配置继续由各模块菜单直接进入。
 - UI 修改同时验证原调用方、返回来源、草稿、滚动与状态恢复。可用 `UiConsistencyTest`、`TaskPageDesignTest`、`ParcelPageDesignTest` 和 `ModuleSettingsStyleTest` 覆盖布局及本机交互；原生 Canvas 渲染不能代替设备手势、键盘、系统安装器或真实启动器验收。截图使用合成数据，输出至仓库外；官网三张截图由 `UiConsistencyTest.productScreensUseSyntheticDataAndKeepActions` 的 360dp / xhdpi 场景生成，不使用私人课表。
 
 ### 共享交互规则
 
-- 总设置按课表与应用分组，课表管理二级页提供课程管理、课表列表和新增课表，直接点击切换、长按重命名；开学日期、作息时间、桌面小组件、学校账号和统一数据管理保留直接入口；课表右上角菜单提供课程调整恢复和学校登录；课表清空、任务恢复及全部任务数据删除、全部快递数据删除统一放在“数据管理”中；任务页菜单另提供任务恢复快捷入口，其他全部数据删除不在模块菜单重复展示；单条任务和快递删除仍在各自条目中。全部任务删除会退出学习通账号、取消当前刷新并删除所有账号缓存及手动任务，不修改学校平台数据；快递删除沿用关闭后台功能、清除去重记录和设置的行为。每项删除分别确认，不提供一键删除三个模块。各模块右上角横向三点打开本模块设置菜单，关闭后保留来源页面与滚动；开学日期保存或取消、小组件和学校账号页取消后返回总设置；学校账号同步成功后回到课表页。作息时间返回总设置，课程管理和取消新增返回课表管理，新增成功后回到课表页。操作结果提供可见反馈。
+- 总设置按课表与应用分组，课表管理二级页提供课程管理、课表列表和新增课表，直接点击切换、长按重命名；开学日期、作息时间、桌面小组件、学校账号和统一数据管理保留直接入口；课表右上角菜单提供添加课程、课程调整恢复和学校登录；课表清空、任务恢复及全部任务数据删除、全部快递数据删除统一放在“数据管理”中；任务页菜单另提供任务恢复快捷入口，其他全部数据删除不在模块菜单重复展示；单条任务和快递删除仍在各自条目中。全部任务删除会退出学习通账号、取消当前刷新并删除所有账号缓存及手动任务，不修改学校平台数据；快递删除沿用关闭后台功能、清除去重记录和设置的行为。每项删除分别确认，不提供一键删除三个模块。各模块右上角横向三点打开本模块设置菜单，关闭后保留来源页面与滚动；开学日期保存或取消、小组件和学校账号页取消后返回总设置；学校账号同步成功后回到课表页。作息时间返回总设置，课程管理和取消新增返回课表管理，新增成功后回到课表页。操作结果提供可见反馈。
 - 侧栏收起动画结束前继续消费返回操作，避免快速连续返回穿透到页面；完成收起后恢复正常返回。沿用 `SecondaryUi` 和现有颜色资源、48dp 最小操作区；点击不使用水波纹扩散，保留静态键盘焦点描边与原生控件选中状态。底栏直接切换及完整周课表，不另建一套主题或导航组件。
 - 栏目设置与操作菜单统一使用横向三点入口、右上角圆角细描边下拉面板和分组分隔线，不遮暗底页。下拉菜单宽度上限 168dp、上下内边距 8dp、文字 14sp，菜单行保持最小 48dp 点击区并缩小分隔留白；较长菜单限高滚动；下拉菜单用 220/180ms 进出缓动，底部面板用 340/280ms，上方保留圆角、底边贴齐并与系统手势区同色，关闭后恢复页面底色；编辑、选择与确认面板沿用足够的操作空间并使用同一描边与轻遮罩。打开菜单后底页暂时退出无障碍焦点，点外部或返回关闭后恢复。
 - `navigationOnly` 覆盖课表入口迁入总设置、栏目右上角横向三点菜单与来源模块恢复，以及侧栏连续返回；截图随 QA 数据导出至仓库外，不能仅凭构建或 JVM 测试宣称视觉验收通过。
@@ -61,7 +61,7 @@
 python tests/run_checks.py
 python tests/ReleaseChecksTest.py
 python tests/SigningChecks.py
-.\gradlew.bat --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :app:assembleFullDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:lintLiteDebug :app:lintFullDebug :ocr-plugin:lintDebug
+.\gradlew.bat --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:lintLiteDebug :ocr-plugin:lintDebug
 ```
 
 Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用的 Java 业务回归入口，另含本实验的学习通解析检查；Gradle 单元测试的 `NO-SOURCE` 不代表它们通过。
@@ -70,25 +70,23 @@ Linux 使用 `python3` 和 `sh gradlew`。`run_checks.py` 是本地与 CI 共用
 
 ## 快递中心
 
-### 轻量版与完整版
+### 主程序与识图插件
 
-- `lite` / `full` 是轻量版和内置 OCR 完整版两种构建变体，`assembleDebug` 同时生成两种 QA 包。两者保持相同包名、版本号、正式签名及数据格式，可以覆盖安装切换；无需卸载或清空数据。“关于软件 / 检查更新”标明当前类型。QA 仍独立使用 `cn.courselens.qa`，两种 QA 包会互相覆盖，安装前先备份。
-- 安装包分别在 `app/build/outputs/apk/lite/` 和 `app/build/outputs/apk/full/`，测试和 Lint 报告也按变体分别保留。两套源只在 `LocalOcr` 接口处不同；`ocr-engine/` 由完整版和独立插件复用，轻量版不引用该库。完整版直接识别，轻量版已安装插件时直接打开图片选择器，只有未安装时进入下载页。
-- PR CI 构建、测试轻量版和 OCR 插件，不构建完整版。发布草稿生成 `Morrow-VERSION-lite-vcCODE.apk`、`Morrow-VERSION-full-vcCODE.apk` 及独立 OCR 插件，校验文件同时覆盖三份 APK。公开发布之后才配置 `remote/config.json` 的 `android.liteApkUrl` / `android.fullApkUrl`；旧客户端的 `apkUrl` / `diskUrl` 继续保留。新版更新按当前类型选择链接，缺少对应地址时打开 Releases 让用户选择，不自动切换类型。
-- 官网明确提供两种下载按钮并说明区别。当前历史 2.7.5 APK 已内置 OCR，因此只作为完整版地址；轻量版新产物未公开前其链接保持空，不拿旧完整版冒充轻量版。
+- 当前只维护原轻量版的主程序和独立 OCR 插件；保留 `lite` 构建名以兼容现有构建路径。主程序不包含 OCR 模型，识图时安装插件；包名、签名和数据格式保持不变。
+- 发布草稿仅生成主程序和 OCR 插件。远程配置保留历史字段，供旧客户端使用；新客户端使用 `android.liteApkUrl`。公开发布后再更新下载配置。
 
 ### 可选图片识别插件
 
-- `ocr-plugin/` 是轻量版可选安装的独立应用，正式包名 `cn.courselens.ocr`，QA 为 `cn.courselens.ocr.qa`。与主包使用相同签名配置，但独立安装、卸载和版本管理。轻量版主包不依赖 ML Kit、不包含 OCR 模型或原生库；通知、粘贴文字和手动录入无需插件。插件不声明网络权限，不上传截图。
+- `ocr-plugin/` 是可选安装的独立应用，正式包名 `cn.courselens.ocr`，QA 为 `cn.courselens.ocr.qa`。与主包使用相同签名配置，但独立安装、卸载和版本管理。主包不依赖 ML Kit、不包含 OCR 模型或原生库；通知、粘贴文字和手动录入无需插件。插件不声明网络权限，不上传截图。
 - 「读取信息」和「识别设置」提供插件入口。主包从 `https://morrow.xvyan.cn/remote/ocr-plugin.json` 读取 HTTPS 下载地址、字节数、SHA-256、插件版本和协议。未发布时 `enabled: false`；不使用占位 APK 地址。下载交给系统 DownloadManager，界面显示进度、等待网络和失败重试，离开页面后可继续下载，再次进入恢复进度。下载后复制到私有目录，校验大小、SHA-256、包名、主包签名和协议 1，再临时授权系统安装器读取该 APK；取消下载会清除任务和安装缓存。QA 不下载正式插件，需安装同签名 QA 产物。
 - Android 首次安装需用户允许 Morrow 安装应用，并在系统安装器确认；不静默安装。安装返回后重新检查插件并继续选择 / 识别图片，取消或拒绝授权可重试。插件只接受同签名且包名匹配的主包调用，读取单个临时 `content` URI，返回有长度和坐标边界的文本行，由主包沿用 `ParcelRules.extractImage` 提取快递信息；不传整张位图或保存截图。
-- `.\gradlew.bat --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :app:assembleFullDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:testLiteDebugUnitTest :app:testFullDebugUnitTest :app:lintLiteDebug :app:lintFullDebug :ocr-plugin:lintDebug` 同时检查主包和插件。`python tests/OcrPluginChecks.py --host app/build/outputs/apk/lite/debug/app-lite-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk` 检查同签名、包名、模型隔离和插件无网络权限。正式发布工作流额外生成插件 APK 和 `ocr-plugin.json` 至草稿产物；公开插件后才把已验证的描述文件通过 PR 更新到 `remote/ocr-plugin.json`。下载地址可使用经审核的 HTTPS 国内对象存储，内容必须与校验值一致。准备产物不代表上传、公开发布或下载链路验收。
+- `.\gradlew.bat --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:testLiteDebugUnitTest :app:lintLiteDebug :ocr-plugin:lintDebug` 同时检查主包和插件。`python tests/OcrPluginChecks.py --host app/build/outputs/apk/lite/debug/app-lite-debug.apk --plugin ocr-plugin/build/outputs/apk/debug/ocr-plugin-debug.apk` 检查同签名、包名、模型隔离和插件无网络权限。正式发布工作流额外生成插件 APK 和 `ocr-plugin.json` 至草稿产物；公开插件后才把已验证的描述文件通过 PR 更新到 `remote/ocr-plugin.json`。下载地址可使用经审核的 HTTPS 国内对象存储，内容必须与校验值一致。准备产物不代表上传、公开发布或下载链路验收。
 - QA 下载测试可额外使用 `-PqaOcrManifest=http://127.0.0.1:8765/ocr-plugin.json`，通过 `adb -s SERIAL reverse tcp:8765 tcp:8765` 连接仅监听电脑回环地址的临时文件服务。描述文件必须指向 `cn.courselens.ocr.qa` 同签名插件；正式包拒绝 QA 插件及 HTTP 地址。只有 debug 网络配置放行精确 `127.0.0.1`，不放行局域网域名，也不部署 QA 下载配置到官网。安装 QA 主包和测试包后，可运行 `adb -s SERIAL shell am instrument -w -e ocrDownloadOnly true cn.courselens.qa.test/cn.courselens.NativeChecks` 启动下载专项；系统安装授权与确认仍需在手机界面完成，专项不打开业务页面或写入快递数据库。测试完删除 ADB 转发并停止服务，使用此测试包继续下载前需重新建立测试源。
 - 发布前验收：未安装入口、下载失败 / 取消 / 网络恢复、进后台 / 进程重建后恢复、损坏及异签名文件拒绝、拒绝安装权限、取消安装、安装成功后识别、卸载回退、图片分享、协议不兼容、深色 / 大字体。设备测试使用合成截图和隔离 QA 数据。
 
 
 - 入口在底部导航的「快递」，也可由 Android 文字 / 图片分享打开。三个底栏入口在主界面与快递页共用 `AppNavigation`，选中使用实心图标；返回课表 / 任务时复用主 Activity、保留原页面和相应选中项，并清除其上的快递页，避免返回键循环。独立 `ParcelActivity` 使用现有 `SecondaryUi`、原生 View 和半高滚动表单，头部菜单与添加按钮共用全应用 `SecondaryUi` 圆形图标样式，浅色沿用原色板，浅色与深色均复用共享色板。没有迁移课表、学习通缓存或账号数据，也没有改包名、版本号或正式签名。
-- 快递页使用单一快递列表，不按状态或驿站分类，不左右翻页。点击条目内容内联展开编辑、删除、复制取件码、提醒及已有物流记录，同一时间只展开一条；展开后的「已取件」按钮标记完成，完成后保留在同一列表末尾，地址与取件码使用灰色、取件码加删除线，不另显示完成状态文字；提供 5 秒撤销和展开后的「恢复未取件」，恢复不自动重启旧提醒；既有已取件记录同样可见。未核对的识别结果在同一列表提示核对，确认前不能标记完成。顶部保留淘宝 / 菜鸟 / 拼多多官方身份码入口；「手动添加」直接打开表单，「读取信息」提供粘贴文字、选择截图及直达通知读取设置。截图读取结果回填文本，失败时保留文字和面板内反馈，便于修正或手动添加。填写取件码或运单号即可保存，沿用原有状态字段及去重规则；不提供在线物流查询。全部数据删除仍在总设置 → 数据管理。
+- 快递页使用单一快递列表，不按状态或驿站分类，不左右翻页。点击条目内容内联展开编辑、删除、复制取件码、提醒及已有物流记录，同一时间只展开一条；展开后的「已取件」按钮标记完成，完成后保留在同一列表末尾，地址与取件码使用灰色、取件码加删除线，不另显示完成状态文字；提供 5 秒撤销和展开后的「恢复未取件」，恢复不自动重启旧提醒；既有已取件记录同样可见。未核对的识别结果在同一列表提示核对，确认前不能标记完成。顶部保留淘宝 / 菜鸟 / 拼多多官方身份码入口；「手动添加」直接打开表单，「读取信息」提供粘贴文字、选择截图及直达通知读取设置。选择图片后关闭读取面板，离线识别不显示处理中弹窗，候选直接进入列表待核对；识别失败或无结果显示反馈，可重新选择图片或手动添加。旧版 OCR 插件仍可能显示处理中界面，安装同签名 1.0.1 或更新版本后才会消除。填写取件码或运单号即可保存，沿用原有状态字段及去重规则；不提供在线物流查询。全部数据删除仍在总设置 → 数据管理。
 
 - `ParcelDatabase` 是独立 Room schema 2 数据库 `parcels.db`，schema 保存在 `app/schemas/`。Java 使用 annotationProcessor，无 Compose / Hilt / Kotlin 插件；Room 2.6.1、WorkManager 2.9.1 保持现有 SDK 34 / JDK 17 构建兼容。升级 schema 时添加保留数据的 migration，不使用 destructive fallback。取件码和运单号分别保存；同运单或同地址同码去重，同码不同驿站保留。完成记录不因通知复活。运输中记录收到同运单取件通知时补全原记录，低评分信息需确认。单条删除移入本机快递恢复，并保留最长 14 天的 SHA-256 去重摘要；可从快递菜单或数据管理恢复，恢复不重启提醒，删除全部会清除记录、摘要和设置，并执行 Room 的 WAL checkpoint / VACUUM。
 - `ParcelRules` 是本地版本化规则（当前 v2），评分是规则强度而非统计概率。只提取明确取件语境，排除验证码和动态身份码。只有单码、明确地址的高评分通知可以直接进入待取件；其他结果在快递列表中标记为待核对，由用户人工核对，截图 / 分享一律确认。通知 / 粘贴多码文本不自动配地址或运单，避免串件；截图按 ML Kit 文本行坐标关联标签、码值和附近取件点，同一标签含多码时仍留空地址待补。截图局部区域排除身份码 / 验证码，不因整屏其他位置出现无关安全词而丢弃有效取件码。没有保存通知全文或图片，没有短信、无障碍、相机或媒体库读取权限。截图使用文档选择器 / 分享授权和独立可选插件内的中文 ML Kit；只接收 content URI，限 10 MB / 8000 万输入像素并下采样处理，识别后释放图片和识别器。
@@ -115,7 +113,7 @@ Android 实现依据：[Room Java 配置](https://developer.android.com/training
 
 ```powershell
 python tests/run_checks.py
-.\gradlew.bat --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :app:assembleFullDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:testLiteDebugUnitTest :app:testFullDebugUnitTest :app:lintLiteDebug :app:lintFullDebug :ocr-plugin:lintDebug
+.\gradlew.bat --no-daemon -PqaBuild assembleDebug :app:assembleLiteDebugAndroidTest :ocr-plugin:assembleDebugAndroidTest :app:testLiteDebugUnitTest :app:lintLiteDebug :ocr-plugin:lintDebug
 adb -s SERIAL shell am instrument -w -e parcelOnly true cn.courselens.qa.test/cn.courselens.NativeChecks
 ```
 
@@ -193,11 +191,11 @@ COURSELENS_KEY_PASSWORD
 
 1. 合入已批准并完成适用设备验收的源码；提高 versionCode 和 versionName。保留包名、偏好名称、存储格式及签名指纹；修改存储时另做旧数据兼容检查。提前并行核对版本与标签、准备隔离模拟器及合成数据；本地独立检查与远端 CI 可并行，不重复运行已通过且源码未改变的检查。
 2. 经发布授权后，main 必需检查通过即运行 `Prepare signed release`，选择 main 和与 versionName 对应的新标签；在授权范围内处理 release 环境审核。签名构建和独立的隔离覆盖升级准备可并行，检查结果中的来源提交必须是获准提交。
-3. 核对草稿 APK、`SHA256SUMS`、`release-metadata-lite.json` / `release-metadata-full.json`、证书及使用说明，完成隔离覆盖升级验证；经明确授权后公开草稿。现有标签和 APK 不替换。
+3. 核对草稿 APK、`SHA256SUMS`、`release-metadata-lite.json`、证书及使用说明，完成隔离覆盖升级验证；经明确授权后公开草稿。现有标签和 APK 不替换。
 4. 发布成功且 APK 可下载后，再通过 PR 更新 `remote/config.json` 中的版本、更新日志和 APK 地址，保留公告及人工维护的网盘地址。CI 成功或草稿 Release 不等于发布成功。
 5. 核验 Pages 与 Raw 均返回 200，配置与 Git blob 一致；检查 APK 下载及旧客户端更新入口。网盘分享由维护者核对内容和有效期。
 
-本地正式构建按 `signing.properties.example` 配置被忽略的签名属性，密钥保存在仓库外；执行 `python tests/SigningChecks.py --signed`、正式 `assembleRelease :app:lintLiteRelease :app:lintFullRelease :ocr-plugin:lintRelease`。`python tests/ReleaseChecks.py vVERSION --apk PATH --edition lite`（完整版改为 `--edition full`）使用 `ANDROID_HOME` 或 `ANDROID_SDK_ROOT` 检查产物，输出到 `app/build/release/`，不发布。
+本地正式构建按 `signing.properties.example` 配置被忽略的签名属性，密钥保存在仓库外；执行 `python tests/SigningChecks.py --signed`、正式 `assembleRelease :app:lintLiteRelease :ocr-plugin:lintRelease`。`python tests/ReleaseChecks.py vVERSION --apk PATH --edition lite`使用 `ANDROID_HOME` 或 `ANDROID_SDK_ROOT` 检查产物，输出到 `app/build/release/`，不发布。
 
 ## 公告配置与旧版兼容
 

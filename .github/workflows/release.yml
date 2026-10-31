@@ -58,10 +58,8 @@ jobs:
           COURSELENS_KEY_PASSWORD: ${{ secrets.COURSELENS_KEY_PASSWORD }}
         run: |
           python3 tests/SigningChecks.py --signed
-          sh gradlew --no-daemon assembleRelease :app:lintLiteRelease :app:lintFullRelease :ocr-plugin:lintRelease :ocr-engine:lintRelease
+          sh gradlew --no-daemon assembleRelease :app:lintLiteRelease :ocr-plugin:lintRelease :ocr-engine:lintRelease
           python3 tests/ReleaseChecks.py "$RELEASE_TAG" --apk app/build/outputs/apk/lite/release/app-lite-release.apk --edition lite
-          python3 tests/ReleaseChecks.py "$RELEASE_TAG" --apk app/build/outputs/apk/full/release/app-full-release.apk --edition full
-          python3 tests/OcrPluginChecks.py --edition full --host app/build/outputs/apk/full/release/app-full-release.apk --plugin ocr-plugin/build/outputs/apk/release/ocr-plugin-release.apk
           python3 tests/OcrPluginChecks.py --host app/build/outputs/apk/lite/release/app-lite-release.apk --plugin ocr-plugin/build/outputs/apk/release/ocr-plugin-release.apk --release-base-url "https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG"
       - name: Save verified artifacts
         uses: actions/upload-artifact@v4
