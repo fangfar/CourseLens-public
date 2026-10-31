@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory() as folder:
 
     check("missing key fails instead of generating a signer", [], "Fixed signing is required")
     check("PR verification works without signing secrets", ["-PqaBuild"], None)
-    for task in (":app:assembleLiteRelease", ":app:assembleFullRelease", ":ocr-plugin:assembleRelease"):
+    for task in (":app:assembleLiteRelease", ":ocr-plugin:assembleRelease"):
         check("QA disables official APK task " + task, ["-PqaBuild", task, "--dry-run"], "not found")
     if not options.signed:
         print("SKIP: official key checks (use --signed in the release environment)")

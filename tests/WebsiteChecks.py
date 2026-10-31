@@ -35,16 +35,14 @@ class SiteParser(HTMLParser):
 
 
 html = (ROOT / 'index.html').read_text(encoding='utf-8')
-assert html.count('data-download="lite"') == 1 and html.count('data-download="full"') == 1
-assert '下载轻量版' in html and '下载完整版' in html
+assert html.count('data-download="lite"') == 1 and 'data-download="full"' not in html
+assert '下载安卓版' in html
 assert html.count('href="https://github.com/fangfar/Morrow"') == 2
 page = SiteParser()
 page.feed(html)
 page.close()
 assert page.heading_count == 1, 'Site needs one primary heading'
-assert 'button' in page.downloads['full'] and 'secondary' not in page.downloads['full'], 'Full edition needs the highlighted download button'
-assert 'button' in page.downloads['lite'] and 'secondary' in page.downloads['lite'], 'Lite edition needs the secondary download button'
-assert html.index('data-download="full"') < html.index('data-download="lite"'), 'Full edition download must appear before lite'
+assert 'button' in page.downloads['lite'] and 'secondary' not in page.downloads['lite'], 'Download needs the primary button'
 for link in page.links:
     uri = urlsplit(link)
     if uri.scheme or uri.netloc:
@@ -62,5 +60,5 @@ with tempfile.TemporaryDirectory() as directory:
     subprocess.run([sys.executable, str(ROOT / 'build.py'), directory], check=True)
     generated = (Path(directory) / 'index.html').read_text(encoding='utf-8')
     config = json.loads((Path(directory) / 'remote/config.json').read_text(encoding='utf-8'))
-    for edition in ('full', 'lite'):
+    for edition in ('lite',):
         assert f'data-download="{edition}" href="{config["android"][edition + "ApkUrl"]}"' in generated, f'{edition} must link directly to its APK without JavaScript'

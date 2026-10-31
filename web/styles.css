@@ -65,7 +65,7 @@ h1 { font-size: clamp(32px, 3.5vw, 48px); font-weight: 700; line-height: 1.4; le
 .module figcaption { text-align: left; }
 .download { display: grid; grid-template-columns: 1fr 1.3fr; gap: 40px; align-items: start; padding-block: 40px; border-top: 1px solid var(--line); }
 .download p { color: var(--muted); margin-top: 12px; }
-.editions { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.editions { display: grid; grid-template-columns: 1fr; gap: 24px; }
 .editions p { min-height: 56px; margin-top: 8px; }
 .editions .button { margin-top: 20px; width: 100%; }
 .help { padding-block: 8px 40px; }

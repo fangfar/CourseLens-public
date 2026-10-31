@@ -39,7 +39,7 @@
       });
       if (!response.ok) throw new Error('Configuration request failed');
       const config = await response.json();
-      const link = edition === 'full' ? config.android?.fullApkUrl : edition === 'lite' ? config.android?.liteApkUrl : config.android?.apkUrl;
+      const link = config.android?.liteApkUrl;
       if (config.schemaVersion !== 1 || typeof link !== 'string' || !link) throw new Error('Edition not published');
       window.location.assign(apkUrl(link));
       status.textContent = '已请求下载最新正式版。若未开始，可重试或手动下载。';

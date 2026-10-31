@@ -24,9 +24,8 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=34)
 public class OcrPluginTest {
- @Test public void distributionLabelMatchesBundledEngine()throws Exception{
-  assertEquals(LocalOcr.AVAILABLE?"":"轻量版",RuntimeEnvironment.getApplication().getString(R.string.distribution_name));
-  try{Class.forName("cn.courselens.ocr.OcrEngine");assertTrue("Lite must not include the OCR engine",LocalOcr.AVAILABLE);}catch(ClassNotFoundException absent){assertFalse("Full must bundle the OCR engine",LocalOcr.AVAILABLE);}
+ @Test public void hostDoesNotBundleOcrEngine()throws Exception{
+  try{Class.forName("cn.courselens.ocr.OcrEngine");fail("Host must not include the OCR engine");}catch(ClassNotFoundException expected){}
  }
  @Test public void imagePickerUsesGalleryInsteadOfDocuments(){
   Intent photo=ImagePicker.intent(34);assertEquals(MediaStore.ACTION_PICK_IMAGES,photo.getAction());assertEquals("image/*",photo.getType());
